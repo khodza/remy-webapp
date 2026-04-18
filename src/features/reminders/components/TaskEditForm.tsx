@@ -1,5 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import {
+  addDays,
+  addHours,
+  format,
+  nextMonday,
+  nextSaturday,
+  setHours,
+  setMinutes,
+  setSeconds,
+  startOfDay,
+} from 'date-fns';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +33,48 @@ function toLocalInputValue(date: Date): string {
   return format(date, "yyyy-MM-dd'T'HH:mm");
 }
 
+interface Preset {
+  key: string;
+  label: string;
+  compute: (now: Date) => Date;
+}
+
+const atTime = (date: Date, hour: number, minute = 0): Date =>
+  setSeconds(setMinutes(setHours(date, hour), minute), 0);
+
+const PRESETS: Preset[] = [
+  {
+    key: 'in-1-hour',
+    label: '+1 hour',
+    compute: (now) => addHours(now, 1),
+  },
+  {
+    key: 'tonight',
+    label: 'Tonight 8pm',
+    compute: (now) => {
+      const tonight = atTime(now, 20);
+      return tonight.getTime() > now.getTime()
+        ? tonight
+        : atTime(addDays(startOfDay(now), 1), 20);
+    },
+  },
+  {
+    key: 'tomorrow-9am',
+    label: 'Tomorrow 9am',
+    compute: (now) => atTime(addDays(startOfDay(now), 1), 9),
+  },
+  {
+    key: 'weekend',
+    label: 'Weekend 10am',
+    compute: (now) => atTime(nextSaturday(now), 10),
+  },
+  {
+    key: 'next-monday',
+    label: 'Next Monday 9am',
+    compute: (now) => atTime(nextMonday(now), 9),
+  },
+];
+
 interface TaskEditFormProps {
   task: Task;
 }
@@ -37,6 +89,7 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
     register,
     handleSubmit,
     formState: { errors, isDirty, isValid },
+    setValue,
     watch,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,6 +121,15 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
       },
     );
   });
+
+  const applyPreset = (preset: Preset) => {
+    const next = preset.compute(new Date());
+    setValue('scheduledAt', toLocalInputValue(next), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    haptic.selection();
+  };
 
   useMainButton({
     text: update.isPending ? 'Saving…' : 'Save changes',
@@ -118,6 +180,20 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
             {errors.scheduledAt.message}
           </span>
         )}
+        <div className="mt-2 -mx-4 overflow-x-auto px-4">
+          <div className="flex w-max gap-1.5">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => applyPreset(preset)}
+                className="whitespace-nowrap rounded-[var(--radius-pill)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface-2)] px-3 py-1.5 font-sans text-[12px] text-[color:var(--color-text-2)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </label>
 
       <button
