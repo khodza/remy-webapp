@@ -1,0 +1,94 @@
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
+import * as api from '@/shared/api';
+import type { Task } from '@/shared/api';
+
+export interface TasksQueryVars {
+  includeCompleted?: boolean;
+}
+
+export function tasksKey(vars: TasksQueryVars = {}): QueryKey {
+  return ['tasks', { includeCompleted: vars.includeCompleted ?? false }];
+}
+
+export function useTasks(vars: TasksQueryVars = {}) {
+  return useQuery({
+    queryKey: tasksKey(vars),
+    queryFn: () => api.listTasks(vars),
+  });
+}
+
+export function useCreateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => api.createTask(text),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useCompleteTask(vars: TasksQueryVars = {}) {
+  const qc = useQueryClient();
+  const key = tasksKey(vars);
+  return useMutation({
+    mutationFn: (id: string) => api.completeTask(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<Task[]>(key);
+      qc.setQueryData<Task[]>(key, (old) =>
+        (old ?? []).map((task) =>
+          task.id === id ? { ...task, status: 'completed' } : task,
+        ),
+      );
+      return { prev };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.prev) qc.setQueryData<Task[]>(key, context.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDelayTask(vars: TasksQueryVars = {}) {
+  const qc = useQueryClient();
+  const key = tasksKey(vars);
+  return useMutation({
+    mutationFn: ({ id, minutes }: { id: string; minutes: number }) =>
+      api.delayTask(id, minutes),
+    onSuccess: (updated) => {
+      qc.setQueryData<Task[]>(key, (old) =>
+        (old ?? []).map((task) => (task.id === updated.id ? updated : task)),
+      );
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDeleteTask(vars: TasksQueryVars = {}) {
+  const qc = useQueryClient();
+  const key = tasksKey(vars);
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTask(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<Task[]>(key);
+      qc.setQueryData<Task[]>(key, (old) =>
+        (old ?? []).filter((task) => task.id !== id),
+      );
+      return { prev };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.prev) qc.setQueryData<Task[]>(key, context.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
