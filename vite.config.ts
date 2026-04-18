@@ -19,5 +19,8 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // `.trycloudflare.com` matches any subdomain — `pnpm dev:tunnel` picks a
+    // random one each run. Add other providers here if you switch tunnels.
+    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io'],
   },
 });
