@@ -1,0 +1,85 @@
+@layer theme, base, telegram-ui, components, utilities;
+
+@import '@telegram-apps/telegram-ui/dist/styles.css' layer(telegram-ui);
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    'Inter', -apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
+
+  --color-bg: #f2f3f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f9fb;
+  --color-hairline: rgba(60, 60, 67, 0.12);
+  --color-text: #0b0b0f;
+  --color-text-2: rgba(60, 60, 67, 0.62);
+  --color-text-3: rgba(60, 60, 67, 0.36);
+  --color-accent: oklch(62% 0.14 265);
+  --color-accent-soft: oklch(94% 0.03 265);
+  --color-accent-fg: #ffffff;
+  --color-danger: oklch(60% 0.18 25);
+  --color-danger-soft: oklch(95% 0.035 25);
+  --color-success: oklch(64% 0.13 155);
+  --color-warn: oklch(72% 0.13 75);
+
+  --color-tg-bg: var(--tg-theme-bg-color, var(--color-bg));
+  --color-tg-surface: var(--tg-theme-secondary-bg-color, var(--color-surface));
+  --color-tg-text: var(--tg-theme-text-color, var(--color-text));
+  --color-tg-hint: var(--tg-theme-hint-color, var(--color-text-2));
+  --color-tg-link: var(--tg-theme-link-color, var(--color-accent));
+  --color-tg-button: var(--tg-theme-button-color, var(--color-accent));
+  --color-tg-button-text:
+    var(--tg-theme-button-text-color, var(--color-accent-fg));
+
+  --radius-card: 14px;
+  --radius-big: 20px;
+  --radius-pill: 999px;
+
+  --spacing-row: 64px;
+}
+
+[data-theme='dark'] {
+  --color-bg: #17181c;
+  --color-surface: #1f2025;
+  --color-surface-2: #24252b;
+  --color-hairline: rgba(255, 255, 255, 0.07);
+  --color-text: #f2f3f5;
+  --color-text-2: rgba(235, 235, 245, 0.56);
+  --color-text-3: rgba(235, 235, 245, 0.28);
+  --color-accent: oklch(72% 0.13 265);
+  --color-accent-soft: oklch(30% 0.05 265);
+  --color-danger: oklch(70% 0.17 25);
+  --color-danger-soft: oklch(30% 0.07 25);
+  --color-success: oklch(72% 0.13 155);
+  --color-warn: oklch(78% 0.13 75);
+}
+
+[data-density='compact'] {
+  --spacing-row: 52px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: var(--tg-viewport-stable-height, 100dvh);
+  height: var(--tg-viewport-stable-height, 100dvh);
+  display: flex;
+  flex-direction: column;
+}
