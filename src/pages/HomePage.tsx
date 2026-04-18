@@ -117,7 +117,14 @@ export function HomePage() {
             )}
 
             {groups.later.length > 0 && (
-              <Section title="Later" count={groups.later.length}>
+              <Section
+                title="Later"
+                count={groups.later.length}
+                action={{
+                  label: 'UPCOMING →',
+                  onClick: () => navigate('/upcoming'),
+                }}
+              >
                 <TaskList
                   tasks={groups.later}
                   disabled={busy}
@@ -233,11 +240,13 @@ function Section({
   title,
   count,
   tone,
+  action,
   children,
 }: {
   title: string;
   count: number;
   tone?: 'danger';
+  action?: { label: string; onClick: () => void };
   children: React.ReactNode;
 }) {
   const color =
@@ -251,9 +260,20 @@ function Section({
         >
           {title}
         </span>
-        <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-text-3)]">
-          {count}
-        </span>
+        <div className="flex items-baseline gap-3">
+          {action && (
+            <button
+              type="button"
+              onClick={action.onClick}
+              className="font-mono text-[11px] uppercase tracking-wider text-[color:var(--color-accent)] transition hover:opacity-80"
+            >
+              {action.label}
+            </button>
+          )}
+          <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-text-3)]">
+            {count}
+          </span>
+        </div>
       </div>
       {children}
     </section>
