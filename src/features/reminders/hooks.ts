@@ -64,6 +64,16 @@ export function useCreateTask() {
   });
 }
 
+export function useCreateTaskFromVoice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (blob: Blob) => api.createTaskFromVoice(blob),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useCompleteTask(vars: TasksQueryVars = {}) {
   const qc = useQueryClient();
   const key = tasksKey(vars);

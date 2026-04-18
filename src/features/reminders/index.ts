@@ -3,6 +3,7 @@ export {
   useTasks,
   useTask,
   useCreateTask,
+  useCreateTaskFromVoice,
   useCompleteTask,
   useDelayTask,
   useDeleteTask,
@@ -12,3 +13,4 @@ export {
 export { CreateTaskForm } from './components/CreateTaskForm';
 export { TaskEditForm } from './components/TaskEditForm';
 export { ParsePreview } from './components/ParsePreview';
+export { VoiceRecordButton } from './components/VoiceRecordButton';
