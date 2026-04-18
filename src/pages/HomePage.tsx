@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
   useCompleteTask,
+  useDelayTask,
   useDeleteTask,
   useTasks,
 } from '@/features/reminders';
@@ -37,8 +38,15 @@ export function HomePage() {
   const tasksQuery = useTasks(VARS);
   const complete = useCompleteTask(VARS);
   const remove = useDeleteTask(VARS);
+  const delay = useDelayTask(VARS);
   const haptic = useHapticFeedback();
   const [showCompleted, setShowCompleted] = useState(false);
+
+  const busy = complete.isPending || remove.isPending || delay.isPending;
+  const handleSnooze = (id: string, minutes: number) => {
+    haptic.impact('light');
+    delay.mutate({ id, minutes });
+  };
 
   const groups = useMemo(
     () => groupTasks(tasksQuery.data ?? []),
@@ -93,7 +101,7 @@ export function HomePage() {
               <Section title="Overdue" tone="danger" count={groups.overdue.length}>
                 <TaskList
                   tasks={groups.overdue}
-                  disabled={complete.isPending || remove.isPending}
+                  disabled={busy}
                   onComplete={(id) => {
                     haptic.impact('light');
                     complete.mutate(id);
@@ -103,6 +111,7 @@ export function HomePage() {
                     remove.mutate(id);
                   }}
                   onOpen={(id) => navigate(`/tasks/${id}`)}
+                  onSnooze={handleSnooze}
                 />
               </Section>
             )}
@@ -111,7 +120,7 @@ export function HomePage() {
               <Section title="Later" count={groups.later.length}>
                 <TaskList
                   tasks={groups.later}
-                  disabled={complete.isPending || remove.isPending}
+                  disabled={busy}
                   onComplete={(id) => {
                     haptic.impact('light');
                     complete.mutate(id);
@@ -141,7 +150,7 @@ export function HomePage() {
                 {showCompleted && (
                   <TaskList
                     tasks={groups.completed}
-                    disabled={complete.isPending || remove.isPending}
+                    disabled={busy}
                     onComplete={() => {}}
                     onDelete={(id) => {
                       haptic.impact('medium');
@@ -257,12 +266,14 @@ function TaskList({
   onComplete,
   onDelete,
   onOpen,
+  onSnooze,
 }: {
   tasks: Task[];
   disabled: boolean;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
+  onSnooze?: (id: string, minutes: number) => void;
 }) {
   return (
     <ul className="flex flex-col gap-2">
@@ -274,6 +285,9 @@ function TaskList({
           onComplete={() => onComplete(task.id)}
           onDelete={() => onDelete(task.id)}
           onOpen={() => onOpen(task.id)}
+          {...(onSnooze
+            ? { onSnooze: (minutes: number) => onSnooze(task.id, minutes) }
+            : {})}
         />
       ))}
     </ul>
@@ -286,12 +300,14 @@ function TaskRow({
   onComplete,
   onDelete,
   onOpen,
+  onSnooze,
 }: {
   task: Task;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
   onOpen: () => void;
+  onSnooze?: (minutes: number) => void;
 }) {
   const isDone = task.status === 'completed';
   return (
@@ -307,17 +323,15 @@ function TaskRow({
         {isDone && <Check size={12} className="text-white" strokeWidth={3} />}
       </button>
 
-      <button
-        type="button"
-        onClick={onOpen}
-        className="min-w-0 flex-1 text-left"
-      >
-        <p
-          className={`font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)] ${isDone ? 'text-[color:var(--color-text-3)] line-through' : ''}`}
-        >
-          {task.description}
-        </p>
-        <div className="mt-1 flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <button type="button" onClick={onOpen} className="block w-full text-left">
+          <p
+            className={`font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)] ${isDone ? 'text-[color:var(--color-text-3)] line-through' : ''}`}
+          >
+            {task.description}
+          </p>
+        </button>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <span
             className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-[3px] font-sans text-[11px] font-medium tabular-nums ${
               task.isOverdue
@@ -327,8 +341,22 @@ function TaskRow({
           >
             {format(task.scheduledAt, 'MMM d, h:mm a')}
           </span>
+          {onSnooze && (
+            <>
+              <SnoozeChip
+                label="+15m"
+                onClick={() => onSnooze(15)}
+                disabled={disabled}
+              />
+              <SnoozeChip
+                label="+1h"
+                onClick={() => onSnooze(60)}
+                disabled={disabled}
+              />
+            </>
+          )}
         </div>
-      </button>
+      </div>
 
       <button
         type="button"
@@ -340,6 +368,27 @@ function TaskRow({
         <Trash2 size={18} />
       </button>
     </li>
+  );
+}
+
+function SnoozeChip({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="inline-flex items-center rounded-[var(--radius-pill)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface-2)] px-2 py-[3px] font-mono text-[11px] text-[color:var(--color-text-2)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)] disabled:opacity-50"
+    >
+      {label}
+    </button>
   );
 }
 
