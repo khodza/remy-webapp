@@ -6,7 +6,11 @@ import {
 } from '@telegram-apps/sdk-react';
 import { useMemo } from 'react';
 
-export function EnvUnsupported() {
+interface EnvUnsupportedProps {
+  error?: string;
+}
+
+export function EnvUnsupported({ error }: EnvUnsupportedProps) {
   const [platform, isDark] = useMemo(() => {
     try {
       const lp = retrieveLaunchParams();
@@ -20,6 +24,8 @@ export function EnvUnsupported() {
     }
   }, []);
 
+  const showError = Boolean(error) && import.meta.env.DEV;
+
   return (
     <AppRoot
       appearance={isDark ? 'dark' : 'light'}
@@ -29,6 +35,23 @@ export function EnvUnsupported() {
         header="Open in Telegram"
         description="Remy runs inside Telegram. Open it from the Remy bot to continue."
       />
+      {showError && (
+        <pre
+          style={{
+            padding: '12px 16px',
+            margin: '8px 16px',
+            background: 'rgba(255, 80, 80, 0.08)',
+            color: '#c23',
+            borderRadius: 12,
+            fontSize: 11,
+            fontFamily: 'ui-monospace, Menlo, monospace',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {error}
+        </pre>
+      )}
     </AppRoot>
   );
 }
