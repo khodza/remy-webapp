@@ -22,6 +22,38 @@ export function useTasks(vars: TasksQueryVars = {}) {
   });
 }
 
+export function useTask(id: string | undefined) {
+  return useQuery({
+    queryKey: ['task', id],
+    queryFn: () => {
+      if (!id) throw new Error('Task id missing');
+      return api.listTasks({ includeCompleted: true }).then((tasks) => {
+        const found = tasks.find((task) => task.id === id);
+        if (!found) throw new Error('Task not found');
+        return found;
+      });
+    },
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdateTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: { description?: string; scheduledAt?: Date };
+    }) => api.updateTask(id, patch),
+    onSuccess: (updated) => {
+      qc.setQueryData<Task>(['task', updated.id], updated);
+      void qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({

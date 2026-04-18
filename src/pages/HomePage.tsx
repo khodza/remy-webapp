@@ -1,6 +1,7 @@
-import { Check, Loader2, Trash2 } from 'lucide-react';
+import { Check, Loader2, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import {
   useCompleteTask,
   useDeleteTask,
@@ -11,6 +12,7 @@ import { useHapticFeedback, useTelegramUser } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
 export function HomePage() {
+  const navigate = useNavigate();
   const user = useTelegramUser();
   const tasksQuery = useTasks();
   const complete = useCompleteTask();
@@ -21,14 +23,24 @@ export function HomePage() {
 
   return (
     <Page back={false}>
-      <main className="flex flex-1 flex-col gap-4 px-4 py-6">
-        <header>
-          <p className="font-sans text-sm text-[color:var(--color-text-2)]">
-            {user ? `Hi, ${user.firstName}` : 'Hi there'}
-          </p>
-          <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
-            Today
-          </h1>
+      <main className="relative flex flex-1 flex-col gap-4 px-4 pb-24 pt-6">
+        <header className="flex items-start justify-between gap-2">
+          <div>
+            <p className="font-sans text-sm text-[color:var(--color-text-2)]">
+              {user ? `Hi, ${user.firstName}` : 'Hi there'}
+            </p>
+            <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
+              Today
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            aria-label="Settings"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--color-text-2)] transition hover:bg-[color:var(--color-surface-2)]"
+          >
+            <Settings2 size={18} />
+          </button>
         </header>
 
         {tasksQuery.isPending ? (
@@ -58,10 +70,24 @@ export function HomePage() {
                   haptic.impact('medium');
                   remove.mutate(task.id);
                 }}
+                onOpen={() => navigate(`/tasks/${task.id}`)}
               />
             ))}
           </ul>
         )}
+
+        <button
+          type="button"
+          onClick={() => {
+            haptic.impact('light');
+            navigate('/create');
+          }}
+          aria-label="New reminder"
+          className="fixed bottom-4 right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[color:var(--color-accent-fg)] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition active:scale-95"
+          style={{ bottom: 'calc(1rem + var(--tg-safe-area-inset-bottom, 0px))' }}
+        >
+          <Plus size={22} strokeWidth={2.5} />
+        </button>
       </main>
     </Page>
   );
@@ -72,18 +98,17 @@ function TaskRow({
   disabled,
   onComplete,
   onDelete,
+  onOpen,
 }: {
   task: Task;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
+  onOpen: () => void;
 }) {
   const isDone = task.status === 'completed';
   return (
-    <li
-      className="flex items-start gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3"
-      data-overdue={task.isOverdue ? 'true' : undefined}
-    >
+    <li className="flex items-start gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">
       <button
         type="button"
         onClick={onComplete}
@@ -95,7 +120,11 @@ function TaskRow({
         {isDone && <Check size={12} className="text-white" strokeWidth={3} />}
       </button>
 
-      <div className="min-w-0 flex-1">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 flex-1 text-left"
+      >
         <p
           className={`font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)] ${isDone ? 'text-[color:var(--color-text-3)] line-through' : ''}`}
         >
@@ -112,7 +141,7 @@ function TaskRow({
             {format(task.scheduledAt, 'MMM d, h:mm a')}
           </span>
         </div>
-      </div>
+      </button>
 
       <button
         type="button"
@@ -140,7 +169,7 @@ function EmptyState() {
   return (
     <div className="rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] p-6 text-center">
       <p className="font-sans text-sm text-[color:var(--color-text-2)]">
-        No reminders yet. Send one to the Remy bot to get started.
+        No reminders yet. Tap + to create one.
       </p>
     </div>
   );
