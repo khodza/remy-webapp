@@ -1,5 +1,5 @@
 import { Check, Loader2, Plus, Settings2, Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,15 +11,41 @@ import type { Task } from '@/shared/api';
 import { useHapticFeedback, useTelegramUser } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
+const VARS = { includeCompleted: true } as const;
+
+interface Groups {
+  overdue: Task[];
+  later: Task[];
+  completed: Task[];
+}
+
+function groupTasks(tasks: Task[]): Groups {
+  const overdue: Task[] = [];
+  const later: Task[] = [];
+  const completed: Task[] = [];
+  for (const task of tasks) {
+    if (task.status === 'completed') completed.push(task);
+    else if (task.isOverdue) overdue.push(task);
+    else later.push(task);
+  }
+  return { overdue, later, completed };
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const user = useTelegramUser();
-  const tasksQuery = useTasks();
-  const complete = useCompleteTask();
-  const remove = useDeleteTask();
+  const tasksQuery = useTasks(VARS);
+  const complete = useCompleteTask(VARS);
+  const remove = useDeleteTask(VARS);
   const haptic = useHapticFeedback();
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
+  const groups = useMemo(
+    () => groupTasks(tasksQuery.data ?? []),
+    [tasksQuery.data],
+  );
+  const hasAny =
+    groups.overdue.length + groups.later.length + groups.completed.length > 0;
 
   return (
     <Page back={false}>
@@ -43,6 +69,12 @@ export function HomePage() {
           </button>
         </header>
 
+        <StatStrip
+          overdue={groups.overdue.length}
+          remaining={groups.later.length}
+          done={groups.completed.length}
+        />
+
         {tasksQuery.isPending ? (
           <LoadingState />
         ) : tasksQuery.isError ? (
@@ -53,27 +85,74 @@ export function HomePage() {
                 : 'Something went wrong.'
             }
           />
-        ) : tasks.length === 0 ? (
+        ) : !hasAny ? (
           <EmptyState />
         ) : (
-          <ul className="flex flex-col gap-2">
-            {tasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                disabled={complete.isPending || remove.isPending}
-                onComplete={() => {
-                  haptic.impact('light');
-                  complete.mutate(task.id);
-                }}
-                onDelete={() => {
-                  haptic.impact('medium');
-                  remove.mutate(task.id);
-                }}
-                onOpen={() => navigate(`/tasks/${task.id}`)}
-              />
-            ))}
-          </ul>
+          <>
+            {groups.overdue.length > 0 && (
+              <Section title="Overdue" tone="danger" count={groups.overdue.length}>
+                <TaskList
+                  tasks={groups.overdue}
+                  disabled={complete.isPending || remove.isPending}
+                  onComplete={(id) => {
+                    haptic.impact('light');
+                    complete.mutate(id);
+                  }}
+                  onDelete={(id) => {
+                    haptic.impact('medium');
+                    remove.mutate(id);
+                  }}
+                  onOpen={(id) => navigate(`/tasks/${id}`)}
+                />
+              </Section>
+            )}
+
+            {groups.later.length > 0 && (
+              <Section title="Later" count={groups.later.length}>
+                <TaskList
+                  tasks={groups.later}
+                  disabled={complete.isPending || remove.isPending}
+                  onComplete={(id) => {
+                    haptic.impact('light');
+                    complete.mutate(id);
+                  }}
+                  onDelete={(id) => {
+                    haptic.impact('medium');
+                    remove.mutate(id);
+                  }}
+                  onOpen={(id) => navigate(`/tasks/${id}`)}
+                />
+              </Section>
+            )}
+
+            {groups.completed.length > 0 && (
+              <section>
+                <button
+                  type="button"
+                  onClick={() => setShowCompleted((v) => !v)}
+                  className="flex w-full items-center justify-between px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--color-text-2)]"
+                >
+                  <span>Done</span>
+                  <span className="tabular-nums">
+                    {groups.completed.length}{' '}
+                    {showCompleted ? '▾' : '▸'}
+                  </span>
+                </button>
+                {showCompleted && (
+                  <TaskList
+                    tasks={groups.completed}
+                    disabled={complete.isPending || remove.isPending}
+                    onComplete={() => {}}
+                    onDelete={(id) => {
+                      haptic.impact('medium');
+                      remove.mutate(id);
+                    }}
+                    onOpen={(id) => navigate(`/tasks/${id}`)}
+                  />
+                )}
+              </section>
+            )}
+          </>
         )}
 
         <button
@@ -90,6 +169,114 @@ export function HomePage() {
         </button>
       </main>
     </Page>
+  );
+}
+
+function StatStrip({
+  overdue,
+  remaining,
+  done,
+}: {
+  overdue: number;
+  remaining: number;
+  done: number;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      <StatCell label="Overdue" value={overdue} tone={overdue > 0 ? 'danger' : 'muted'} />
+      <StatCell label="Remaining" value={remaining} tone="accent" />
+      <StatCell label="Done" value={done} tone="muted" />
+    </div>
+  );
+}
+
+function StatCell({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'accent' | 'danger' | 'muted';
+}) {
+  const toneColor = {
+    accent: 'var(--color-accent)',
+    danger: 'var(--color-danger)',
+    muted: 'var(--color-text-2)',
+  }[tone];
+
+  return (
+    <div className="rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-3 py-2.5">
+      <p
+        className="font-sans text-xl font-semibold tabular-nums tracking-tight"
+        style={{ color: toneColor }}
+      >
+        {value}
+      </p>
+      <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-2)]">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  count,
+  tone,
+  children,
+}: {
+  title: string;
+  count: number;
+  tone?: 'danger';
+  children: React.ReactNode;
+}) {
+  const color =
+    tone === 'danger' ? 'var(--color-danger)' : 'var(--color-text-2)';
+  return (
+    <section className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between px-2">
+        <span
+          className="font-mono text-[11px] uppercase tracking-wider"
+          style={{ color }}
+        >
+          {title}
+        </span>
+        <span className="font-mono text-[11px] tabular-nums text-[color:var(--color-text-3)]">
+          {count}
+        </span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function TaskList({
+  tasks,
+  disabled,
+  onComplete,
+  onDelete,
+  onOpen,
+}: {
+  tasks: Task[];
+  disabled: boolean;
+  onComplete: (id: string) => void;
+  onDelete: (id: string) => void;
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <ul className="flex flex-col gap-2">
+      {tasks.map((task) => (
+        <TaskRow
+          key={task.id}
+          task={task}
+          disabled={disabled}
+          onComplete={() => onComplete(task.id)}
+          onDelete={() => onDelete(task.id)}
+          onOpen={() => onOpen(task.id)}
+        />
+      ))}
+    </ul>
   );
 }
 
