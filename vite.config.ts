@@ -22,5 +22,14 @@ export default defineConfig({
     // `.trycloudflare.com` matches any subdomain — `pnpm dev:tunnel` picks a
     // random one each run. Add other providers here if you switch tunnels.
     allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io'],
+    // Forward /api/* to the local NestJS backend. With this + the frontend
+    // tunnel, the Mini App can call the API same-origin (no CORS, no need
+    // to tunnel the backend separately).
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
   },
 });

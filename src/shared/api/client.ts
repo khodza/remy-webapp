@@ -1,7 +1,10 @@
 import { useAuthStore } from '@/shared/stores/auth.store';
 
-const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1';
+// Default: relative path. In dev, Vite's server.proxy forwards /api/* to the
+// local backend, so the Mini App stays same-origin whether it's running on
+// localhost:5173 or a *.trycloudflare.com tunnel. Override to an absolute URL
+// in production (.env) to point at a separately-deployed API.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 
 export class ApiError extends Error {
   constructor(
@@ -24,16 +27,17 @@ export function buildUrl(
   path: string,
   query?: RequestOptions['query'],
 ): string {
-  const url = new URL(
-    path.startsWith('/') ? path.slice(1) : path,
-    ensureTrailingSlash(BASE_URL),
-  );
-  if (query) {
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined) url.searchParams.set(key, String(value));
-    }
+  const base = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+  const pathPart = path.startsWith('/') ? path : `/${path}`;
+  const url = `${base}${pathPart}`;
+
+  if (!query) return url;
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined) params.set(key, String(value));
   }
-  return url.toString();
+  const qs = params.toString();
+  return qs ? `${url}?${qs}` : url;
 }
 
 export async function apiRequest<T>(
@@ -114,8 +118,4 @@ function extractStringField(body: unknown, key: string): string | undefined {
     if (typeof value === 'string' && value.length > 0) return value;
   }
   return undefined;
-}
-
-function ensureTrailingSlash(url: string): string {
-  return url.endsWith('/') ? url : `${url}/`;
 }
