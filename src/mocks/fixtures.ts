@@ -19,8 +19,19 @@ export interface MockTask {
   scheduledAt: Date;
   status: TaskStatus;
   recurrence: Recurrence | null;
+  /** IANA zone the task was created in. */
+  timezone: string;
+  /** One-off snooze of a recurring task; the series time stays put. */
+  snoozedUntil: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export const MOCK_TIMEZONE = 'Asia/Tashkent';
+
+/** When the reminder fires — mirrors the backend's nextFireAt. */
+export function nextFireAt(task: Pick<MockTask, 'scheduledAt' | 'snoozedUntil'>): Date {
+  return task.snoozedUntil ?? task.scheduledAt;
 }
 
 const at = (base: Date, hour: number, minute = 0): Date =>
@@ -44,6 +55,8 @@ function make(
     scheduledAt,
     status: opts.status ?? 'pending',
     recurrence: opts.recurrence ?? null,
+    timezone: MOCK_TIMEZONE,
+    snoozedUntil: null,
     createdAt: created,
     updatedAt: created,
   };
@@ -76,5 +89,5 @@ export const mockUser: User = {
   firstName: 'Remy',
   lastName: 'Dev',
   username: 'remy_dev',
-  timezone: 'Asia/Tashkent',
+  timezone: MOCK_TIMEZONE,
 };

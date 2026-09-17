@@ -1,7 +1,13 @@
 import { HttpResponse, delay, http } from 'msw';
 import { addDays, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 import type { Recurrence } from '@/shared/api';
-import { buildFixtures, mockUser, newId, type MockTask } from './fixtures';
+import {
+  buildFixtures,
+  mockUser,
+  newId,
+  nextFireAt,
+  type MockTask,
+} from './fixtures';
 
 /**
  * MSW handlers for every endpoint in src/shared/api. Response shapes mirror
@@ -17,20 +23,27 @@ let tasks: MockTask[] = buildFixtures();
 let user = { ...mockUser };
 
 function toDto(task: MockTask, withOverdue = false) {
+  const fire = nextFireAt(task);
   const dto: Record<string, unknown> = {
     id: task.id,
     description: task.description,
     scheduledAt: task.scheduledAt.toISOString(),
     status: task.status,
     recurrence: task.recurrence,
+    timezone: task.timezone,
+    snoozedUntil: task.snoozedUntil ? task.snoozedUntil.toISOString() : null,
+    nextFireAt: fire.toISOString(),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   };
   if (withOverdue) {
-    dto['isOverdue'] =
-      task.status === 'pending' && task.scheduledAt.getTime() < Date.now();
+    dto['isOverdue'] = task.status === 'pending' && fire.getTime() < Date.now();
   }
   return dto;
+}
+
+function isValidObjectId(id: string | undefined): id is string {
+  return typeof id === 'string' && /^[0-9a-f]{24}$/i.test(id);
 }
 
 function error(status: number, code: string, message: string) {
@@ -105,8 +118,19 @@ export const handlers = [
     const list = tasks
       .filter((t) => t.status !== 'deleted')
       .filter((t) => includeCompleted || t.status !== 'completed')
-      .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+      .sort((a, b) => nextFireAt(a).getTime() - nextFireAt(b).getTime());
     return HttpResponse.json({ tasks: list.map((t) => toDto(t, true)) });
+  }),
+
+  http.get(`${API}/tasks/:id`, async ({ params }) => {
+    await delay(LATENCY_MS);
+    const id = Array.isArray(params['id']) ? params['id'][0] : params['id'];
+    if (!isValidObjectId(id)) {
+      return error(400, 'BAD_REQUEST', 'Validation failed (ObjectId is expected)');
+    }
+    const task = find(id);
+    if (!task) return error(404, 'NOT_FOUND', 'Task not found');
+    return HttpResponse.json(toDto(task, true));
   }),
 
   http.post(`${API}/tasks`, async ({ request }) => {
@@ -122,6 +146,8 @@ export const handlers = [
       scheduledAt: parsed.scheduledAt,
       status: 'pending',
       recurrence: parsed.recurrence,
+      timezone: user.timezone ?? 'UTC',
+      snoozedUntil: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -138,6 +164,8 @@ export const handlers = [
       scheduledAt: addMinutes(now, 60),
       status: 'pending',
       recurrence: null,
+      timezone: user.timezone ?? 'UTC',
+      snoozedUntil: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -155,7 +183,10 @@ export const handlers = [
       recurrence?: Recurrence | null;
     };
     if (body.description !== undefined) task.description = body.description;
-    if (body.scheduledAt !== undefined) task.scheduledAt = new Date(body.scheduledAt);
+    if (body.scheduledAt !== undefined) {
+      task.scheduledAt = new Date(body.scheduledAt);
+      task.snoozedUntil = null; // an explicit reschedule replaces any snooze
+    }
     if (body.recurrence !== undefined) task.recurrence = body.recurrence;
     return HttpResponse.json(toDto(touch(task)));
   }),
@@ -164,7 +195,13 @@ export const handlers = [
     await delay(LATENCY_MS);
     const task = find(params['id']);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
-    task.status = 'completed';
+    if (task.recurrence) {
+      // Recurring tasks advance one day (mock approximation) and clear snooze.
+      task.scheduledAt = addDays(task.scheduledAt, 1);
+      task.snoozedUntil = null;
+    } else {
+      task.status = 'completed';
+    }
     return HttpResponse.json(toDto(touch(task)));
   }),
 
@@ -178,9 +215,12 @@ export const handlers = [
       return error(400, 'BAD_REQUEST', 'minutes must be a positive integer');
     }
     // Same rule as the backend: overdue tasks snooze from now, others from
-    // their scheduled time.
-    const base = Math.max(task.scheduledAt.getTime(), Date.now());
-    task.scheduledAt = addMinutes(new Date(base), minutes);
+    // their (current) fire time. A recurring task keeps its series time and
+    // gets a one-off snoozedUntil instead.
+    const base = Math.max(nextFireAt(task).getTime(), Date.now());
+    const until = addMinutes(new Date(base), minutes);
+    if (task.recurrence) task.snoozedUntil = until;
+    else task.scheduledAt = until;
     return HttpResponse.json(toDto(touch(task)));
   }),
 

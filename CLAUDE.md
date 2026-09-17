@@ -47,8 +47,12 @@ and calls `navigate(-1)` from react-router-dom directly.
    Fixed bottom bars use `padding-bottom: var(--tg-viewport-safe-area-inset-bottom)`
    (that is the exact name `viewport.bindCssVars()` emits in SDK v3; there is
    no `--tg-safe-area-inset-*`).
-4. **All dates use `date-fns` + `@date-fns/tz`.** Reminders live or die on
-   timezone correctness — respect the user's Telegram timezone.
+4. **All dates go through `src/shared/lib/dates.ts`.** Never call
+   `format`/`isToday`/`startOfDay`/`new Date(input)` on a raw Date in a
+   component: use `formatInTz`, `isTodayInTz`, `toLocalInputValue` /
+   `fromLocalInputValue`, `fireAt`, … with `useUserTimezone()` (profile zone,
+   else device zone). 24-hour clock everywhere. Reminders live or die on
+   timezone correctness.
 5. **No localStorage/cookies for auth.** The JWT is in-memory only (Zustand store,
    not persisted). Mini App webviews die on close anyway; this avoids exfil risk
    and simplifies logout.
