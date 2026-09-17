@@ -29,6 +29,12 @@ export const TaskSchema = z.object({
   scheduledAt: z.coerce.date(),
   status: TaskStatusSchema,
   recurrence: RecurrenceSchema.nullable().optional(),
+  /** IANA zone the task was created in (older backends omit it). */
+  timezone: z.string().optional(),
+  /** Set when a recurring task was delayed; the series time stays put. */
+  snoozedUntil: z.coerce.date().nullable().optional(),
+  /** When the reminder actually fires: snoozedUntil ?? scheduledAt. */
+  nextFireAt: z.coerce.date().optional(),
   isOverdue: z.boolean().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

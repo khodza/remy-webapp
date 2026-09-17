@@ -1,1 +1,1 @@
-export { TIMEZONE_OPTIONS, timeInZone, type TimezoneOption } from './timezones';
+export { listTimezones, matchesZone, zoneCity, zoneRegion } from './timezones';

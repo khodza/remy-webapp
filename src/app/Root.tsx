@@ -1,6 +1,7 @@
 import { ErrorBoundary } from '@/app/ErrorBoundary';
 import { Providers } from '@/app/Providers';
 import { Router } from '@/app/Router';
+import { useEnsureTimezone } from '@/features/profile';
 
 function ErrorFallback({ error }: { error: unknown }) {
   const message =
@@ -22,10 +23,16 @@ function ErrorFallback({ error }: { error: unknown }) {
   );
 }
 
+function TimezoneBootstrap() {
+  useEnsureTimezone();
+  return null;
+}
+
 export function Root() {
   return (
     <ErrorBoundary fallback={ErrorFallback}>
       <Providers>
+        <TimezoneBootstrap />
         <Router />
       </Providers>
     </ErrorBoundary>

@@ -1,6 +1,11 @@
-import { format } from 'date-fns';
 import { Repeat, Sparkles } from 'lucide-react';
 import type { ParsedTask } from '@/shared/api';
+import {
+  formatDayShort,
+  formatTime,
+  relativeToNow,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { recurrenceLabel } from '../lib/recurrence';
 
 interface ParsePreviewProps {
@@ -10,6 +15,7 @@ interface ParsePreviewProps {
 }
 
 export function ParsePreview({ parsed, loading, error }: ParsePreviewProps) {
+  const tz = useUserTimezone();
   if (error) {
     return (
       <div className="rounded-[var(--radius-card)] border border-[color:var(--color-danger-soft)] bg-[color:var(--color-danger-soft)] p-3">
@@ -50,7 +56,13 @@ export function ParsePreview({ parsed, loading, error }: ParsePreviewProps) {
         {parsed.description}
       </p>
       <p className="mt-1 flex flex-wrap items-center gap-2 font-sans text-xs tabular-nums text-[color:var(--color-accent)]">
-        <span>{format(parsed.scheduledAt, 'EEE, MMM d · h:mm a')}</span>
+        <span>
+          {formatDayShort(parsed.scheduledAt, tz)} ·{' '}
+          {formatTime(parsed.scheduledAt, tz)}
+        </span>
+        <span className="text-[color:var(--color-text-2)]">
+          {relativeToNow(parsed.scheduledAt)}
+        </span>
         {repeat && (
           <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color:var(--color-accent-soft)] px-2 py-[2px] text-[11px] font-medium">
             <Repeat size={11} />

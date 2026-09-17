@@ -1,12 +1,5 @@
 import { Check, Loader2, Repeat, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
-import {
-  format,
-  isSameDay,
-  isToday,
-  isTomorrow,
-  startOfDay,
-} from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
   recurrenceLabel,
@@ -15,6 +8,15 @@ import {
   useTasks,
 } from '@/features/reminders';
 import type { Task } from '@/shared/api';
+import {
+  fireAt,
+  formatInTz,
+  formatTime,
+  isTodayInTz,
+  isTomorrowInTz,
+  startOfDayInTz,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
@@ -22,18 +24,19 @@ interface DayGroup {
   key: string;
   label: string;
   sublabel: string;
+  isToday: boolean;
   tasks: Task[];
 }
 
-function groupByDay(tasks: Task[]): DayGroup[] {
+function groupByDay(tasks: Task[], tz: string): DayGroup[] {
   const pending = tasks
     .filter((task) => task.status === 'pending' && !task.isOverdue)
-    .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+    .sort((a, b) => fireAt(a).getTime() - fireAt(b).getTime());
 
   const groups: DayGroup[] = [];
   for (const task of pending) {
-    const dayStart = startOfDay(task.scheduledAt);
-    const key = format(dayStart, 'yyyy-MM-dd');
+    const when = fireAt(task);
+    const key = formatInTz(startOfDayInTz(when, tz), tz, 'yyyy-MM-dd');
     const existing = groups.find((group) => group.key === key);
     if (existing) {
       existing.tasks.push(task);
@@ -41,18 +44,19 @@ function groupByDay(tasks: Task[]): DayGroup[] {
     }
     groups.push({
       key,
-      label: labelForDay(task.scheduledAt),
-      sublabel: format(task.scheduledAt, 'EEE, MMM d'),
+      label: labelForDay(when, tz),
+      sublabel: formatInTz(when, tz, 'EEE, d MMM'),
+      isToday: isTodayInTz(when, tz),
       tasks: [task],
     });
   }
   return groups;
 }
 
-function labelForDay(date: Date): string {
-  if (isToday(date)) return 'Today';
-  if (isTomorrow(date)) return 'Tomorrow';
-  return format(date, 'EEEE');
+function labelForDay(date: Date, tz: string): string {
+  if (isTodayInTz(date, tz)) return 'Today';
+  if (isTomorrowInTz(date, tz)) return 'Tomorrow';
+  return formatInTz(date, tz, 'EEEE');
 }
 
 export function UpcomingPage() {
@@ -61,10 +65,11 @@ export function UpcomingPage() {
   const complete = useCompleteTask({ includeCompleted: true });
   const remove = useDeleteTask({ includeCompleted: true });
   const haptic = useHapticFeedback();
+  const tz = useUserTimezone();
 
   const groups = useMemo(
-    () => groupByDay(tasksQuery.data ?? []),
-    [tasksQuery.data],
+    () => groupByDay(tasksQuery.data ?? [], tz),
+    [tasksQuery.data, tz],
   );
   const busy = complete.isPending || remove.isPending;
 
@@ -97,6 +102,7 @@ export function UpcomingPage() {
             <DaySection
               key={group.key}
               group={group}
+              tz={tz}
               busy={busy}
               onComplete={(id) => {
                 haptic.impact('light');
@@ -117,19 +123,20 @@ export function UpcomingPage() {
 
 function DaySection({
   group,
+  tz,
   busy,
   onComplete,
   onDelete,
   onOpen,
 }: {
   group: DayGroup;
+  tz: string;
   busy: boolean;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
   onOpen: (id: string) => void;
 }) {
-  const isGroupToday = group.tasks.length > 0 && group.tasks[0] &&
-    isSameDay(group.tasks[0].scheduledAt, new Date());
+  const isGroupToday = group.isToday;
 
   return (
     <section className="flex flex-col gap-2">
@@ -153,6 +160,7 @@ function DaySection({
           <UpcomingRow
             key={task.id}
             task={task}
+            tz={tz}
             disabled={busy}
             onComplete={() => onComplete(task.id)}
             onDelete={() => onDelete(task.id)}
@@ -166,12 +174,14 @@ function DaySection({
 
 function UpcomingRow({
   task,
+  tz,
   disabled,
   onComplete,
   onDelete,
   onOpen,
 }: {
   task: Task;
+  tz: string;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
@@ -206,8 +216,15 @@ function UpcomingRow({
         )}
       </button>
 
-      <span className="shrink-0 font-mono text-[12px] tabular-nums text-[color:var(--color-accent)]">
-        {format(task.scheduledAt, 'h:mm a')}
+      <span className="shrink-0 text-right">
+        <span className="block font-mono text-[12px] tabular-nums text-[color:var(--color-accent)]">
+          {formatTime(fireAt(task), tz)}
+        </span>
+        {task.snoozedUntil && (
+          <span className="block font-sans text-[10px] text-[color:var(--color-text-3)]">
+            snoozed
+          </span>
+        )}
       </span>
 
       <button

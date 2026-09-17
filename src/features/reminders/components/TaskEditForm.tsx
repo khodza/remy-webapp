@@ -1,47 +1,54 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  addDays,
-  addHours,
-  format,
-  nextMonday,
-  nextSaturday,
-  setHours,
-  setMinutes,
-  setSeconds,
-  startOfDay,
-} from 'date-fns';
+import { addDays, addHours, nextMonday, nextSaturday } from 'date-fns';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { RecurrenceSchema, type Task } from '@/shared/api';
+import {
+  atTimeInTz,
+  fireAt,
+  formatTime,
+  fromLocalInputValue,
+  inTz,
+  relativeToNow,
+  toLocalInputValue,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useDeleteTask, useUpdateTask } from '../hooks';
 import { RecurrencePicker } from './RecurrencePicker';
 
-const schema = z.object({
-  description: z.string().min(1, 'Required').max(4000),
-  scheduledAt: z
-    .string()
-    .min(1, 'Required')
-    .refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date/time'),
-  recurrence: RecurrenceSchema.nullable(),
-});
-
-type FormValues = z.infer<typeof schema>;
-
-function toLocalInputValue(date: Date): string {
-  // <input type="datetime-local"> expects YYYY-MM-DDTHH:mm in *local* time.
-  return format(date, "yyyy-MM-dd'T'HH:mm");
+/**
+ * The datetime-local input holds wall-clock time in the user's zone; the
+ * schema is built per render so it can convert with that zone and compare
+ * against "now". An already-overdue task may keep its past time (the user
+ * is editing something else); a *changed* time must be in the future.
+ */
+function buildSchema(tz: string, originalInput: string) {
+  return z.object({
+    description: z.string().trim().min(1, 'Required').max(4000),
+    scheduledAt: z
+      .string()
+      .min(1, 'Required')
+      .refine((v) => fromLocalInputValue(v, tz) !== null, 'Invalid date/time')
+      .refine(
+        (v) =>
+          v === originalInput ||
+          (fromLocalInputValue(v, tz)?.getTime() ?? 0) > Date.now(),
+        'Pick a time in the future',
+      ),
+    recurrence: RecurrenceSchema.nullable(),
+  });
 }
+
+type FormValues = z.infer<ReturnType<typeof buildSchema>>;
 
 interface Preset {
   key: string;
   label: string;
-  compute: (now: Date) => Date;
+  compute: (now: Date, tz: string) => Date;
 }
-
-const atTime = (date: Date, hour: number, minute = 0): Date =>
-  setSeconds(setMinutes(setHours(date, hour), minute), 0);
 
 const PRESETS: Preset[] = [
   {
@@ -51,28 +58,28 @@ const PRESETS: Preset[] = [
   },
   {
     key: 'tonight',
-    label: 'Tonight 8pm',
-    compute: (now) => {
-      const tonight = atTime(now, 20);
+    label: 'Tonight 20:00',
+    compute: (now, tz) => {
+      const tonight = atTimeInTz(now, tz, 20);
       return tonight.getTime() > now.getTime()
         ? tonight
-        : atTime(addDays(startOfDay(now), 1), 20);
+        : atTimeInTz(addDays(inTz(now, tz), 1), tz, 20);
     },
   },
   {
     key: 'tomorrow-9am',
-    label: 'Tomorrow 9am',
-    compute: (now) => atTime(addDays(startOfDay(now), 1), 9),
+    label: 'Tomorrow 09:00',
+    compute: (now, tz) => atTimeInTz(addDays(inTz(now, tz), 1), tz, 9),
   },
   {
     key: 'weekend',
-    label: 'Weekend 10am',
-    compute: (now) => atTime(nextSaturday(now), 10),
+    label: 'Saturday 10:00',
+    compute: (now, tz) => atTimeInTz(nextSaturday(inTz(now, tz)), tz, 10),
   },
   {
     key: 'next-monday',
-    label: 'Next Monday 9am',
-    compute: (now) => atTime(nextMonday(now), 9),
+    label: 'Monday 09:00',
+    compute: (now, tz) => atTimeInTz(nextMonday(inTz(now, tz)), tz, 9),
   },
 ];
 
@@ -85,6 +92,15 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
   const update = useUpdateTask();
   const remove = useDeleteTask();
   const haptic = useHapticFeedback();
+  const tz = useUserTimezone();
+  const originalInput = useMemo(
+    () => toLocalInputValue(task.scheduledAt, tz),
+    [task.scheduledAt, tz],
+  );
+  const schema = useMemo(
+    () => buildSchema(tz, originalInput),
+    [tz, originalInput],
+  );
 
   const {
     register,
@@ -97,21 +113,27 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
     mode: 'onChange',
     defaultValues: {
       description: task.description,
-      scheduledAt: toLocalInputValue(task.scheduledAt),
+      scheduledAt: originalInput,
       recurrence: task.recurrence ?? null,
     },
   });
 
   const recurrence = watch('recurrence');
+  const scheduledInput = watch('scheduledAt');
+  const isOverdue =
+    task.status === 'pending' && fireAt(task).getTime() < Date.now();
+  const keptPastTime = isOverdue && scheduledInput === originalInput;
 
   const onSubmit = handleSubmit((data) => {
+    const scheduledAt = fromLocalInputValue(data.scheduledAt, tz);
+    if (!scheduledAt) return;
     haptic.impact('medium');
     update.mutate(
       {
         id: task.id,
         patch: {
           description: data.description,
-          scheduledAt: new Date(data.scheduledAt),
+          scheduledAt,
           recurrence: data.recurrence,
         },
       },
@@ -126,8 +148,8 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
   });
 
   const applyPreset = (preset: Preset) => {
-    const next = preset.compute(new Date());
-    setValue('scheduledAt', toLocalInputValue(next), {
+    const next = preset.compute(new Date(), tz);
+    setValue('scheduledAt', toLocalInputValue(next, tz), {
       shouldDirty: true,
       shouldValidate: true,
     });
@@ -146,6 +168,26 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
       onSubmit={(e) => void onSubmit(e)}
       className="flex flex-1 flex-col gap-4"
     >
+      {(isOverdue || task.snoozedUntil) && (
+        <div className="rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-2.5 font-sans text-xs text-[color:var(--color-text-2)]">
+          {task.snoozedUntil && (
+            <p>
+              Snoozed until{' '}
+              <span className="tabular-nums text-[color:var(--color-text)]">
+                {formatTime(task.snoozedUntil, tz)}
+              </span>
+              {task.recurrence ? ' (this occurrence only)' : ''}
+            </p>
+          )}
+          {isOverdue && (
+            <p className="text-[color:var(--color-danger)]">
+              {relativeToNow(fireAt(task))}
+              {keptPastTime ? ' — pick a new time or mark it done' : ''}
+            </p>
+          )}
+        </div>
+      )}
+
       <label className="flex flex-col gap-1">
         <span className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-2)]">
           Description
@@ -165,7 +207,7 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
 
       <label className="flex flex-col gap-1">
         <span className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-2)]">
-          When
+          When · {tz}
         </span>
         <input
           type="datetime-local"

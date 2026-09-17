@@ -1,40 +1,59 @@
-export interface TimezoneOption {
-  value: string;
-  label: string;
-}
+import { getDeviceTimezone } from '@/shared/lib/dates';
 
-/**
- * Common IANA timezones. Same shortlist the bot's /settings keyboard offers,
- * plus a few extras. Order is rough geography (west → east).
- */
-export const TIMEZONE_OPTIONS: TimezoneOption[] = [
-  { value: 'UTC', label: 'UTC' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles' },
-  { value: 'America/Denver', label: 'Denver' },
-  { value: 'America/Chicago', label: 'Chicago' },
-  { value: 'America/New_York', label: 'New York' },
-  { value: 'America/Sao_Paulo', label: 'São Paulo' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Berlin', label: 'Berlin' },
-  { value: 'Europe/Istanbul', label: 'Istanbul' },
-  { value: 'Africa/Cairo', label: 'Cairo' },
-  { value: 'Asia/Dubai', label: 'Dubai' },
-  { value: 'Asia/Tashkent', label: 'Tashkent' },
-  { value: 'Asia/Kolkata', label: 'Kolkata' },
-  { value: 'Asia/Shanghai', label: 'Shanghai' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Australia/Sydney', label: 'Sydney' },
+/** Fallback shortlist for engines without Intl.supportedValuesOf. */
+const FALLBACK_ZONES = [
+  'UTC',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Chicago',
+  'America/New_York',
+  'America/Sao_Paulo',
+  'Europe/London',
+  'Europe/Berlin',
+  'Europe/Istanbul',
+  'Africa/Cairo',
+  'Asia/Dubai',
+  'Asia/Tashkent',
+  'Asia/Kolkata',
+  'Asia/Shanghai',
+  'Asia/Tokyo',
+  'Australia/Sydney',
 ];
 
-export function timeInZone(timezone: string, now = new Date()): string {
+/** Every IANA zone the runtime knows, always including the device zone. */
+export function listTimezones(): string[] {
+  let zones: string[];
   try {
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: false,
-    }).format(now);
+    zones =
+      typeof Intl.supportedValuesOf === 'function'
+        ? Intl.supportedValuesOf('timeZone')
+        : FALLBACK_ZONES;
   } catch {
-    return '—';
+    zones = FALLBACK_ZONES;
   }
+  const device = getDeviceTimezone();
+  const set = new Set(zones);
+  set.add('UTC');
+  set.add(device);
+  return [...set].sort();
+}
+
+/** "America/New_York" → "New York" */
+export function zoneCity(zone: string): string {
+  const last = zone.split('/').pop() ?? zone;
+  return last.replace(/_/g, ' ');
+}
+
+/** "America/New_York" → "America" (empty for "UTC") */
+export function zoneRegion(zone: string): string {
+  const parts = zone.split('/');
+  return parts.length > 1 ? parts.slice(0, -1).join(' / ') : '';
+}
+
+/** Case-insensitive substring match on the id, the city, and the region. */
+export function matchesZone(zone: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const hay = `${zone} ${zoneCity(zone)} ${zoneRegion(zone)}`.toLowerCase();
+  return hay.replace(/_/g, ' ').includes(q.replace(/_/g, ' '));
 }

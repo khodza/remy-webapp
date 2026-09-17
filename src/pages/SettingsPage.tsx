@@ -1,11 +1,15 @@
 import { ChevronRight, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMe } from '@/features/profile';
+import { zoneCity } from '@/features/settings';
+import { getDeviceTimezone } from '@/shared/lib/dates';
 import { Page } from '@/shared/ui';
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const me = useMe();
+  const tz = me.data?.timezone ?? null;
+  const detected = tz !== null && tz === getDeviceTimezone();
 
   return (
     <Page>
@@ -59,8 +63,15 @@ export function SettingsPage() {
             <span className="flex-1 font-sans text-[15px] font-medium text-[color:var(--color-text)]">
               Timezone
             </span>
-            <span className="font-mono text-xs tabular-nums text-[color:var(--color-text-2)]">
-              {me.data?.timezone ?? 'Not set'}
+            <span className="text-right">
+              <span className="block font-sans text-xs text-[color:var(--color-text-2)]">
+                {tz ? zoneCity(tz) : 'Detecting…'}
+              </span>
+              {detected && (
+                <span className="block font-sans text-[10px] text-[color:var(--color-text-3)]">
+                  detected
+                </span>
+              )}
             </span>
             <ChevronRight
               size={16}

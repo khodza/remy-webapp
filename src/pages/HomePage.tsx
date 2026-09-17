@@ -1,6 +1,5 @@
 import { Check, Loader2, Plus, Repeat, Settings2, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
   recurrenceLabel,
@@ -10,6 +9,14 @@ import {
   useTasks,
 } from '@/features/reminders';
 import type { Task } from '@/shared/api';
+import {
+  fireAt,
+  formatDayShort,
+  formatTime,
+  formatWhen,
+  relativeToNow,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { useHapticFeedback, useTelegramUser } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
@@ -36,6 +43,7 @@ function groupTasks(tasks: Task[]): Groups {
 export function HomePage() {
   const navigate = useNavigate();
   const user = useTelegramUser();
+  const tz = useUserTimezone();
   const tasksQuery = useTasks(VARS);
   const complete = useCompleteTask(VARS);
   const remove = useDeleteTask(VARS);
@@ -67,6 +75,9 @@ export function HomePage() {
             <h1 className="mt-1 font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
               Today
             </h1>
+            <p className="mt-0.5 font-sans text-xs tabular-nums text-[color:var(--color-text-3)]">
+              {formatDayShort(new Date(), tz)} · {formatTime(new Date(), tz)}
+            </p>
           </div>
           <button
             type="button"
@@ -102,6 +113,7 @@ export function HomePage() {
               <Section title="Overdue" tone="danger" count={groups.overdue.length}>
                 <TaskList
                   tasks={groups.overdue}
+                  tz={tz}
                   disabled={busy}
                   onComplete={(id) => {
                     haptic.impact('light');
@@ -128,6 +140,7 @@ export function HomePage() {
               >
                 <TaskList
                   tasks={groups.later}
+                  tz={tz}
                   disabled={busy}
                   onComplete={(id) => {
                     haptic.impact('light');
@@ -158,6 +171,7 @@ export function HomePage() {
                 {showCompleted && (
                   <TaskList
                     tasks={groups.completed}
+                    tz={tz}
                     disabled={busy}
                     onComplete={() => {}}
                     onDelete={(id) => {
@@ -283,6 +297,7 @@ function Section({
 
 function TaskList({
   tasks,
+  tz,
   disabled,
   onComplete,
   onDelete,
@@ -290,6 +305,7 @@ function TaskList({
   onSnooze,
 }: {
   tasks: Task[];
+  tz: string;
   disabled: boolean;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
@@ -302,6 +318,7 @@ function TaskList({
         <TaskRow
           key={task.id}
           task={task}
+          tz={tz}
           disabled={disabled}
           onComplete={() => onComplete(task.id)}
           onDelete={() => onDelete(task.id)}
@@ -317,6 +334,7 @@ function TaskList({
 
 function TaskRow({
   task,
+  tz,
   disabled,
   onComplete,
   onDelete,
@@ -324,6 +342,7 @@ function TaskRow({
   onSnooze,
 }: {
   task: Task;
+  tz: string;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
@@ -332,6 +351,7 @@ function TaskRow({
 }) {
   const isDone = task.status === 'completed';
   const repeat = recurrenceLabel(task.recurrence);
+  const when = fireAt(task);
   return (
     <li className="flex items-start gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">
       <button
@@ -361,8 +381,16 @@ function TaskRow({
                 : 'bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)]'
             }`}
           >
-            {format(task.scheduledAt, 'MMM d, h:mm a')}
+            {formatWhen(when, tz)}
+            {!isDone && (
+              <span className="ml-1 opacity-70">· {relativeToNow(when)}</span>
+            )}
           </span>
+          {task.snoozedUntil && !isDone && (
+            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[color:var(--color-surface-2)] px-2 py-[3px] font-sans text-[11px] font-medium tabular-nums text-[color:var(--color-text-2)]">
+              Snoozed until {formatTime(task.snoozedUntil, tz)}
+            </span>
+          )}
           {repeat && (
             <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[color:var(--color-hairline)] px-2 py-[3px] font-sans text-[11px] font-medium text-[color:var(--color-text-2)]">
               <Repeat size={11} />
