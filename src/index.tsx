@@ -18,6 +18,12 @@ if (!container) {
 const root = ReactDOM.createRoot(container);
 
 try {
+  if (import.meta.env.DEV && import.meta.env.VITE_MOCK_API === '1') {
+    // Dynamic import keeps msw and the fixtures out of production bundles.
+    const { startMockApi } = await import('@/mocks/browser');
+    await startMockApi();
+  }
+
   const launchParams = retrieveLaunchParams();
   const platform = launchParams.tgWebAppPlatform;
   const startParam = launchParams.tgWebAppStartParam ?? '';

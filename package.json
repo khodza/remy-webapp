@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mock": "cross-env VITE_MOCK_API=1 vite",
     "dev:https": "cross-env HTTPS=true vite",
     "dev:tunnel": "cross-env TUNNEL=1 concurrently -k -n vite,tunnel -c cyan,magenta \"vite\" \"cloudflared tunnel --url http://localhost:5173\"",
     "dev:ngrok": "cross-env TUNNEL=1 concurrently -k -n vite,ngrok -c cyan,magenta \"vite\" \"node scripts/ngrok.mjs\"",
@@ -46,6 +47,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^15.15.0",
+    "msw": "^2.15.0",
     "tailwindcss": "^4.0.0",
     "terser": "^5.44.0",
     "typescript": "^5.9.2",
