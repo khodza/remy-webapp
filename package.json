@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "dev:https": "cross-env HTTPS=true vite",
-    "dev:tunnel": "concurrently -k -n vite,tunnel -c cyan,magenta \"vite\" \"cloudflared tunnel --url http://localhost:5173\"",
+    "dev:tunnel": "cross-env TUNNEL=1 concurrently -k -n vite,tunnel -c cyan,magenta \"vite\" \"cloudflared tunnel --url http://localhost:5173\"",
+    "dev:ngrok": "cross-env TUNNEL=1 concurrently -k -n vite,ngrok -c cyan,magenta \"vite\" \"node scripts/ngrok.mjs\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "preview:ngrok": "pnpm build && concurrently -k -n preview,ngrok -c cyan,magenta \"vite preview --port 5173 --strictPort\" \"node scripts/ngrok.mjs\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "pnpm lint --fix"
@@ -31,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@ngrok/ngrok": "^1.7.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.24",

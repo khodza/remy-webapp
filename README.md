@@ -32,17 +32,34 @@ build.
    your laptop IP, e.g. `http://192.168.1.42:5173/`.
 3. Open the bot → Menu → launch the Mini App.
 
-### Prod DC real-device testing (requires tunnel)
+### Prod DC — Telegram Web, Desktop, mobile (requires tunnel)
 
 `vite-plugin-mkcert` self-signed certs are rejected by iOS/Android Telegram on
-prod DC. Use Cloudflared instead:
+prod DC, so expose the app through a tunnel. Start the backend first (`../remy`:
+MongoDB + `npm run dev:api`); Vite proxies `/api` to it, so one tunnel covers both.
 
-```bash
-pnpm dev:tunnel
-```
+**ngrok (recommended):**
 
-Copy the `https://<random>.trycloudflare.com` URL from the output and set it as
-the Mini App URL in BotFather (prod DC).
+1. One-time: put your token from
+   https://dashboard.ngrok.com/get-started/your-authtoken in `.env.local`:
+   `NGROK_AUTHTOKEN=...`. Free accounts get one static domain (dashboard →
+   Domains); set `NGROK_DOMAIN=<it>` so the URL stops changing between runs.
+2. Run one of:
+
+   | Command | Serves | Use when |
+   |---|---|---|
+   | `pnpm preview:ngrok` | production build (~140 KB gzipped) | testing in Telegram — loads in seconds even on a slow uplink |
+   | `pnpm dev:ngrok` | Vite dev server with HMR (~4.6 MB unbundled) | your upload is fast enough for live reload |
+
+3. Copy `Mini App URL` from the output into BotFather (Configure Mini App and
+   Menu Button). With `NGROK_DOMAIN` set this is a one-time step.
+4. The first open on each client shows ngrok's free-plan "You are about to
+   visit" page — tap **Visit Site** once (remembered ~7 days). In Telegram Web
+   that cookie is third-party, so use a Chromium browser or Firefox; Safari
+   blocks it.
+
+**Cloudflared (no account):** `pnpm dev:tunnel`, then set the random
+`https://<random>.trycloudflare.com` URL in BotFather on every run.
 
 ## How auth works
 
@@ -79,6 +96,8 @@ Strict alias `@/` → `src/`. All dates go through `date-fns` + `@date-fns/tz`.
 | `pnpm dev` | Vite dev server on :5173 with mock Telegram env |
 | `pnpm dev:https` | HTTPS dev via mkcert (laptop only — mobile rejects) |
 | `pnpm dev:tunnel` | Vite + cloudflared (real-device, prod DC) |
+| `pnpm dev:ngrok` | Vite + ngrok tunnel (HMR over the tunnel) |
+| `pnpm preview:ngrok` | Production build + ngrok tunnel (fast in Telegram) |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint, `--max-warnings 0` |
 | `pnpm build` | Typecheck + production build into `dist/` |

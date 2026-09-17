@@ -19,9 +19,23 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    // `.trycloudflare.com` matches any subdomain — `pnpm dev:tunnel` picks a
-    // random one each run. Add other providers here if you switch tunnels.
-    allowedHosts: ['.trycloudflare.com', '.ngrok-free.app', '.ngrok.io'],
+    // A leading dot matches any subdomain: `pnpm dev:tunnel` gets a random
+    // trycloudflare.com one each run. ngrok now gives free accounts a
+    // *.ngrok-free.dev domain (older ones got *.ngrok-free.app); paid plans
+    // use *.ngrok.app / *.ngrok.dev. Add other providers here if you switch.
+    allowedHosts: [
+      '.trycloudflare.com',
+      '.ngrok-free.dev',
+      '.ngrok-free.app',
+      '.ngrok.app',
+      '.ngrok.dev',
+      '.ngrok.io',
+    ],
+    // Vite enables this under coding agents. Its client then calls ws.send()
+    // before the HMR socket is open, so every console.error/warn throws until
+    // it connects — instant on localhost, but over a slow tunnel it broke app
+    // startup. The dev:* tunnel scripts set TUNNEL=1.
+    forwardConsole: process.env.TUNNEL ? false : undefined,
     // Forward /api/* to the local NestJS backend. With this + the frontend
     // tunnel, the Mini App can call the API same-origin (no CORS, no need
     // to tunnel the backend separately).
