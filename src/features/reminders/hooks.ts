@@ -45,7 +45,11 @@ export function useUpdateTask() {
       patch,
     }: {
       id: string;
-      patch: { description?: string; scheduledAt?: Date };
+      patch: {
+        description?: string;
+        scheduledAt?: Date;
+        recurrence?: api.Recurrence | null;
+      };
     }) => api.updateTask(id, patch),
     onSuccess: (updated) => {
       qc.setQueryData<Task>(['task', updated.id], updated);

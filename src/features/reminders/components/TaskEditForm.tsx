@@ -10,13 +10,13 @@ import {
   setSeconds,
   startOfDay,
 } from 'date-fns';
-import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
-import type { Task } from '@/shared/api';
+import { RecurrenceSchema, type Task } from '@/shared/api';
 import { useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useDeleteTask, useUpdateTask } from '../hooks';
+import { RecurrencePicker } from './RecurrencePicker';
 
 const schema = z.object({
   description: z.string().min(1, 'Required').max(4000),
@@ -24,6 +24,7 @@ const schema = z.object({
     .string()
     .min(1, 'Required')
     .refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date/time'),
+  recurrence: RecurrenceSchema.nullable(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -97,10 +98,11 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
     defaultValues: {
       description: task.description,
       scheduledAt: toLocalInputValue(task.scheduledAt),
+      recurrence: task.recurrence ?? null,
     },
   });
 
-  const values = watch();
+  const recurrence = watch('recurrence');
 
   const onSubmit = handleSubmit((data) => {
     haptic.impact('medium');
@@ -110,12 +112,13 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
         patch: {
           description: data.description,
           scheduledAt: new Date(data.scheduledAt),
+          recurrence: data.recurrence,
         },
       },
       {
         onSuccess: () => {
           haptic.notify('success');
-          navigate('/');
+          navigate('/', { replace: true });
         },
         onError: () => haptic.notify('error'),
       },
@@ -137,11 +140,6 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
     loading: update.isPending,
     onClick: () => void onSubmit(),
   });
-
-  useEffect(() => {
-    // Preview — compiler would strip if unused
-    void values;
-  }, [values]);
 
   return (
     <form
@@ -196,6 +194,23 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
         </div>
       </label>
 
+      <div className="flex flex-col gap-1">
+        <span className="font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-2)]">
+          Repeat
+        </span>
+        <RecurrencePicker
+          value={recurrence ?? null}
+          onChange={(next) => {
+            setValue('recurrence', next, {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+            haptic.selection();
+          }}
+          disabled={update.isPending}
+        />
+      </div>
+
       <button
         type="button"
         onClick={() => {
@@ -203,7 +218,7 @@ export function TaskEditForm({ task }: TaskEditFormProps) {
           remove.mutate(task.id, {
             onSuccess: () => {
               haptic.notify('success');
-              navigate('/');
+              navigate('/', { replace: true });
             },
           });
         }}

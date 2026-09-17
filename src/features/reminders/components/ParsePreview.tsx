@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
-import { Sparkles } from 'lucide-react';
+import { Repeat, Sparkles } from 'lucide-react';
 import type { ParsedTask } from '@/shared/api';
+import { recurrenceLabel } from '../lib/recurrence';
 
 interface ParsePreviewProps {
   parsed: ParsedTask | null;
@@ -35,6 +36,8 @@ export function ParsePreview({ parsed, loading, error }: ParsePreviewProps) {
 
   if (!parsed) return null;
 
+  const repeat = recurrenceLabel(parsed.recurrence);
+
   return (
     <div className="rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] p-3">
       <div className="mb-1 flex items-center gap-1.5">
@@ -46,8 +49,14 @@ export function ParsePreview({ parsed, loading, error }: ParsePreviewProps) {
       <p className="font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)]">
         {parsed.description}
       </p>
-      <p className="mt-1 font-sans text-xs tabular-nums text-[color:var(--color-accent)]">
-        {format(parsed.scheduledAt, 'EEE, MMM d · h:mm a')}
+      <p className="mt-1 flex flex-wrap items-center gap-2 font-sans text-xs tabular-nums text-[color:var(--color-accent)]">
+        <span>{format(parsed.scheduledAt, 'EEE, MMM d · h:mm a')}</span>
+        {repeat && (
+          <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[color:var(--color-accent-soft)] px-2 py-[2px] text-[11px] font-medium">
+            <Repeat size={11} />
+            {repeat}
+          </span>
+        )}
       </p>
     </div>
   );

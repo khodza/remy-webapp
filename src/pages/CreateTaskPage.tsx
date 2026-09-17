@@ -24,7 +24,7 @@ export function CreateTaskPage() {
 
         <section className="rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] p-4">
           <VoiceRecordButton
-            onCreated={() => navigate('/')}
+            onCreated={() => navigate('/', { replace: true })}
             onError={(message) => setVoiceError(message)}
           />
           {voiceError && (

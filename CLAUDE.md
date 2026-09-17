@@ -41,10 +41,12 @@ and calls `navigate(-1)` from react-router-dom directly.
 1. **Never import `@telegram-apps/telegram-ui` directly in feature code.** Use
    thin wrappers from `src/shared/ui/`. This keeps a future migration cheap.
 2. **Never use raw `fetch` in components.** All network goes through `src/shared/api/client.ts`
-   (landed in Phase 3, once the backend is ready).
+   (`apiRequest`), plus `auth.ts` / `voice.ts` for the two special cases.
 3. **Never `100vh`.** The root container uses
    `height: var(--tg-viewport-stable-height, 100dvh)` (set in `src/index.css` on `#root`).
-   Fixed bottom bars use `padding-bottom: var(--tg-safe-area-inset-bottom)`.
+   Fixed bottom bars use `padding-bottom: var(--tg-viewport-safe-area-inset-bottom)`
+   (that is the exact name `viewport.bindCssVars()` emits in SDK v3; there is
+   no `--tg-safe-area-inset-*`).
 4. **All dates use `date-fns` + `@date-fns/tz`.** Reminders live or die on
    timezone correctness — respect the user's Telegram timezone.
 5. **No localStorage/cookies for auth.** The JWT is in-memory only (Zustand store,
@@ -53,75 +55,68 @@ and calls `navigate(-1)` from react-router-dom directly.
 6. **New feature** → `src/features/<name>/` with `api.ts`, `hooks.ts`,
    `components/`, `index.ts`. Cross-feature sharing goes through `src/shared/`.
 
+## Commands
+
+```bash
+pnpm dev           # Vite dev server on :5173 with mockTelegramEnv (needs the backend, see Dev modes)
+pnpm dev:mock      # Same, but the API is mocked in-browser with MSW — no backend needed
+pnpm dev:https     # Same, via vite-plugin-mkcert (laptop only — mobile TG rejects mkcert)
+pnpm dev:tunnel    # Vite + cloudflared — real mobile-device testing on prod DC (random URL)
+pnpm dev:ngrok     # Vite + ngrok tunnel (stable URL with NGROK_DOMAIN, HMR over the tunnel)
+pnpm preview:ngrok # Production build + ngrok tunnel — fastest way to test inside Telegram
+pnpm typecheck     # tsc --noEmit
+pnpm lint          # ESLint, --max-warnings 0
+pnpm build         # tsc --noEmit && vite build → dist/
+pnpm preview       # Serve the built bundle
+```
+
+## Dev modes (outside Telegram)
+
+In a plain browser `src/app/mockEnv.ts` fakes the Telegram SDK (theme, viewport,
+initData with `hash=dev-mock-hash` and user id `VITE_MOCK_TG_USER_ID`, default
+`123456789`). What happens to API calls depends on the mode:
+
+1. **Mock API** — `pnpm dev:mock` (`VITE_MOCK_API=1`). MSW intercepts every
+   endpoint in `src/shared/api/` with in-memory fixtures from `src/mocks/`.
+   Use this for UI work; no backend, no Mongo, no OpenAI.
+2. **Real backend** — `pnpm dev`. Vite proxies `/api` to `localhost:3000`. The
+   backend rejects the mock initData unless it runs with
+   `DEV_ALLOW_MOCK_INITDATA=true` and `OWNER_TELEGRAM_ID=<VITE_MOCK_TG_USER_ID>`
+   (both dev-only; see `../remy/.env.example`).
+3. **Inside Telegram** — test DC without a tunnel, or prod DC with
+   `pnpm preview:ngrok`. See `.claude/skills/telegram-device-testing/SKILL.md`.
+
+## Backend contract
+
+See `src/shared/api/CLAUDE.md` (base URL, `/api/v1` prefix, `tma` → JWT
+exchange, 401 retry-once rule). Endpoint functions live in
+`src/shared/api/endpoints.ts`; response shapes are Zod schemas in `schemas.ts`.
+
 ## Folder layout
 
 ```
 src/
-├── app/               # SDK init, providers, router, error boundary, root
-├── features/          # Domain slices (reminders, ai, profile, settings)
-├── pages/             # Route-level compositions
+├── app/               # SDK init, providers, router, error boundary, root, mockEnv
+├── features/          # Domain slices: reminders (hooks, components, lib), profile, settings
+├── mocks/             # MSW handlers + fixtures for `pnpm dev:mock`
+├── pages/             # Route-level screens
 └── shared/
     ├── api/           # apiClient + Zod schemas + typed endpoint fns
     ├── lib/telegram/  # SDK hooks (back/main button, haptics, user, theme)
-    ├── stores/        # Zustand stores
+    ├── stores/        # Zustand (in-memory auth)
     └── ui/            # Thin wrappers over @telegram-apps/telegram-ui
 ```
 
-## Backend contract (for the API layer, post-scaffold)
+## Current screens
 
-- **Base URL**: `VITE_API_BASE_URL` (no trailing slash)
-- **Prefix**: `/api/v1` (already included in `VITE_API_BASE_URL`)
-- **Auth**: JWT exchange.
-  1. Frontend reads raw initData via `retrieveRawInitData()`.
-  2. POSTs `Authorization: tma <initDataRaw>` → `/auth/telegram`.
-  3. Backend returns `{ token, user, expiresAt }`.
-  4. All subsequent requests carry `Authorization: Bearer <jwt>`.
-  5. On 401: re-read initData, re-exchange, retry the original request **once**.
-- JWT lifetime: 15 min. Keep the token in memory; do not persist.
-
-## Commands
-
-```bash
-pnpm dev           # Vite dev server on :5173 with mockTelegramEnv
-pnpm dev:https     # Same, via vite-plugin-mkcert (laptop only — mobile TG rejects mkcert)
-pnpm dev:tunnel    # Vite + cloudflared — required for real mobile-device testing on prod DC
-pnpm typecheck     # tsc --noEmit
-pnpm lint          # ESLint strict
-pnpm build         # tsc --noEmit && vite build → dist/
-pnpm preview       # Preview the built bundle
-```
-
-## Telegram test DC vs prod DC
-
-Primary dev loop is **Telegram test DC** — no tunnel needed.
-On mobile: Settings → tap version ×10 → Accounts → Login to another → Test.
-In BotFather test DC, `http://` and bare IPs are accepted for Mini App URL.
-
-Real device testing on prod DC requires `pnpm dev:tunnel` — `vite-plugin-mkcert`
-self-signed certs are rejected by iOS/Android Telegram.
-
-## Debugging live devices
-
-- **Android WebView**: tap the Telegram version 2× to enable WebView debug, then
-  open chrome://inspect on your laptop.
-- **iOS**: open Safari Web Inspector on your Mac against the paired device.
-- **Telegram Desktop Beta**: Settings → Advanced → Experimental → enable webview
-  inspection → right-click inside Mini App → Inspect.
+`/` Home (today: overdue / later / done, snooze chips) · `/upcoming` agenda by
+day · `/create` text + voice with AI parse preview · `/tasks/:id` edit
+(description, time, repeat) · `/settings` · `/settings/timezone`.
 
 ## Design reference
 
 Full design bundle lives at `docs/design/` (HTML/CSS tokens + JSX screens for 12
-views: Today / Timeline / Triage / Detail / Create / Upcoming / Settings hub /
-Notifications / Region / Connected / Categories / Editor). Token source of
-truth: `docs/design/project/Remy.html` lines 174–207. Match it faithfully —
-light and dark palettes, soft-indigo accent, Inter + JetBrains Mono, 14/20 radii,
-64/52 row heights. Dark mode is toggled via `data-theme="dark"` on `<html>` by
-`useTheme()`.
-
-## What's NOT scaffolded yet
-
-- **API layer** — `src/shared/api/` is empty on purpose; wait for the backend HTTP
-  API to ship, then build `client.ts`, Zod schemas for `Task`/`User`, endpoint
-  functions, and the JWT-exchange auth store.
-- **Feature screens** — `src/features/*/` are empty barrels. Today/Timeline/
-  Create/Settings/etc. land feature-by-feature after the API layer.
+views). Token source of truth: `docs/design/project/Remy.html` lines 174–207.
+Dark mode is toggled via `data-theme="dark"` on `<html>` by `useTheme()`.
+The next redesign ("Time canvas", Timeline + List views) is specified in
+`../remy-plan/remy.html`; do not start it without being asked.

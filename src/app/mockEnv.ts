@@ -23,6 +23,10 @@ if (import.meta.env.DEV) {
       text_color: '#f5f5f5',
     } as const;
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
+    // Must match OWNER_TELEGRAM_ID on the backend when using its dev bypass
+    // (DEV_ALLOW_MOCK_INITDATA=true), which accepts hash=dev-mock-hash.
+    const mockUserId =
+      Number(import.meta.env.VITE_MOCK_TG_USER_ID) || 123456789;
 
     mockTelegramEnv({
       onEvent(event) {
@@ -56,7 +60,7 @@ if (import.meta.env.DEV) {
             [
               'user',
               JSON.stringify({
-                id: 1,
+                id: mockUserId,
                 first_name: 'Remy',
                 last_name: 'Dev',
                 username: 'remy_dev',

@@ -1,4 +1,4 @@
-import { Check, Loader2, Trash2 } from 'lucide-react';
+import { Check, Loader2, Repeat, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import {
   format,
@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
+  recurrenceLabel,
   useCompleteTask,
   useDeleteTask,
   useTasks,
@@ -176,6 +177,7 @@ function UpcomingRow({
   onDelete: () => void;
   onOpen: () => void;
 }) {
+  const repeat = recurrenceLabel(task.recurrence);
   return (
     <li className="flex items-center gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">
       <button
@@ -196,6 +198,12 @@ function UpcomingRow({
         <p className="truncate font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)]">
           {task.description}
         </p>
+        {repeat && (
+          <span className="mt-0.5 inline-flex items-center gap-1 font-sans text-[11px] font-medium text-[color:var(--color-text-2)]">
+            <Repeat size={11} />
+            {repeat}
+          </span>
+        )}
       </button>
 
       <span className="shrink-0 font-mono text-[12px] tabular-nums text-[color:var(--color-accent)]">

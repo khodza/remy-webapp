@@ -1,8 +1,9 @@
-import { Check, Loader2, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Check, Loader2, Plus, Repeat, Settings2, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import {
+  recurrenceLabel,
   useCompleteTask,
   useDelayTask,
   useDeleteTask,
@@ -179,7 +180,7 @@ export function HomePage() {
           }}
           aria-label="New reminder"
           className="fixed bottom-4 right-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[color:var(--color-accent-fg)] shadow-[0_6px_16px_rgba(0,0,0,0.18)] transition active:scale-95"
-          style={{ bottom: 'calc(1rem + var(--tg-safe-area-inset-bottom, 0px))' }}
+          style={{ bottom: 'calc(1rem + var(--tg-viewport-safe-area-inset-bottom, 0px))' }}
         >
           <Plus size={22} strokeWidth={2.5} />
         </button>
@@ -330,6 +331,7 @@ function TaskRow({
   onSnooze?: (minutes: number) => void;
 }) {
   const isDone = task.status === 'completed';
+  const repeat = recurrenceLabel(task.recurrence);
   return (
     <li className="flex items-start gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">
       <button
@@ -361,6 +363,12 @@ function TaskRow({
           >
             {format(task.scheduledAt, 'MMM d, h:mm a')}
           </span>
+          {repeat && (
+            <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[color:var(--color-hairline)] px-2 py-[3px] font-sans text-[11px] font-medium text-[color:var(--color-text-2)]">
+              <Repeat size={11} />
+              {repeat}
+            </span>
+          )}
           {onSnooze && (
             <>
               <SnoozeChip

@@ -40,7 +40,7 @@ export function CreateTaskForm() {
       createTask.mutate(trimmed, {
         onSuccess: () => {
           haptic.notify('success');
-          navigate('/');
+          navigate('/', { replace: true });
         },
         onError: () => {
           haptic.notify('error');

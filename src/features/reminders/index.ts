@@ -14,3 +14,5 @@ export { CreateTaskForm } from './components/CreateTaskForm';
 export { TaskEditForm } from './components/TaskEditForm';
 export { ParsePreview } from './components/ParsePreview';
 export { VoiceRecordButton } from './components/VoiceRecordButton';
+export { RecurrencePicker } from './components/RecurrencePicker';
+export { recurrenceLabel } from './lib/recurrence';

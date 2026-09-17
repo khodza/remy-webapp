@@ -4,6 +4,7 @@ import {
   initData,
   miniApp,
   setDebug,
+  swipeBehavior,
   themeParams,
   viewport,
 } from '@telegram-apps/sdk-react';
@@ -46,4 +47,17 @@ export async function init(options: InitOptions): Promise<void> {
     await viewport.mount();
     viewport.bindCssVars();
   }
+
+  // Mobile clients open Mini Apps at half height; ask for the full height so
+  // lists are not cramped until the user drags the sheet up.
+  viewport.expand.ifAvailable();
+
+  // A vertical swipe on the page can collapse/close the Mini App on iOS.
+  // Disabling it keeps scrolling inside the app.
+  swipeBehavior.mount.ifAvailable();
+  swipeBehavior.disableVertical.ifAvailable();
+
+  // Tell Telegram the app is ready so its loading placeholder goes away at
+  // first paint instead of on window load.
+  miniApp.ready.ifAvailable();
 }

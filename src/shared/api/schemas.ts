@@ -8,11 +8,27 @@ export const TaskStatusSchema = z.enum([
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
+export const RecurrenceTypeSchema = z.enum([
+  'daily',
+  'weekdays',
+  'weekly',
+  'monthly',
+  'every_n_days',
+]);
+export type RecurrenceType = z.infer<typeof RecurrenceTypeSchema>;
+
+export const RecurrenceSchema = z.object({
+  type: RecurrenceTypeSchema,
+  intervalDays: z.number().int().positive().optional(),
+});
+export type Recurrence = z.infer<typeof RecurrenceSchema>;
+
 export const TaskSchema = z.object({
   id: z.string(),
   description: z.string(),
   scheduledAt: z.coerce.date(),
   status: TaskStatusSchema,
+  recurrence: RecurrenceSchema.nullable().optional(),
   isOverdue: z.boolean().optional(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -43,6 +59,7 @@ export type AuthResult = z.infer<typeof AuthResultSchema>;
 export const ParsedTaskSchema = z.object({
   description: z.string(),
   scheduledAt: z.coerce.date(),
+  recurrence: RecurrenceSchema.nullable().optional(),
 });
 export type ParsedTask = z.infer<typeof ParsedTaskSchema>;
 

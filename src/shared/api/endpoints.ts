@@ -6,6 +6,7 @@ import {
   TaskSchema,
   UserSchema,
   type ParsedTask,
+  type Recurrence,
   type Task,
   type User,
 } from './schemas';
@@ -41,7 +42,11 @@ export async function createTask(text: string): Promise<Task> {
 
 export async function updateTask(
   id: string,
-  patch: { description?: string; scheduledAt?: Date | string },
+  patch: {
+    description?: string;
+    scheduledAt?: Date | string;
+    recurrence?: Recurrence | null;
+  },
 ): Promise<Task> {
   const body: Record<string, unknown> = {};
   if (patch.description !== undefined) body['description'] = patch.description;
@@ -51,6 +56,7 @@ export async function updateTask(
         ? patch.scheduledAt.toISOString()
         : patch.scheduledAt;
   }
+  if (patch.recurrence !== undefined) body['recurrence'] = patch.recurrence;
   const data = await apiRequest<unknown>('PATCH', `/tasks/${id}`, { body });
   return TaskSchema.parse(data);
 }
