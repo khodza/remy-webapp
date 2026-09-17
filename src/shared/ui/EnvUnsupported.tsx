@@ -2,6 +2,7 @@ import { AppRoot, Placeholder } from '@telegram-apps/telegram-ui';
 import {
   isColorDark,
   isRGB,
+  isTMA,
   retrieveLaunchParams,
 } from '@telegram-apps/sdk-react';
 import { useMemo } from 'react';
@@ -10,17 +11,29 @@ interface EnvUnsupportedProps {
   error?: string;
 }
 
+/**
+ * Rendered when bootstrap throws. Outside Telegram that means "open it from
+ * the bot"; inside Telegram it is a real startup failure and the user needs
+ * a way to retry, not advice they are already following (F10).
+ */
 export function EnvUnsupported({ error }: EnvUnsupportedProps) {
-  const [platform, isDark] = useMemo(() => {
+  const [platform, isDark, insideTelegram] = useMemo(() => {
+    let inside = false;
+    try {
+      inside = isTMA();
+    } catch {
+      inside = false;
+    }
     try {
       const lp = retrieveLaunchParams();
       const bgColor = lp.tgWebAppThemeParams?.bg_color;
       return [
         lp.tgWebAppPlatform,
         bgColor && isRGB(bgColor) ? isColorDark(bgColor) : false,
+        inside,
       ] as const;
     } catch {
-      return ['android', false] as const;
+      return ['android', false, inside] as const;
     }
   }, []);
 
@@ -31,10 +44,34 @@ export function EnvUnsupported({ error }: EnvUnsupportedProps) {
       appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(platform) ? 'ios' : 'base'}
     >
-      <Placeholder
-        header="Open in Telegram"
-        description="Remy runs inside Telegram. Open it from the Remy bot to continue."
-      />
+      {insideTelegram ? (
+        <Placeholder
+          header="Something went wrong starting Remy"
+          description="Please try again. If it keeps happening, close the app and reopen it from the bot."
+          action={
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              style={{
+                minHeight: 44,
+                padding: '0 20px',
+                borderRadius: 12,
+                border: 0,
+                background: 'var(--tg-theme-button-color, #5B5BD6)',
+                color: 'var(--tg-theme-button-text-color, #fff)',
+                font: '600 15px system-ui, sans-serif',
+              }}
+            >
+              Try again
+            </button>
+          }
+        />
+      ) : (
+        <Placeholder
+          header="Open in Telegram"
+          description="Remy runs inside Telegram. Open it from the Remy bot to continue."
+        />
+      )}
       {showError && (
         <pre
           style={{

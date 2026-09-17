@@ -49,8 +49,10 @@ export async function apiRequest<T>(
   const response = await tryFetch(method, path, options, token);
 
   if (response.status === 401) {
-    // Token invalid/expired — re-exchange once and retry
-    useAuthStore.getState().clear();
+    // Token invalid/expired — re-exchange once and retry. If another request
+    // already replaced the token while this one was in flight, reuse it.
+    const store = useAuthStore.getState();
+    if (store.token === token) store.clear();
     const fresh = await useAuthStore.getState().authenticate();
     const retry = await tryFetch(method, path, options, fresh);
     return parseResponse<T>(retry);

@@ -1,5 +1,6 @@
 export {
   tasksKey,
+  taskKey,
   useTasks,
   useTask,
   useCreateTask,

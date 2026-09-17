@@ -33,6 +33,11 @@ export async function listTasks(params?: {
   return TaskListSchema.parse(data).tasks;
 }
 
+export async function getTask(id: string): Promise<Task> {
+  const data = await apiRequest<unknown>('GET', `/tasks/${id}`);
+  return TaskSchema.parse(data);
+}
+
 export async function createTask(text: string): Promise<Task> {
   const data = await apiRequest<unknown>('POST', '/tasks', {
     body: { text },

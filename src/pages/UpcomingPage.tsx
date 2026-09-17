@@ -62,8 +62,8 @@ function labelForDay(date: Date, tz: string): string {
 export function UpcomingPage() {
   const navigate = useNavigate();
   const tasksQuery = useTasks({ includeCompleted: true });
-  const complete = useCompleteTask({ includeCompleted: true });
-  const remove = useDeleteTask({ includeCompleted: true });
+  const complete = useCompleteTask();
+  const remove = useDeleteTask();
   const haptic = useHapticFeedback();
   const tz = useUserTimezone();
 

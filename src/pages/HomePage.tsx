@@ -45,9 +45,9 @@ export function HomePage() {
   const user = useTelegramUser();
   const tz = useUserTimezone();
   const tasksQuery = useTasks(VARS);
-  const complete = useCompleteTask(VARS);
-  const remove = useDeleteTask(VARS);
-  const delay = useDelayTask(VARS);
+  const complete = useCompleteTask();
+  const remove = useDeleteTask();
+  const delay = useDelayTask();
   const haptic = useHapticFeedback();
   const [showCompleted, setShowCompleted] = useState(false);
 
