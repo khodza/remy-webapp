@@ -115,11 +115,22 @@ export function atTimeInTz(
   );
 }
 
-/** When the reminder actually fires: a snooze overrides the series time. */
-export function fireAt(
-  task: Pick<Task, 'scheduledAt'> & Partial<Pick<Task, 'nextFireAt'>>,
-): Date {
+/**
+ * When the reminder actually fires: a snooze overrides the series time.
+ * Null for todos (no time at all).
+ */
+export function fireAt(task: Pick<Task, 'scheduledAt' | 'nextFireAt'>): Date | null {
   return task.nextFireAt ?? task.scheduledAt;
+}
+
+/** Sort key: earliest fire time first, todos (no time) last. */
+export function compareByFireAt(
+  a: Pick<Task, 'scheduledAt' | 'nextFireAt'>,
+  b: Pick<Task, 'scheduledAt' | 'nextFireAt'>,
+): number {
+  const at = fireAt(a)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const bt = fireAt(b)?.getTime() ?? Number.POSITIVE_INFINITY;
+  return at - bt;
 }
 
 /** "HH:mm" */

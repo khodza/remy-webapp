@@ -6,24 +6,38 @@ import {
   type QueryKey,
 } from '@tanstack/react-query';
 import * as api from '@/shared/api';
-import type { Task } from '@/shared/api';
+import type { Task, TaskView } from '@/shared/api';
 
 export interface TasksQueryVars {
+  /** Server-side view; omitted = "all". */
+  view?: TaskView;
   includeCompleted?: boolean;
+  limit?: number;
 }
 
 export function tasksKey(vars: TasksQueryVars = {}): QueryKey {
-  return ['tasks', { includeCompleted: vars.includeCompleted ?? false }];
+  return [
+    'tasks',
+    {
+      view: vars.view ?? 'all',
+      includeCompleted: vars.includeCompleted ?? false,
+      limit: vars.limit ?? null,
+    },
+  ];
 }
 
 export function taskKey(id: string): QueryKey {
   return ['task', id];
 }
 
-export function useTasks(vars: TasksQueryVars = {}) {
+export function useTasks(
+  vars: TasksQueryVars = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: tasksKey(vars),
     queryFn: () => api.listTasks(vars),
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -42,7 +56,7 @@ function findCachedTask(
   return best;
 }
 
-/** Apply `fn` to every cached task list (any includeCompleted variant). */
+/** Apply `fn` to every cached task list (any view / variant). */
 function patchLists(qc: QueryClient, fn: (list: Task[]) => Task[]): void {
   for (const [key, list] of qc.getQueriesData<Task[]>({ queryKey: ['tasks'] })) {
     if (list) qc.setQueryData<Task[]>(key, fn(list));
@@ -60,16 +74,14 @@ function restoreLists(
   for (const [key, list] of snapshot) qc.setQueryData<Task[]>(key, list);
 }
 
-/** Write one task into the detail cache and every list that contains it. */
+/**
+ * Write one task into the detail cache and every list that contains it.
+ * Lists are per-view, so membership may be stale until the invalidation
+ * that always follows refetches them.
+ */
 function syncTask(qc: QueryClient, updated: Task): void {
-  qc.setQueryData<Task>(taskKey(updated.id), (old) =>
-    old ? { ...old, ...updated } : updated,
-  );
-  patchLists(qc, (list) =>
-    list.map((t) =>
-      t.id === updated.id ? { ...t, ...updated, isOverdue: t.isOverdue } : t,
-    ),
-  );
+  qc.setQueryData<Task>(taskKey(updated.id), updated);
+  patchLists(qc, (list) => list.map((t) => (t.id === updated.id ? updated : t)));
 }
 
 function invalidateTask(qc: QueryClient, id?: string): void {
@@ -101,17 +113,8 @@ export function useTask(id: string | undefined) {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      id,
-      patch,
-    }: {
-      id: string;
-      patch: {
-        description?: string;
-        scheduledAt?: Date;
-        recurrence?: api.Recurrence | null;
-      };
-    }) => api.updateTask(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: api.TaskPatch }) =>
+      api.updateTask(id, patch),
     onSuccess: (updated) => {
       syncTask(qc, updated);
       invalidateTask(qc, updated.id);
@@ -123,6 +126,16 @@ export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (text: string) => api.createTask(text),
+    onSuccess: () => invalidateTask(qc),
+  });
+}
+
+/** Already-reviewed fields (Phase 5's token-based Create uses this). */
+export function useCreateTaskStructured() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: api.StructuredTaskInput) =>
+      api.createTaskStructured(input),
     onSuccess: () => invalidateTask(qc),
   });
 }
@@ -144,9 +157,11 @@ export function useCompleteTask() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: ['tasks'] });
       const prev = snapshotLists(qc);
+      // Recurring tasks advance instead of completing, so only one-shots are
+      // optimistically struck through; the response settles the rest.
       patchLists(qc, (list) =>
         list.map((task) =>
-          task.id === id
+          task.id === id && !task.recurrence
             ? { ...task, status: 'completed', isOverdue: false }
             : task,
         ),
@@ -156,8 +171,19 @@ export function useCompleteTask() {
     onError: (_err, _id, context) => {
       if (context?.prev) restoreLists(qc, context.prev);
     },
-    onSuccess: (updated) => syncTask(qc, { ...updated, isOverdue: false }),
+    onSuccess: (updated) => syncTask(qc, updated),
     onSettled: (_data, _err, id) => invalidateTask(qc, id),
+  });
+}
+
+export function useReopenTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.reopenTask(id),
+    onSuccess: (updated) => {
+      syncTask(qc, updated);
+      invalidateTask(qc, updated.id);
+    },
   });
 }
 
@@ -167,8 +193,20 @@ export function useDelayTask() {
     mutationFn: ({ id, minutes }: { id: string; minutes: number }) =>
       api.delayTask(id, minutes),
     onSuccess: (updated) => {
-      // A snoozed task is no longer overdue until its new time.
-      syncTask(qc, { ...updated, isOverdue: false });
+      syncTask(qc, updated);
+      invalidateTask(qc, updated.id);
+    },
+  });
+}
+
+/** Absolute snooze: "Tonight 20:00", "Tomorrow 09:00". */
+export function useSnoozeTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, until }: { id: string; until: Date }) =>
+      api.snoozeTask(id, until),
+    onSuccess: (updated) => {
+      syncTask(qc, updated);
       invalidateTask(qc, updated.id);
     },
   });

@@ -1,74 +1,62 @@
-import { z } from 'zod';
+/**
+ * Thin naming layer over the generated HTTP contract. Nothing is defined
+ * here: every shape comes from `contract.gen.ts`, which is a verbatim copy
+ * of the backend's `src/contract/remy-contract.ts` (see ./CLAUDE.md).
+ * Responses are parsed with `client.*` (ISO strings coerced to Date).
+ */
+import { client } from './contract.gen';
 
-export const TaskStatusSchema = z.enum([
-  'pending',
-  'completed',
-  'overdue',
-  'deleted',
-]);
-export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+export const TaskSchema = client.Task;
+export const TaskListSchema = client.TaskList;
+export const UserSchema = client.User;
+export const AuthResultSchema = client.AuthResult;
+export const ParsedTaskSchema = client.ParsedTask;
 
-export const RecurrenceTypeSchema = z.enum([
-  'daily',
-  'weekdays',
-  'weekly',
-  'monthly',
-  'every_n_days',
-]);
-export type RecurrenceType = z.infer<typeof RecurrenceTypeSchema>;
+export {
+  CONTRACT_VERSION,
+  DEFAULT_SETTINGS,
+  Category as CategorySchema,
+  CategoryList as CategoryListSchema,
+  CreateCategoryRequest as CreateCategoryRequestSchema,
+  CreateTaskFromTextRequest as CreateTaskFromTextRequestSchema,
+  CreateTaskStructuredRequest as CreateTaskStructuredRequestSchema,
+  DelayTaskRequest as DelayTaskRequestSchema,
+  DeleteResult as DeleteResultSchema,
+  ListTasksQuery as ListTasksQuerySchema,
+  ParseTextRequest as ParseTextRequestSchema,
+  Priority as PrioritySchema,
+  Recurrence as RecurrenceSchema,
+  RecurrenceType as RecurrenceTypeSchema,
+  Settings as SettingsSchema,
+  SnoozeTaskRequest as SnoozeTaskRequestSchema,
+  TaskStatus as TaskStatusSchema,
+  UpdateCategoryRequest as UpdateCategoryRequestSchema,
+  UpdateSettingsRequest as UpdateSettingsRequestSchema,
+  UpdateTaskRequest as UpdateTaskRequestSchema,
+  UpdateTimezoneRequest as UpdateTimezoneRequestSchema,
+  endpoints,
+} from './contract.gen';
 
-export const RecurrenceSchema = z.object({
-  type: RecurrenceTypeSchema,
-  intervalDays: z.number().int().positive().optional(),
-});
-export type Recurrence = z.infer<typeof RecurrenceSchema>;
-
-export const TaskSchema = z.object({
-  id: z.string(),
-  description: z.string(),
-  scheduledAt: z.coerce.date(),
-  status: TaskStatusSchema,
-  recurrence: RecurrenceSchema.nullable().optional(),
-  /** IANA zone the task was created in (older backends omit it). */
-  timezone: z.string().optional(),
-  /** Set when a recurring task was delayed; the series time stays put. */
-  snoozedUntil: z.coerce.date().nullable().optional(),
-  /** When the reminder actually fires: snoozedUntil ?? scheduledAt. */
-  nextFireAt: z.coerce.date().optional(),
-  isOverdue: z.boolean().optional(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-export type Task = z.infer<typeof TaskSchema>;
-
-export const TaskListSchema = z.object({
-  tasks: z.array(TaskSchema),
-});
-
-export const UserSchema = z.object({
-  id: z.string(),
-  telegramUserId: z.number(),
-  firstName: z.string(),
-  lastName: z.string().nullable(),
-  username: z.string().nullable(),
-  timezone: z.string().nullable(),
-});
-export type User = z.infer<typeof UserSchema>;
-
-export const AuthResultSchema = z.object({
-  token: z.string(),
-  expiresAt: z.coerce.date(),
-  user: UserSchema,
-});
-export type AuthResult = z.infer<typeof AuthResultSchema>;
-
-export const ParsedTaskSchema = z.object({
-  description: z.string(),
-  scheduledAt: z.coerce.date(),
-  recurrence: RecurrenceSchema.nullable().optional(),
-});
-export type ParsedTask = z.infer<typeof ParsedTaskSchema>;
-
-export const DeleteResultSchema = z.object({
-  success: z.boolean(),
-});
+export type {
+  AuthResult,
+  Category,
+  CreateCategoryRequest,
+  CreateTaskStructuredRequest,
+  DefaultView,
+  DeleteResult,
+  ParsedTask,
+  Priority,
+  Recurrence,
+  RecurrenceType,
+  Settings,
+  SourceType,
+  Task,
+  TaskKind,
+  TaskSource,
+  TaskStatus,
+  TaskView,
+  UpdateCategoryRequest,
+  UpdateSettingsRequest,
+  UpdateTaskRequest,
+  User,
+} from './contract.gen';
