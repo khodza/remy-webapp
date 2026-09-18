@@ -1,8 +1,37 @@
 import { HttpResponse, delay, http } from 'msw';
-import { addDays, addMinutes, setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
-import type { Recurrence } from '@/shared/api';
+import { TZDate } from '@date-fns/tz';
 import {
+  addDays,
+  addMinutes,
+  endOfDay,
+  setHours,
+  setMinutes,
+  setSeconds,
+  startOfDay,
+} from 'date-fns';
+import type { Category, Recurrence, Settings } from '@/shared/api';
+import {
+  CategoryListSchema,
+  CategorySchema,
+  CreateCategoryRequestSchema,
+  CreateTaskFromTextRequestSchema,
+  CreateTaskStructuredRequestSchema,
+  DelayTaskRequestSchema,
+  ListTasksQuerySchema,
+  ParseTextRequestSchema,
+  SettingsSchema,
+  SnoozeTaskRequestSchema,
+  UpdateCategoryRequestSchema,
+  UpdateSettingsRequestSchema,
+  UpdateTaskRequestSchema,
+} from '@/shared/api';
+import { wire } from '@/shared/api/contract.gen';
+import { mergeSettings } from '@/features/settings/hooks';
+import {
+  buildCategories,
   buildFixtures,
+  buildSettings,
+  makeTask,
   mockUser,
   newId,
   nextFireAt,
@@ -10,10 +39,10 @@ import {
 } from './fixtures';
 
 /**
- * MSW handlers for every endpoint in src/shared/api. Response shapes mirror
- * the backend DTOs (see src/shared/api/schemas.ts): ISO strings for dates,
- * `isOverdue` only on list items, `{ tasks }` for the list, `{ success }` on
- * delete, `{ token, expiresAt, user }` on auth.
+ * MSW handlers for every endpoint of the contract. Requests are validated
+ * with the contract's request schemas and every response is run through the
+ * `wire.*` / response schema before it leaves, so the mocks cannot drift from
+ * what the real backend is allowed to send.
  */
 
 const API = '*/api/v1';
@@ -21,25 +50,41 @@ const LATENCY_MS = 250;
 
 let tasks: MockTask[] = buildFixtures();
 let user = { ...mockUser };
+let settings: Settings = buildSettings();
+let categories: Category[] = buildCategories();
 
-function toDto(task: MockTask, withOverdue = false) {
+function isOverdue(task: MockTask): boolean {
   const fire = nextFireAt(task);
-  const dto: Record<string, unknown> = {
+  return task.status === 'pending' && fire !== null && fire.getTime() < Date.now();
+}
+
+function toDto(task: MockTask) {
+  const fire = nextFireAt(task);
+  return wire.Task.parse({
     id: task.id,
     description: task.description,
-    scheduledAt: task.scheduledAt.toISOString(),
-    status: task.status,
-    recurrence: task.recurrence,
+    notes: task.notes,
+    kind: task.scheduledAt === null ? 'todo' : 'reminder',
+    scheduledAt: task.scheduledAt ? task.scheduledAt.toISOString() : null,
     timezone: task.timezone,
     snoozedUntil: task.snoozedUntil ? task.snoozedUntil.toISOString() : null,
-    nextFireAt: fire.toISOString(),
+    nextFireAt: fire ? fire.toISOString() : null,
+    leadMinutes: task.leadMinutes,
+    status: task.status,
+    priority: task.priority,
+    categoryId: task.categoryId,
+    recurrence: task.recurrence,
+    source: task.source,
+    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+    completionsCount: task.completionsCount,
+    isOverdue: isOverdue(task),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
-  };
-  if (withOverdue) {
-    dto['isOverdue'] = task.status === 'pending' && fire.getTime() < Date.now();
-  }
-  return dto;
+  });
+}
+
+function taskResponse(task: MockTask, status = 200) {
+  return HttpResponse.json(toDto(task), { status });
 }
 
 function isValidObjectId(id: string | undefined): id is string {
@@ -50,14 +95,37 @@ function error(status: number, code: string, message: string) {
   return HttpResponse.json({ statusCode: status, error: code, message }, { status });
 }
 
+function badRequest(message: string) {
+  return error(400, 'BAD_REQUEST', message);
+}
+
+function paramId(id: string | readonly string[] | undefined): string | undefined {
+  return Array.isArray(id) ? id[0] : (id as string | undefined);
+}
+
 function find(id: string | readonly string[] | undefined): MockTask | undefined {
-  const key = Array.isArray(id) ? id[0] : id;
+  const key = paramId(id);
   return tasks.find((t) => t.id === key && t.status !== 'deleted');
 }
 
 function touch(task: MockTask): MockTask {
   task.updatedAt = new Date();
   return task;
+}
+
+/** End of "today" on the user's calendar, as an absolute instant. */
+function endOfTodayInUserTz(): number {
+  return endOfDay(new TZDate(Date.now(), user.timezone ?? 'UTC')).getTime();
+}
+
+function startOfTodayInUserTz(): number {
+  return startOfDay(new TZDate(Date.now(), user.timezone ?? 'UTC')).getTime();
+}
+
+function byFireAt(a: MockTask, b: MockTask): number {
+  const at = nextFireAt(a)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const bt = nextFireAt(b)?.getTime() ?? Number.POSITIVE_INFINITY;
+  return at - bt;
 }
 
 /** Tiny stand-in for the AI parser: "tomorrow" → tomorrow 09:00, else +1h. */
@@ -84,144 +152,304 @@ function fakeParse(text: string): {
   return { description: description || text.trim(), scheduledAt, recurrence };
 }
 
+/** Same keyword matching idea as the backend's category suggestion. */
+function suggestCategory(text: string): string | null {
+  const lower = text.toLowerCase();
+  return (
+    categories.find((c) => c.keywords.some((k) => lower.includes(k.toLowerCase())))
+      ?.id ?? null
+  );
+}
+
 export const handlers = [
+  // ---------------------------------------------------------------- auth ---
   http.post(`${API}/auth/telegram`, async ({ request }) => {
     await delay(LATENCY_MS);
     const auth = request.headers.get('authorization') ?? '';
     if (!auth.startsWith('tma ')) {
       return error(401, 'UNAUTHORIZED', 'Missing tma initData');
     }
-    return HttpResponse.json({
-      token: 'mock-jwt-token',
-      expiresAt: addMinutes(new Date(), 15).toISOString(),
-      user,
-    });
+    return HttpResponse.json(
+      wire.AuthResult.parse({
+        token: 'mock-jwt-token',
+        expiresAt: addMinutes(new Date(), 15).toISOString(),
+        user,
+      }),
+    );
   }),
 
   http.get(`${API}/user/me`, async () => {
     await delay(LATENCY_MS);
-    return HttpResponse.json(user);
+    return HttpResponse.json(wire.User.parse(user));
   }),
 
   http.patch(`${API}/user/timezone`, async ({ request }) => {
     await delay(LATENCY_MS);
     const body = (await request.json()) as { timezone?: string };
-    if (!body.timezone) return error(400, 'BAD_REQUEST', 'timezone is required');
+    if (!body.timezone) return badRequest('timezone is required');
     user = { ...user, timezone: body.timezone };
-    return HttpResponse.json(user);
+    return HttpResponse.json(wire.User.parse(user));
   }),
 
+  // ------------------------------------------------------------ settings ---
+  http.get(`${API}/settings`, async () => {
+    await delay(LATENCY_MS);
+    return HttpResponse.json(SettingsSchema.parse(settings));
+  }),
+
+  http.patch(`${API}/settings`, async ({ request }) => {
+    await delay(LATENCY_MS);
+    const parsed = UpdateSettingsRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'Invalid settings');
+    settings = mergeSettings(settings, parsed.data);
+    return HttpResponse.json(SettingsSchema.parse(settings));
+  }),
+
+  // ---------------------------------------------------------- categories ---
+  http.get(`${API}/categories`, async () => {
+    await delay(LATENCY_MS);
+    return HttpResponse.json(CategoryListSchema.parse({ categories }));
+  }),
+
+  http.post(`${API}/categories`, async ({ request }) => {
+    await delay(LATENCY_MS);
+    const parsed = CreateCategoryRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'Invalid category');
+    const category: Category = { id: newId(), ...parsed.data };
+    categories = [...categories, category];
+    return HttpResponse.json(CategorySchema.parse(category), { status: 201 });
+  }),
+
+  http.patch(`${API}/categories/:id`, async ({ params, request }) => {
+    await delay(LATENCY_MS);
+    const id = paramId(params['id']);
+    const existing = categories.find((c) => c.id === id);
+    if (!existing) return error(404, 'NOT_FOUND', 'Category not found');
+    const parsed = UpdateCategoryRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'Invalid category');
+    const patch = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, v]) => v !== undefined),
+    );
+    const updated: Category = { ...existing, ...patch };
+    categories = categories.map((c) => (c.id === id ? updated : c));
+    return HttpResponse.json(CategorySchema.parse(updated));
+  }),
+
+  http.delete(`${API}/categories/:id`, async ({ params }) => {
+    await delay(LATENCY_MS);
+    const id = paramId(params['id']);
+    if (!categories.some((c) => c.id === id)) {
+      return error(404, 'NOT_FOUND', 'Category not found');
+    }
+    categories = categories.filter((c) => c.id !== id);
+    for (const task of tasks) if (task.categoryId === id) task.categoryId = null;
+    return HttpResponse.json({ success: true });
+  }),
+
+  // --------------------------------------------------------------- tasks ---
   http.get(`${API}/tasks`, async ({ request }) => {
     await delay(LATENCY_MS);
-    const includeCompleted =
-      new URL(request.url).searchParams.get('includeCompleted') === 'true';
-    const list = tasks
-      .filter((t) => t.status !== 'deleted')
-      .filter((t) => includeCompleted || t.status !== 'completed')
-      .sort((a, b) => nextFireAt(a).getTime() - nextFireAt(b).getTime());
-    return HttpResponse.json({ tasks: list.map((t) => toDto(t, true)) });
+    const params = Object.fromEntries(new URL(request.url).searchParams);
+    const query = ListTasksQuerySchema.safeParse(params);
+    if (!query.success) return badRequest(query.error.issues[0]?.message ?? 'Invalid query');
+    const { view = 'all', includeCompleted, limit } = query.data;
+
+    const alive = tasks.filter((t) => t.status !== 'deleted');
+    const endToday = endOfTodayInUserTz();
+    const startToday = startOfTodayInUserTz();
+    let list: MockTask[];
+    switch (view) {
+      case 'today':
+        list = alive
+          .filter((t) => {
+            const fire = nextFireAt(t);
+            if (t.status === 'pending') return fire !== null && fire.getTime() <= endToday;
+            return (
+              t.status === 'completed' &&
+              t.completedAt !== null &&
+              t.completedAt.getTime() >= startToday
+            );
+          })
+          .sort(byFireAt);
+        break;
+      case 'upcoming':
+        list = alive
+          .filter((t) => {
+            const fire = nextFireAt(t);
+            return t.status === 'pending' && fire !== null && fire.getTime() > endToday;
+          })
+          .sort(byFireAt);
+        break;
+      case 'inbox':
+        list = alive
+          .filter((t) => t.status === 'pending' && t.scheduledAt === null)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        break;
+      case 'done':
+        list = alive
+          .filter((t) => t.status === 'completed')
+          .sort(
+            (a, b) =>
+              (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0),
+          )
+          .slice(0, limit ?? 50);
+        break;
+      default:
+        list = alive
+          .filter((t) => includeCompleted === 'true' || t.status !== 'completed')
+          .sort(byFireAt);
+    }
+    return HttpResponse.json(wire.TaskList.parse({ tasks: list.map(toDto) }));
   }),
 
   http.get(`${API}/tasks/:id`, async ({ params }) => {
     await delay(LATENCY_MS);
-    const id = Array.isArray(params['id']) ? params['id'][0] : params['id'];
+    const id = paramId(params['id']);
     if (!isValidObjectId(id)) {
-      return error(400, 'BAD_REQUEST', 'Validation failed (ObjectId is expected)');
+      return badRequest('Validation failed (ObjectId is expected)');
     }
     const task = find(id);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
-    return HttpResponse.json(toDto(task, true));
+    return taskResponse(task);
   }),
 
   http.post(`${API}/tasks`, async ({ request }) => {
     await delay(LATENCY_MS * 2);
-    const body = (await request.json()) as { text?: string };
-    const text = body.text?.trim();
-    if (!text) return error(400, 'BAD_REQUEST', 'text is required');
-    const parsed = fakeParse(text);
-    const now = new Date();
-    const task: MockTask = {
-      id: newId(),
-      description: parsed.description,
-      scheduledAt: parsed.scheduledAt,
-      status: 'pending',
+    const body = CreateTaskFromTextRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('text is required');
+    const parsed = fakeParse(body.data.text);
+    const task = makeTask(parsed.description, parsed.scheduledAt, {
+      ageDays: 0,
       recurrence: parsed.recurrence,
-      timezone: user.timezone ?? 'UTC',
-      snoozedUntil: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+      categoryId: suggestCategory(parsed.description),
+      source: { type: 'miniapp', originalText: body.data.text },
+    });
+    task.timezone = user.timezone ?? 'UTC';
     tasks = [...tasks, task];
-    return HttpResponse.json(toDto(task), { status: 201 });
+    return taskResponse(task, 201);
+  }),
+
+  http.post(`${API}/tasks/structured`, async ({ request }) => {
+    await delay(LATENCY_MS);
+    const body = CreateTaskStructuredRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest(body.error.issues[0]?.message ?? 'Invalid task');
+    const d = body.data;
+    const task = makeTask(d.description, d.scheduledAt ? new Date(d.scheduledAt) : null, {
+      ageDays: 0,
+      notes: d.notes ?? null,
+      recurrence: d.recurrence ?? null,
+      priority: d.priority ?? 'normal',
+      categoryId: d.categoryId ?? null,
+      leadMinutes: d.leadMinutes ?? null,
+      source: { type: 'miniapp', originalText: d.originalText ?? null },
+    });
+    task.timezone = user.timezone ?? 'UTC';
+    tasks = [...tasks, task];
+    return taskResponse(task, 201);
   }),
 
   http.post(`${API}/tasks/voice`, async () => {
     await delay(LATENCY_MS * 4);
-    const now = new Date();
-    const task: MockTask = {
-      id: newId(),
-      description: 'Voice memo (mock transcription)',
-      scheduledAt: addMinutes(now, 60),
-      status: 'pending',
-      recurrence: null,
-      timezone: user.timezone ?? 'UTC',
-      snoozedUntil: null,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const task = makeTask('Voice memo (mock transcription)', addMinutes(new Date(), 60), {
+      ageDays: 0,
+      source: { type: 'voice', originalText: 'voice memo, mock transcription' },
+    });
+    task.timezone = user.timezone ?? 'UTC';
     tasks = [...tasks, task];
-    return HttpResponse.json(toDto(task), { status: 201 });
+    return taskResponse(task, 201);
   }),
 
   http.patch(`${API}/tasks/:id`, async ({ params, request }) => {
     await delay(LATENCY_MS);
     const task = find(params['id']);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
-    const body = (await request.json()) as {
-      description?: string;
-      scheduledAt?: string;
-      recurrence?: Recurrence | null;
-    };
+    if (task.status !== 'pending') return badRequest('Only pending tasks can be edited');
+    const parsed = UpdateTaskRequestSchema.safeParse(await request.json());
+    if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'Invalid patch');
+    const body = parsed.data;
     if (body.description !== undefined) task.description = body.description;
-    if (body.scheduledAt !== undefined) {
-      task.scheduledAt = new Date(body.scheduledAt);
-      task.snoozedUntil = null; // an explicit reschedule replaces any snooze
-    }
+    if (body.notes !== undefined) task.notes = body.notes;
+    if (body.priority !== undefined) task.priority = body.priority;
+    if (body.categoryId !== undefined) task.categoryId = body.categoryId;
+    if (body.leadMinutes !== undefined) task.leadMinutes = body.leadMinutes;
     if (body.recurrence !== undefined) task.recurrence = body.recurrence;
-    return HttpResponse.json(toDto(touch(task)));
+    if (body.scheduledAt !== undefined) {
+      task.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
+      task.snoozedUntil = null; // an explicit reschedule replaces any snooze
+      if (task.scheduledAt === null) {
+        // A todo has no series and nothing to be reminded before.
+        task.recurrence = null;
+        task.leadMinutes = null;
+      }
+    }
+    if (task.recurrence && task.scheduledAt === null) {
+      return badRequest('A recurring task needs a scheduledAt');
+    }
+    return taskResponse(touch(task));
   }),
 
   http.post(`${API}/tasks/:id/complete`, async ({ params }) => {
     await delay(LATENCY_MS);
     const task = find(params['id']);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
-    if (task.recurrence) {
+    if (task.recurrence && task.scheduledAt) {
       // Recurring tasks advance one day (mock approximation) and clear snooze.
       task.scheduledAt = addDays(task.scheduledAt, 1);
       task.snoozedUntil = null;
+      task.completionsCount += 1;
     } else {
       task.status = 'completed';
+      task.completedAt = new Date();
     }
-    return HttpResponse.json(toDto(touch(task)));
+    return taskResponse(touch(task));
+  }),
+
+  http.post(`${API}/tasks/:id/reopen`, async ({ params }) => {
+    await delay(LATENCY_MS);
+    const task = find(params['id']);
+    if (!task) return error(404, 'NOT_FOUND', 'Task not found');
+    if (task.status !== 'completed') return badRequest('Only completed tasks can be reopened');
+    task.status = 'pending';
+    task.completedAt = null;
+    return taskResponse(touch(task));
   }),
 
   http.post(`${API}/tasks/:id/delay`, async ({ params, request }) => {
     await delay(LATENCY_MS);
     const task = find(params['id']);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
-    const body = (await request.json()) as { minutes?: number };
-    const minutes = Number(body.minutes);
-    if (!Number.isInteger(minutes) || minutes < 1) {
-      return error(400, 'BAD_REQUEST', 'minutes must be a positive integer');
+    const body = DelayTaskRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('minutes must be a positive integer');
+    const fire = nextFireAt(task);
+    if (task.status !== 'pending' || fire === null) {
+      return badRequest('Only pending reminders can be delayed');
     }
     // Same rule as the backend: overdue tasks snooze from now, others from
     // their (current) fire time. A recurring task keeps its series time and
     // gets a one-off snoozedUntil instead.
-    const base = Math.max(nextFireAt(task).getTime(), Date.now());
-    const until = addMinutes(new Date(base), minutes);
+    const until = addMinutes(new Date(Math.max(fire.getTime(), Date.now())), body.data.minutes);
     if (task.recurrence) task.snoozedUntil = until;
     else task.scheduledAt = until;
-    return HttpResponse.json(toDto(touch(task)));
+    return taskResponse(touch(task));
+  }),
+
+  http.post(`${API}/tasks/:id/snooze`, async ({ params, request }) => {
+    await delay(LATENCY_MS);
+    const task = find(params['id']);
+    if (!task) return error(404, 'NOT_FOUND', 'Task not found');
+    const body = SnoozeTaskRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('until must be an ISO datetime');
+    if (task.status !== 'pending' || task.scheduledAt === null) {
+      return badRequest('Only pending reminders can be snoozed');
+    }
+    const until = new Date(body.data.until);
+    if (until.getTime() <= Date.now()) return badRequest('until must be in the future');
+    if (task.recurrence) task.snoozedUntil = until;
+    else {
+      task.scheduledAt = until;
+      task.snoozedUntil = null;
+    }
+    return taskResponse(touch(task));
   }),
 
   http.delete(`${API}/tasks/:id`, async ({ params }) => {
@@ -233,16 +461,18 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
+  // ------------------------------------------------------------------ ai ---
   http.post(`${API}/ai/parse`, async ({ request }) => {
     await delay(LATENCY_MS * 2);
-    const body = (await request.json()) as { text?: string };
-    const text = body.text?.trim();
-    if (!text) return error(400, 'BAD_REQUEST', 'text is required');
-    const parsed = fakeParse(text);
-    return HttpResponse.json({
-      description: parsed.description,
-      scheduledAt: parsed.scheduledAt.toISOString(),
-      recurrence: parsed.recurrence,
-    });
+    const body = ParseTextRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('text is required');
+    const parsed = fakeParse(body.data.text);
+    return HttpResponse.json(
+      wire.ParsedTask.parse({
+        description: parsed.description,
+        scheduledAt: parsed.scheduledAt.toISOString(),
+        recurrence: parsed.recurrence,
+      }),
+    );
   }),
 ];
