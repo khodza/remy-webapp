@@ -70,6 +70,8 @@ pnpm dev:ngrok     # Vite + ngrok tunnel (stable URL with NGROK_DOMAIN, HMR over
 pnpm preview:ngrok # Production build + ngrok tunnel — fastest way to test inside Telegram
 pnpm typecheck     # tsc --noEmit
 pnpm lint          # ESLint, --max-warnings 0
+pnpm contract:check  # contract.gen.ts untouched + in sync with ../remy
+pnpm check         # typecheck + lint + contract:check — run before finishing a task
 pnpm build         # tsc --noEmit && vite build → dist/
 pnpm preview       # Serve the built bundle
 ```
@@ -94,7 +96,10 @@ initData with `hash=dev-mock-hash` and user id `VITE_MOCK_TG_USER_ID`, default
 
 See `src/shared/api/CLAUDE.md` (base URL, `/api/v1` prefix, `tma` → JWT
 exchange, 401 retry-once rule). Endpoint functions live in
-`src/shared/api/endpoints.ts`; response shapes are Zod schemas in `schemas.ts`.
+`src/shared/api/endpoints.ts`. Every request/response shape comes from
+`src/shared/api/contract.gen.ts`, a **generated verbatim copy** of the backend
+contract: never edit it (or redefine shapes in `schemas.ts`); change
+`../remy/src/contract/remy-contract.ts` and run `npm run contract:sync` there.
 
 ## Folder layout
 
@@ -105,7 +110,7 @@ src/
 ├── mocks/             # MSW handlers + fixtures for `pnpm dev:mock`
 ├── pages/             # Route-level screens
 └── shared/
-    ├── api/           # apiClient + Zod schemas + typed endpoint fns
+    ├── api/           # apiClient + generated contract (contract.gen.ts) + typed endpoint fns
     ├── lib/telegram/  # SDK hooks (back/main button, haptics, user, theme)
     ├── stores/        # Zustand (in-memory auth)
     └── ui/            # Thin wrappers over @telegram-apps/telegram-ui

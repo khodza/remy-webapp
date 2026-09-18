@@ -7,7 +7,13 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'docs/design/**'],
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      'docs/design/**',
+      // Verbatim copy of the backend contract; never linted or edited here.
+      'src/shared/api/contract.gen.ts',
+    ],
   },
   {
     files: ['src/**/*.{js,jsx,mjs,cjs,ts,tsx}'],

@@ -14,7 +14,9 @@
     "preview:ngrok": "pnpm build && concurrently -k -n preview,ngrok -c cyan,magenta \"vite preview --port 5173 --strictPort\" \"node scripts/ngrok.mjs\"",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "pnpm lint --fix"
+    "lint:fix": "pnpm lint --fix",
+    "contract:check": "node scripts/check-contract.mjs",
+    "check": "pnpm typecheck && pnpm lint && pnpm contract:check"
   },
   "dependencies": {
     "@date-fns/tz": "^1.2.0",
