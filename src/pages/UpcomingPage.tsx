@@ -1,4 +1,4 @@
-import { Check, Loader2, Repeat, Trash2 } from 'lucide-react';
+import { Check, Flag, Loader2, Repeat, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -7,7 +7,8 @@ import {
   useDeleteTask,
   useTasks,
 } from '@/features/reminders';
-import type { Task } from '@/shared/api';
+import { CategoryChip, useCategoryMap } from '@/features/categories';
+import type { Category, Task } from '@/shared/api';
 import {
   fireAt,
   formatInTz,
@@ -20,26 +21,36 @@ import {
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
+/** A pending reminder with a known fire time (todos never appear here). */
+interface Timed {
+  task: Task;
+  when: Date;
+}
+
 interface DayGroup {
   key: string;
   label: string;
   sublabel: string;
   isToday: boolean;
-  tasks: Task[];
+  items: Timed[];
 }
 
 function groupByDay(tasks: Task[], tz: string): DayGroup[] {
-  const pending = tasks
-    .filter((task) => task.status === 'pending' && !task.isOverdue)
-    .sort((a, b) => fireAt(a).getTime() - fireAt(b).getTime());
+  const pending: Timed[] = [];
+  for (const task of tasks) {
+    const when = fireAt(task);
+    if (task.status !== 'pending' || task.isOverdue || when === null) continue;
+    pending.push({ task, when });
+  }
+  pending.sort((a, b) => a.when.getTime() - b.when.getTime());
 
   const groups: DayGroup[] = [];
-  for (const task of pending) {
-    const when = fireAt(task);
+  for (const item of pending) {
+    const { when } = item;
     const key = formatInTz(startOfDayInTz(when, tz), tz, 'yyyy-MM-dd');
     const existing = groups.find((group) => group.key === key);
     if (existing) {
-      existing.tasks.push(task);
+      existing.items.push(item);
       continue;
     }
     groups.push({
@@ -47,7 +58,7 @@ function groupByDay(tasks: Task[], tz: string): DayGroup[] {
       label: labelForDay(when, tz),
       sublabel: formatInTz(when, tz, 'EEE, d MMM'),
       isToday: isTodayInTz(when, tz),
-      tasks: [task],
+      items: [item],
     });
   }
   return groups;
@@ -61,7 +72,9 @@ function labelForDay(date: Date, tz: string): string {
 
 export function UpcomingPage() {
   const navigate = useNavigate();
-  const tasksQuery = useTasks({ includeCompleted: true });
+  // Same query as Home, so the two screens share one cache entry.
+  const tasksQuery = useTasks({});
+  const categories = useCategoryMap();
   const complete = useCompleteTask();
   const remove = useDeleteTask();
   const haptic = useHapticFeedback();
@@ -103,6 +116,7 @@ export function UpcomingPage() {
               key={group.key}
               group={group}
               tz={tz}
+              categories={categories}
               busy={busy}
               onComplete={(id) => {
                 haptic.impact('light');
@@ -124,6 +138,7 @@ export function UpcomingPage() {
 function DaySection({
   group,
   tz,
+  categories,
   busy,
   onComplete,
   onDelete,
@@ -131,6 +146,7 @@ function DaySection({
 }: {
   group: DayGroup;
   tz: string;
+  categories: Map<string, Category>;
   busy: boolean;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
@@ -156,11 +172,15 @@ function DaySection({
         </span>
       </div>
       <ul className="flex flex-col gap-2">
-        {group.tasks.map((task) => (
+        {group.items.map(({ task, when }) => (
           <UpcomingRow
             key={task.id}
             task={task}
+            when={when}
             tz={tz}
+            category={
+              task.categoryId ? categories.get(task.categoryId) : undefined
+            }
             disabled={busy}
             onComplete={() => onComplete(task.id)}
             onDelete={() => onDelete(task.id)}
@@ -174,14 +194,18 @@ function DaySection({
 
 function UpcomingRow({
   task,
+  when,
   tz,
+  category,
   disabled,
   onComplete,
   onDelete,
   onOpen,
 }: {
   task: Task;
+  when: Date;
   tz: string;
+  category: Category | undefined;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
@@ -206,19 +230,32 @@ function UpcomingRow({
         className="min-w-0 flex-1 text-left"
       >
         <p className="truncate font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)]">
+          {task.priority === 'high' && (
+            <Flag
+              size={13}
+              aria-label="High priority"
+              className="mr-1 inline-block -translate-y-px text-[color:var(--color-danger)]"
+              fill="currentColor"
+            />
+          )}
           {task.description}
         </p>
-        {repeat && (
-          <span className="mt-0.5 inline-flex items-center gap-1 font-sans text-[11px] font-medium text-[color:var(--color-text-2)]">
-            <Repeat size={11} />
-            {repeat}
+        {(repeat || category) && (
+          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            {category && <CategoryChip category={category} />}
+            {repeat && (
+              <span className="inline-flex items-center gap-1 font-sans text-[11px] font-medium text-[color:var(--color-text-2)]">
+                <Repeat size={11} />
+                {repeat}
+              </span>
+            )}
           </span>
         )}
       </button>
 
       <span className="shrink-0 text-right">
         <span className="block font-mono text-[12px] tabular-nums text-[color:var(--color-accent)]">
-          {formatTime(fireAt(task), tz)}
+          {formatTime(when, tz)}
         </span>
         {task.snoozedUntil && (
           <span className="block font-sans text-[10px] text-[color:var(--color-text-3)]">

@@ -1,4 +1,12 @@
-import { Check, Loader2, Plus, Repeat, Settings2, Trash2 } from 'lucide-react';
+import {
+  Check,
+  Flag,
+  Loader2,
+  Plus,
+  Repeat,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -8,8 +16,10 @@ import {
   useDeleteTask,
   useTasks,
 } from '@/features/reminders';
-import type { Task } from '@/shared/api';
+import { CategoryChip, useCategoryMap } from '@/features/categories';
+import type { Category, Task } from '@/shared/api';
 import {
+  compareByFireAt,
   fireAt,
   formatDayShort,
   formatTime,
@@ -20,36 +30,45 @@ import {
 import { useHapticFeedback, useTelegramUser } from '@/shared/lib/telegram';
 import { Page } from '@/shared/ui';
 
-const VARS = { includeCompleted: true } as const;
+// Pending work only; completed tasks are fetched lazily when "Done" opens,
+// so Home never downloads the whole history (audit F18).
+const PENDING_VARS = {} as const;
+const DONE_VARS = { view: 'done', limit: 50 } as const;
 
 interface Groups {
   overdue: Task[];
   later: Task[];
-  completed: Task[];
+  /** Todos: no time, they live in the Inbox until scheduled. */
+  inbox: Task[];
 }
 
 function groupTasks(tasks: Task[]): Groups {
   const overdue: Task[] = [];
   const later: Task[] = [];
-  const completed: Task[] = [];
+  const inbox: Task[] = [];
   for (const task of tasks) {
-    if (task.status === 'completed') completed.push(task);
+    if (task.status !== 'pending') continue;
+    if (task.kind === 'todo' || fireAt(task) === null) inbox.push(task);
     else if (task.isOverdue) overdue.push(task);
     else later.push(task);
   }
-  return { overdue, later, completed };
+  overdue.sort(compareByFireAt);
+  later.sort(compareByFireAt);
+  return { overdue, later, inbox };
 }
 
 export function HomePage() {
   const navigate = useNavigate();
   const user = useTelegramUser();
   const tz = useUserTimezone();
-  const tasksQuery = useTasks(VARS);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const tasksQuery = useTasks(PENDING_VARS);
+  const doneQuery = useTasks(DONE_VARS, { enabled: showCompleted });
+  const categories = useCategoryMap();
   const complete = useCompleteTask();
   const remove = useDeleteTask();
   const delay = useDelayTask();
   const haptic = useHapticFeedback();
-  const [showCompleted, setShowCompleted] = useState(false);
 
   const busy = complete.isPending || remove.isPending || delay.isPending;
   const handleSnooze = (id: string, minutes: number) => {
@@ -62,7 +81,18 @@ export function HomePage() {
     [tasksQuery.data],
   );
   const hasAny =
-    groups.overdue.length + groups.later.length + groups.completed.length > 0;
+    groups.overdue.length + groups.later.length + groups.inbox.length > 0;
+  const rowHandlers = {
+    onComplete: (id: string) => {
+      haptic.impact('light');
+      complete.mutate(id);
+    },
+    onDelete: (id: string) => {
+      haptic.impact('medium');
+      remove.mutate(id);
+    },
+    onOpen: (id: string) => navigate(`/tasks/${id}`),
+  };
 
   return (
     <Page back={false}>
@@ -92,7 +122,7 @@ export function HomePage() {
         <StatStrip
           overdue={groups.overdue.length}
           remaining={groups.later.length}
-          done={groups.completed.length}
+          inbox={groups.inbox.length}
         />
 
         {tasksQuery.isPending ? (
@@ -105,25 +135,18 @@ export function HomePage() {
                 : 'Something went wrong.'
             }
           />
-        ) : !hasAny ? (
-          <EmptyState />
         ) : (
           <>
+            {!hasAny && <EmptyState />}
+
             {groups.overdue.length > 0 && (
               <Section title="Overdue" tone="danger" count={groups.overdue.length}>
                 <TaskList
                   tasks={groups.overdue}
                   tz={tz}
+                  categories={categories}
                   disabled={busy}
-                  onComplete={(id) => {
-                    haptic.impact('light');
-                    complete.mutate(id);
-                  }}
-                  onDelete={(id) => {
-                    haptic.impact('medium');
-                    remove.mutate(id);
-                  }}
-                  onOpen={(id) => navigate(`/tasks/${id}`)}
+                  {...rowHandlers}
                   onSnooze={handleSnooze}
                 />
               </Section>
@@ -141,48 +164,57 @@ export function HomePage() {
                 <TaskList
                   tasks={groups.later}
                   tz={tz}
+                  categories={categories}
                   disabled={busy}
-                  onComplete={(id) => {
-                    haptic.impact('light');
-                    complete.mutate(id);
-                  }}
-                  onDelete={(id) => {
-                    haptic.impact('medium');
-                    remove.mutate(id);
-                  }}
-                  onOpen={(id) => navigate(`/tasks/${id}`)}
+                  {...rowHandlers}
                 />
               </Section>
             )}
 
-            {groups.completed.length > 0 && (
-              <section>
-                <button
-                  type="button"
-                  onClick={() => setShowCompleted((v) => !v)}
-                  className="flex w-full items-center justify-between px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--color-text-2)]"
-                >
-                  <span>Done</span>
-                  <span className="tabular-nums">
-                    {groups.completed.length}{' '}
-                    {showCompleted ? '▾' : '▸'}
-                  </span>
-                </button>
-                {showCompleted && (
-                  <TaskList
-                    tasks={groups.completed}
-                    tz={tz}
-                    disabled={busy}
-                    onComplete={() => {}}
-                    onDelete={(id) => {
-                      haptic.impact('medium');
-                      remove.mutate(id);
-                    }}
-                    onOpen={(id) => navigate(`/tasks/${id}`)}
-                  />
-                )}
-              </section>
+            {groups.inbox.length > 0 && (
+              <Section title="Inbox · no date" count={groups.inbox.length}>
+                <TaskList
+                  tasks={groups.inbox}
+                  tz={tz}
+                  categories={categories}
+                  disabled={busy}
+                  {...rowHandlers}
+                />
+              </Section>
             )}
+
+            <section>
+              <button
+                type="button"
+                onClick={() => setShowCompleted((v) => !v)}
+                className="flex min-h-11 w-full items-center justify-between px-2 py-2 font-mono text-[11px] uppercase tracking-wider text-[color:var(--color-text-2)]"
+              >
+                <span>Done</span>
+                <span className="tabular-nums">
+                  {doneQuery.data ? `${doneQuery.data.length} ` : ''}
+                  {showCompleted ? '▾' : '▸'}
+                </span>
+              </button>
+              {showCompleted &&
+                (doneQuery.isPending ? (
+                  <LoadingState />
+                ) : doneQuery.isError ? (
+                  <ErrorState message="Couldn't load completed tasks." />
+                ) : doneQuery.data.length === 0 ? (
+                  <p className="px-2 font-sans text-xs text-[color:var(--color-text-3)]">
+                    Nothing completed yet.
+                  </p>
+                ) : (
+                  <TaskList
+                    tasks={doneQuery.data}
+                    tz={tz}
+                    categories={categories}
+                    disabled={busy}
+                    {...rowHandlers}
+                    onComplete={() => {}}
+                  />
+                ))}
+            </section>
           </>
         )}
 
@@ -206,17 +238,17 @@ export function HomePage() {
 function StatStrip({
   overdue,
   remaining,
-  done,
+  inbox,
 }: {
   overdue: number;
   remaining: number;
-  done: number;
+  inbox: number;
 }) {
   return (
     <div className="grid grid-cols-3 gap-2">
       <StatCell label="Overdue" value={overdue} tone={overdue > 0 ? 'danger' : 'muted'} />
       <StatCell label="Remaining" value={remaining} tone="accent" />
-      <StatCell label="Done" value={done} tone="muted" />
+      <StatCell label="Inbox" value={inbox} tone="muted" />
     </div>
   );
 }
@@ -298,6 +330,7 @@ function Section({
 function TaskList({
   tasks,
   tz,
+  categories,
   disabled,
   onComplete,
   onDelete,
@@ -306,6 +339,7 @@ function TaskList({
 }: {
   tasks: Task[];
   tz: string;
+  categories: Map<string, Category>;
   disabled: boolean;
   onComplete: (id: string) => void;
   onDelete: (id: string) => void;
@@ -319,6 +353,9 @@ function TaskList({
           key={task.id}
           task={task}
           tz={tz}
+          category={
+            task.categoryId ? categories.get(task.categoryId) : undefined
+          }
           disabled={disabled}
           onComplete={() => onComplete(task.id)}
           onDelete={() => onDelete(task.id)}
@@ -335,6 +372,7 @@ function TaskList({
 function TaskRow({
   task,
   tz,
+  category,
   disabled,
   onComplete,
   onDelete,
@@ -343,6 +381,7 @@ function TaskRow({
 }: {
   task: Task;
   tz: string;
+  category: Category | undefined;
   disabled: boolean;
   onComplete: () => void;
   onDelete: () => void;
@@ -370,22 +409,33 @@ function TaskRow({
           <p
             className={`font-sans text-[15px] leading-snug tracking-tight text-[color:var(--color-text)] ${isDone ? 'text-[color:var(--color-text-3)] line-through' : ''}`}
           >
+            {task.priority === 'high' && !isDone && (
+              <Flag
+                size={13}
+                aria-label="High priority"
+                className="mr-1 inline-block -translate-y-px text-[color:var(--color-danger)]"
+                fill="currentColor"
+              />
+            )}
             {task.description}
           </p>
         </button>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-[3px] font-sans text-[11px] font-medium tabular-nums ${
-              task.isOverdue
-                ? 'bg-[color:var(--color-danger-soft)] text-[color:var(--color-danger)]'
-                : 'bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)]'
-            }`}
-          >
-            {formatWhen(when, tz)}
-            {!isDone && (
-              <span className="ml-1 opacity-70">· {relativeToNow(when)}</span>
-            )}
-          </span>
+          {when && (
+            <span
+              className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-[3px] font-sans text-[11px] font-medium tabular-nums ${
+                task.isOverdue
+                  ? 'bg-[color:var(--color-danger-soft)] text-[color:var(--color-danger)]'
+                  : 'bg-[color:var(--color-accent-soft)] text-[color:var(--color-accent)]'
+              }`}
+            >
+              {formatWhen(when, tz)}
+              {!isDone && (
+                <span className="ml-1 opacity-70">· {relativeToNow(when)}</span>
+              )}
+            </span>
+          )}
+          {category && <CategoryChip category={category} />}
           {task.snoozedUntil && !isDone && (
             <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[color:var(--color-surface-2)] px-2 py-[3px] font-sans text-[11px] font-medium tabular-nums text-[color:var(--color-text-2)]">
               Snoozed until {formatTime(task.snoozedUntil, tz)}

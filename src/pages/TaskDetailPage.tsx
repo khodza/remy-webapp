@@ -12,7 +12,7 @@ export function TaskDetailPage() {
       <main className="flex flex-1 flex-col gap-4 px-4 py-6">
         <header>
           <h1 className="font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
-            Edit reminder
+            {task.data?.kind === 'todo' ? 'To-do' : 'Reminder'}
           </h1>
         </header>
 
