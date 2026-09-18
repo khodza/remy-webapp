@@ -1,7 +1,7 @@
 // GENERATED FILE — DO NOT EDIT.
 // Source: remy/src/contract/remy-contract.ts (backend repo).
 // Regenerate from the backend repo with: npm run contract:sync
-// contract-sha256: c22079a16deea84c77c93b478e90f5152f46bbab975dabbc5a8960ebf1e00b2a
+// contract-sha256: 01a71e439fc9e65ab54211f5c3fb95319042c08c6360c90534f54b3404f3bd4a
 
 /**
  * Remy HTTP contract — the single source of truth for every request and
@@ -22,7 +22,12 @@ export const CONTRACT_VERSION = '2.0.0';
 
 // ---------------------------------------------------------------- enums ---
 
-export const TaskStatus = z.enum(['pending', 'completed', 'overdue', 'deleted']);
+export const TaskStatus = z.enum([
+  'pending',
+  'completed',
+  'overdue',
+  'deleted',
+]);
 export type TaskStatus = z.infer<typeof TaskStatus>;
 
 /** A reminder has a time; a todo does not and lives in the Inbox. */
@@ -63,8 +68,12 @@ export type DefaultView = z.infer<typeof DefaultView>;
 /** ISO 8601 instant as sent on the wire, e.g. 2026-09-18T12:00:00.000Z */
 const IsoInstant = z.iso.datetime({ offset: true });
 /** Wall-clock "HH:mm", 24-hour. */
-export const TimeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm');
-const ObjectIdString = z.string().regex(/^[0-9a-f]{24}$/i, 'Expected a 24-char hex id');
+export const TimeOfDay = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:mm');
+const ObjectIdString = z
+  .string()
+  .regex(/^[0-9a-f]{24}$/i, 'Expected a 24-char hex id');
 const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Expected #RRGGBB');
 
 export const Recurrence = z.object({
@@ -218,7 +227,12 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultView: 'timeline',
   morningBrief: { enabled: true, time: '08:00' },
   eveningReview: { enabled: true, time: '21:00' },
-  quietHours: { enabled: true, from: '23:00', to: '07:00', allowHighPriority: true },
+  quietHours: {
+    enabled: true,
+    from: '23:00',
+    to: '07:00',
+    allowHighPriority: true,
+  },
   escalation: { enabled: true, stepsMinutes: [30, 120] },
 };
 
@@ -244,8 +258,12 @@ const Notes = z.string().max(4000);
 const LeadMinutes = z.number().int().min(1).max(10080);
 
 /** POST /tasks — natural language; the server parses it. */
-export const CreateTaskFromTextRequest = z.object({ text: Description }).strict();
-export type CreateTaskFromTextRequest = z.infer<typeof CreateTaskFromTextRequest>;
+export const CreateTaskFromTextRequest = z
+  .object({ text: Description })
+  .strict();
+export type CreateTaskFromTextRequest = z.infer<
+  typeof CreateTaskFromTextRequest
+>;
 
 /** POST /tasks/structured — already-reviewed fields; nothing is parsed. */
 export const CreateTaskStructuredRequest = z
@@ -266,7 +284,9 @@ export const CreateTaskStructuredRequest = z
     message: 'A recurring task needs a scheduledAt',
     path: ['recurrence'],
   });
-export type CreateTaskStructuredRequest = z.infer<typeof CreateTaskStructuredRequest>;
+export type CreateTaskStructuredRequest = z.infer<
+  typeof CreateTaskStructuredRequest
+>;
 
 /** PATCH /tasks/:id — undefined leaves a field alone, null clears it. */
 export const UpdateTaskRequest = z
@@ -333,7 +353,11 @@ export const endpoints = {
   listTasks: { method: 'GET', path: '/tasks', auth: 'jwt' },
   getTask: { method: 'GET', path: '/tasks/:id', auth: 'jwt' },
   createTaskFromText: { method: 'POST', path: '/tasks', auth: 'jwt' },
-  createTaskStructured: { method: 'POST', path: '/tasks/structured', auth: 'jwt' },
+  createTaskStructured: {
+    method: 'POST',
+    path: '/tasks/structured',
+    auth: 'jwt',
+  },
   createTaskFromVoice: { method: 'POST', path: '/tasks/voice', auth: 'jwt' },
   updateTask: { method: 'PATCH', path: '/tasks/:id', auth: 'jwt' },
   completeTask: { method: 'POST', path: '/tasks/:id/complete', auth: 'jwt' },
