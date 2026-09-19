@@ -20,3 +20,5 @@ export { ParsePreview } from './components/ParsePreview';
 export { VoiceRecordButton } from './components/VoiceRecordButton';
 export { RecurrencePicker } from './components/RecurrencePicker';
 export { recurrenceLabel } from './lib/recurrence';
+export { TaskRow, type RowTone } from './components/TaskRow';
+export { useTaskActions } from './useTaskActions';

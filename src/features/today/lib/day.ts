@@ -1,0 +1,175 @@
+import { TZDate } from '@date-fns/tz';
+import { addDays, startOfWeek } from 'date-fns';
+import type { Task } from '@/shared/api';
+import { formatInTz, inTz, startOfDayInTz } from '@/shared/lib/dates';
+
+/**
+ * Pure grouping for the Today screen. Everything is decided in the user's
+ * zone with an explicit `now`, so it is testable and never uses the
+ * browser's midnight.
+ */
+
+/** "2026-09-17": a calendar day in the user's zone (the ?day= param). */
+export type DayKey = string;
+
+export function dayKey(date: Date | number, tz: string): DayKey {
+  return formatInTz(date, tz, 'yyyy-MM-dd');
+}
+
+/** Midnight of `key` in `tz`, or null for a malformed key. */
+export function dayStart(key: DayKey, tz: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  const date = new TZDate(Number(m[1]), Number(m[2]) - 1, Number(m[3]), tz);
+  return Number.isNaN(date.getTime()) ? null : new Date(date.getTime());
+}
+
+/** Midnight after `start` (23 or 25 hours later on DST days). */
+export function nextDayStart(start: Date, tz: string): Date {
+  const z = inTz(start, tz);
+  return new Date(new TZDate(z.getFullYear(), z.getMonth(), z.getDate() + 1, tz).getTime());
+}
+
+/** When the task is due for the user: the snooze, else the series time. */
+export function dueAt(task: Pick<Task, 'nextFireAt' | 'scheduledAt'>): Date | null {
+  return task.nextFireAt ?? task.scheduledAt;
+}
+
+/** Wall-clock minutes since midnight in `tz` (DST-safe: 09:30 is 570). */
+export function minuteOfDay(date: Date | number, tz: string): number {
+  const z = inTz(date, tz);
+  return z.getHours() * 60 + z.getMinutes();
+}
+
+const byDue = (a: Task, b: Task) => (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0);
+
+export interface DayItem {
+  task: Task;
+  /** Where it sits on the day: due time, or completion time when done off-day. */
+  at: Date;
+  state: 'overdue' | 'later' | 'done';
+}
+
+export interface DayModel {
+  /** Midnight of the selected day, and of the day after, in the user zone. */
+  start: Date;
+  end: Date;
+  isToday: boolean;
+  isPast: boolean;
+  /** Overdue from before the selected day (only on today). */
+  earlier: Task[];
+  /** Everything placed on the selected day, by time. */
+  items: DayItem[];
+  overdue: DayItem[];
+  later: DayItem[];
+  done: DayItem[];
+  /** Pending tasks due the day after (List view shows them on today). */
+  tomorrow: Task[];
+  inboxCount: number;
+  /** First pending task still ahead today. */
+  next: Task | null;
+}
+
+export function buildDay(pending: Task[], completed: Task[], selected: DayKey, tz: string, now: Date): DayModel {
+  const start = dayStart(selected, tz) ?? startOfDayInTz(now, tz);
+  const end = nextDayStart(start, tz);
+  const todayStart = startOfDayInTz(now, tz);
+  const isToday = start.getTime() === todayStart.getTime();
+  const isPast = end.getTime() <= todayStart.getTime();
+  const tomorrowEnd = nextDayStart(end, tz);
+  const inDay = (t: number) => t >= start.getTime() && t < end.getTime();
+
+  const earlier: Task[] = [];
+  const items: DayItem[] = [];
+  const tomorrow: Task[] = [];
+  let inboxCount = 0;
+
+  for (const task of pending) {
+    if (task.status !== 'pending') continue;
+    const due = dueAt(task);
+    if (!due) {
+      inboxCount += 1;
+      continue;
+    }
+    const t = due.getTime();
+    if (inDay(t)) items.push({ task, at: due, state: t < now.getTime() ? 'overdue' : 'later' });
+    else if (isToday && t < start.getTime()) earlier.push(task);
+    else if (t >= end.getTime() && t < tomorrowEnd.getTime()) tomorrow.push(task);
+  }
+
+  for (const task of completed) {
+    if (task.status !== 'completed' || !task.completedAt) continue;
+    if (!inDay(task.completedAt.getTime())) continue;
+    // A done block stays where it was planned when that was the same day.
+    const planned = dueAt(task);
+    const at = planned && inDay(planned.getTime()) ? planned : task.completedAt;
+    items.push({ task, at, state: 'done' });
+  }
+
+  items.sort((a, b) => a.at.getTime() - b.at.getTime());
+  earlier.sort(byDue);
+  tomorrow.sort(byDue);
+  const later = items.filter((i) => i.state === 'later');
+  return {
+    start,
+    end,
+    isToday,
+    isPast,
+    earlier,
+    items,
+    overdue: items.filter((i) => i.state === 'overdue'),
+    later,
+    done: items.filter((i) => i.state === 'done'),
+    tomorrow,
+    inboxCount,
+    next: isToday ? (later[0]?.task ?? null) : null,
+  };
+}
+
+export interface WeekDay {
+  key: DayKey;
+  start: Date;
+  /** Reminders on the day, pending or done (dots). */
+  count: number;
+  overdue: boolean;
+}
+
+/** The seven days around `selected`, starting on the user's week start. */
+export function buildWeek(
+  pending: Task[],
+  completed: Task[],
+  selected: DayKey,
+  tz: string,
+  now: Date,
+  weekStartsOn: 0 | 1,
+): WeekDay[] {
+  const anchor = dayStart(selected, tz) ?? startOfDayInTz(now, tz);
+  const first = startOfWeek(inTz(anchor, tz), { weekStartsOn });
+  const days: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
+    const start = new Date(new TZDate(first.getFullYear(), first.getMonth(), first.getDate() + i, tz).getTime());
+    return { key: dayKey(start, tz), start, count: 0, overdue: false };
+  });
+  const index = new Map(days.map((d, i) => [d.key, i]));
+  const bump = (date: Date, overdue: boolean) => {
+    const i = index.get(dayKey(date, tz));
+    const day = i === undefined ? undefined : days[i];
+    if (!day) return;
+    day.count += 1;
+    if (overdue) day.overdue = true;
+  };
+  for (const task of pending) {
+    const due = task.status === 'pending' ? dueAt(task) : null;
+    if (due) bump(due, due.getTime() < now.getTime());
+  }
+  for (const task of completed) {
+    if (task.status === 'completed' && task.completedAt) bump(task.completedAt, false);
+  }
+  return days;
+}
+
+/** The same weekday one week earlier or later. */
+export function shiftWeek(key: DayKey, weeks: number, tz: string): DayKey {
+  const start = dayStart(key, tz);
+  if (!start) return key;
+  return dayKey(addDays(inTz(start, tz), weeks * 7), tz);
+}

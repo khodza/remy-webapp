@@ -173,6 +173,16 @@ export function relativeToNow(
   return diff > 0 ? `in ${span}` : `${span} late`;
 }
 
+/** Compact span for tight columns: "43 m", "3 h 47 m", "2 d". */
+export function spanLabel(date: Date | number, now: Date = new Date()): string {
+  const abs = Math.abs(differenceInMinutes(date, now));
+  if (abs < 1) return 'now';
+  if (abs >= 48 * 60) return `${Math.round(abs / (24 * 60))} d`;
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return h === 0 ? `${m} m` : m === 0 ? `${h} h` : `${h} h ${m} m`;
+}
+
 /** "+05:00" style UTC offset of `tz` at `now`. */
 export function utcOffsetLabel(tz: string, now: Date = new Date()): string {
   try {

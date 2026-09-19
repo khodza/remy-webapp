@@ -3,7 +3,11 @@ import { TZDate } from '@date-fns/tz';
 import {
   addDays,
   addMinutes,
+  addMonths,
+  addWeeks,
+  addYears,
   endOfDay,
+  lastDayOfMonth,
   setHours,
   setMinutes,
   setSeconds,
@@ -37,6 +41,40 @@ import {
   nextFireAt,
   type MockTask,
 } from './fixtures';
+
+/**
+ * Next occurrence after `from` (device-zone approximation of the backend's
+ * common/recurrence.ts; good enough for toasts and the timeline in dev).
+ */
+function nextOccurrence(recurrence: Recurrence, from: Date): Date {
+  const n = Math.max(1, recurrence.interval ?? 1);
+  switch (recurrence.type) {
+    case 'daily':
+      return addDays(from, 1);
+    case 'every_n_days':
+      return addDays(from, Math.max(1, recurrence.intervalDays ?? 1));
+    case 'weekdays': {
+      let next = addDays(from, 1);
+      while (next.getDay() === 0 || next.getDay() === 6) next = addDays(next, 1);
+      return next;
+    }
+    case 'weekly': {
+      const days = recurrence.byWeekday ?? [];
+      if (days.length === 0) return addWeeks(from, n);
+      for (let i = 1; i <= 7 * n; i += 1) {
+        const next = addDays(from, i);
+        if (days.includes(next.getDay())) return next;
+      }
+      return addWeeks(from, n);
+    }
+    case 'monthly': {
+      const next = addMonths(from, n);
+      return recurrence.lastDayOfMonth ? setSeconds(setMinutes(setHours(lastDayOfMonth(next), from.getHours()), from.getMinutes()), 0) : next;
+    }
+    case 'yearly':
+      return addYears(from, n);
+  }
+}
 
 /**
  * MSW handlers for every endpoint of the contract. Requests are validated
@@ -395,8 +433,10 @@ export const handlers = [
     const task = find(params['id']);
     if (!task) return error(404, 'NOT_FOUND', 'Task not found');
     if (task.recurrence && task.scheduledAt) {
-      // Recurring tasks advance one day (mock approximation) and clear snooze.
-      task.scheduledAt = addDays(task.scheduledAt, 1);
+      // Recurring tasks advance to the next occurrence after now and clear snooze.
+      let next = nextOccurrence(task.recurrence, task.scheduledAt);
+      while (next.getTime() <= Date.now()) next = nextOccurrence(task.recurrence, next);
+      task.scheduledAt = next;
       task.snoozedUntil = null;
       task.completionsCount += 1;
     } else {

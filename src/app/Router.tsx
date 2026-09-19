@@ -1,11 +1,12 @@
 import { lazy, Suspense } from 'react';
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CreateTaskPage } from '@/pages/CreateTaskPage';
-import { HomePage } from '@/pages/HomePage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TaskDetailPage } from '@/pages/TaskDetailPage';
 import { TimezonePage } from '@/pages/TimezonePage';
+import { TodayPage } from '@/pages/TodayPage';
 import { UpcomingPage } from '@/pages/UpcomingPage';
+import { useSettingsButton } from '@/shared/lib/telegram';
 import { useDeepLink } from './useDeepLink';
 
 // Dev-only; the import is dropped from production builds.
@@ -13,18 +14,22 @@ const GalleryPage = import.meta.env.DEV
   ? lazy(() => import('@/pages/dev/GalleryPage').then((m) => ({ default: m.GalleryPage })))
   : null;
 
-function DeepLink() {
+/** App-wide wiring that needs the router: deep links and ⋯ → Settings. */
+function AppWiring() {
+  const navigate = useNavigate();
   useDeepLink();
+  useSettingsButton(() => navigate('/settings'));
   return null;
 }
 
 export function Router() {
   return (
     <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <DeepLink />
+      <AppWiring />
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<TodayPage />} />
         <Route path="/upcoming" element={<UpcomingPage />} />
+        <Route path="/week" element={<UpcomingPage />} />
         <Route path="/create" element={<CreateTaskPage />} />
         <Route path="/tasks/:id" element={<TaskDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
