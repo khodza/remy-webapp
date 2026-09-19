@@ -77,14 +77,15 @@ The JWT is kept in memory only — never persisted to localStorage or cookies.
 
 ```
 src/
-├── app/           # SDK init, providers, router, error boundary, Root
-├── features/      # Reminders, AI, Profile, Settings (filled feature-by-feature)
+├── app/           # SDK init, providers, router, error boundary, Root, deep links
+├── features/      # reminders, today, categories, settings, profile
+├── mocks/         # MSW handlers + fixtures (pnpm dev:mock)
 ├── pages/         # Route-level screens
 └── shared/
-    ├── api/       # apiClient, Zod schemas, endpoint fns (Phase 3)
-    ├── lib/telegram/  # SDK hooks: back/main button, haptics, user, theme
-    ├── stores/    # Zustand
-    └── ui/        # Thin wrappers over @telegram-apps/telegram-ui
+    ├── api/       # apiClient, generated contract, endpoint fns
+    ├── lib/       # dates, autosave, scroll memory, telegram/ SDK hooks
+    ├── stores/    # Zustand (in-memory auth)
+    └── ui/        # The Time canvas component kit
 ```
 
 Strict alias `@/` → `src/`. All dates go through `date-fns` + `@date-fns/tz`.
@@ -98,16 +99,21 @@ Strict alias `@/` → `src/`. All dates go through `date-fns` + `@date-fns/tz`.
 | `pnpm dev:tunnel` | Vite + cloudflared (real-device, prod DC) |
 | `pnpm dev:ngrok` | Vite + ngrok tunnel (HMR over the tunnel) |
 | `pnpm preview:ngrok` | Production build + ngrok tunnel (fast in Telegram) |
+| `pnpm dev:mock` | Dev server with the API mocked in the browser (no backend); `?theme=light` for light |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm lint` | ESLint, `--max-warnings 0` |
+| `pnpm test` | Vitest unit tests (pure logic) |
+| `pnpm check` | typecheck + lint + test + contract check |
+| `pnpm smoke` | Mock-mode app + your Chrome: clicks through every screen |
 | `pnpm build` | Typecheck + production build into `dist/` |
 | `pnpm preview` | Serve the built bundle |
 
 ## Design source
 
-`docs/design/` — full design bundle (HTML tokens + 12 JSX screens). Read
-`docs/design/README.md` and `docs/design/project/Remy.html` before touching
-screens.
+The **Time canvas** design in `../remy-plan/remy.html` (tokens, building blocks
+and every screen, light and dark). Tokens are in `src/index.css`; the kit is in
+`src/shared/ui/`; `#/dev/gallery` in dev shows it. `docs/design/` is the older
+bundle, kept for reference.
 
 ## Backend
 

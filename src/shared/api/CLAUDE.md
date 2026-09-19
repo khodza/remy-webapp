@@ -89,12 +89,15 @@ contract.
 `features/reminders`: `useTasks({view?, includeCompleted?, limit?}, {enabled?})`,
 `useTask`, `useCreateTask`, `useCreateTaskStructured`, `useCreateTaskFromVoice`,
 `useUpdateTask`, `useCompleteTask`, `useReopenTask`, `useDelayTask`,
-`useSnoozeTask`, `useDeleteTask`. Every mutation syncs all cached `['tasks', …]`
-lists and `['task', id]`, then invalidates.
+`useSnoozeTask`, `useDeleteTask`, `useDeferredDelete` (delete with Undo: the
+task is hidden from every list until the toast ends, then DELETE is sent).
+Every mutation syncs all cached `['tasks', …]` lists and `['task', id]`, then
+invalidates. `useTaskActions` wraps the one-tap actions (done with Undo,
+snooze chips, +1h, move) with haptics and toasts.
 `features/settings`: `useSettings`, `useUpdateSettings` (optimistic, same
 deep-merge as the server via `mergeSettings`).
 `features/categories`: `useCategories`, `useCategoryMap`, `useCreateCategory`,
-`useUpdateCategory`, `useDeleteCategory`, `<CategoryChip>`.
+`useUpdateCategory`, `useDeleteCategory`, `<CategoryPill>`.
 
 ## Contract 2.1 (Phase 3)
 
@@ -105,9 +108,9 @@ deep-merge as the server via `mergeSettings`).
   `RecurrenceInput`). `endpoints.ts` converts it (`recurrenceBody`), so feature
   code always works with the `Date` form.
 - These richer rules are created in chat ("gym every Mon and Thu until
-  December"). `RecurrencePicker` cannot express them: it shows a read-only
-  "Custom: …" chip (`isCustomRecurrence`) and the edit form only sends
-  `recurrence` when the user actually picks another chip, so saving a task
+  December"). The Repeat sheet cannot express them: it shows the rule
+  read-only (`isCustomRecurrence`), and Detail sends one field per sheet, so
+  `recurrence` goes out only when another option is picked and saving a task
   never flattens a chat-made rule. `recurrenceLabel(recurrence, tz)` words every
   shape the same way the bot does.
 - `nextFireAt` still means "when the task is due (snooze included)".
