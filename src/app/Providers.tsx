@@ -1,11 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AppRoot } from '@telegram-apps/telegram-ui';
 import type { PropsWithChildren } from 'react';
-import { useMemo } from 'react';
-import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { ApiError } from '@/shared/api';
 import { useTheme } from '@/shared/lib/telegram';
-import { AuthGate } from '@/shared/ui';
+import { AuthGate, DevChrome, Toaster } from '@/shared/ui';
 
 // Client errors (bad request, auth, not found) won't fix themselves on
 // retry; everything else gets one more attempt.
@@ -28,22 +25,13 @@ const queryClient = new QueryClient({
 });
 
 export function Providers({ children }: PropsWithChildren) {
-  const theme = useTheme();
-  const platform = useMemo(() => {
-    try {
-      return retrieveLaunchParams().tgWebAppPlatform;
-    } catch {
-      return 'tdesktop';
-    }
-  }, []);
-  const tgPlatform: 'ios' | 'base' =
-    platform === 'ios' || platform === 'macos' ? 'ios' : 'base';
-
+  useTheme();
   return (
     <QueryClientProvider client={queryClient}>
-      <AppRoot appearance={theme} platform={tgPlatform}>
+      <DevChrome>
         <AuthGate>{children}</AuthGate>
-      </AppRoot>
+      </DevChrome>
+      <Toaster />
     </QueryClientProvider>
   );
 }

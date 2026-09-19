@@ -3,6 +3,8 @@ import { Lock, RefreshCw } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import { useState } from 'react';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { Button } from './Button';
+import { Placeholder } from './Empty';
 
 /**
  * Replaces raw backend messages with one explanation when the app cannot
@@ -38,33 +40,17 @@ export function AuthGate({ children }: PropsWithChildren) {
       : 'Your Telegram login is too old for the server to accept. Close this window and reopen Remy from the bot.';
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <span
-        className="flex h-14 w-14 items-center justify-center rounded-full"
-        style={{
-          background: 'var(--color-accent-soft)',
-          color: 'var(--color-accent)',
-        }}
-      >
-        <Lock size={24} />
-      </span>
-      <h1 className="font-sans text-xl font-bold tracking-tight text-[color:var(--color-text)]">
-        {title}
-      </h1>
-      <p className="max-w-[32ch] font-sans text-sm text-[color:var(--color-text-2)]">
-        {body}
-      </p>
-      {!forbidden && (
-        <button
-          type="button"
-          onClick={() => void retry()}
-          disabled={retrying}
-          className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-card)] bg-[color:var(--color-accent)] px-5 font-sans text-sm font-semibold text-[color:var(--color-accent-fg)] transition disabled:opacity-60"
-        >
-          <RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />
-          {retrying ? 'Retrying…' : 'Try again'}
-        </button>
-      )}
-    </main>
+    <Placeholder
+      icon={<Lock size={24} />}
+      title={title}
+      body={body}
+      action={
+        forbidden ? undefined : (
+          <Button variant="primary" onClick={() => void retry()} disabled={retrying} icon={<RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />}>
+            {retrying ? 'Retrying…' : 'Try again'}
+          </Button>
+        )
+      }
+    />
   );
 }

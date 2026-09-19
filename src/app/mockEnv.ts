@@ -7,7 +7,10 @@ import {
 // Only mock in dev — tree-shaken out of production bundles.
 if (import.meta.env.DEV) {
   if (!(await isTMA('complete'))) {
-    const themeParams = {
+    window.__REMY_MOCK_ENV__ = true;
+    // ?theme=light previews the light palette; the default mock is dark.
+    const light = new URLSearchParams(window.location.search).get('theme') === 'light';
+    const darkParams = {
       accent_text_color: '#6ab2f2',
       bg_color: '#17212b',
       button_color: '#5288c1',
@@ -22,6 +25,22 @@ if (import.meta.env.DEV) {
       subtitle_text_color: '#708499',
       text_color: '#f5f5f5',
     } as const;
+    const lightParams = {
+      accent_text_color: '#168acd',
+      bg_color: '#ffffff',
+      button_color: '#2481cc',
+      button_text_color: '#ffffff',
+      destructive_text_color: '#d14e4e',
+      header_bg_color: '#ffffff',
+      hint_color: '#999999',
+      link_color: '#2481cc',
+      secondary_bg_color: '#f1f1f4',
+      section_bg_color: '#ffffff',
+      section_header_text_color: '#6d6d72',
+      subtitle_text_color: '#999999',
+      text_color: '#000000',
+    } as const;
+    const themeParams = light ? lightParams : darkParams;
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
     // Must match OWNER_TELEGRAM_ID on the backend when using its dev bypass
     // (DEV_ALLOW_MOCK_INITDATA=true), which accepts hash=dev-mock-hash.

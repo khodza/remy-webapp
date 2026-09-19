@@ -1,6 +1,10 @@
-export { useBackButton } from './useBackButton';
+export { useBackButton, useBackHandler } from './useBackButton';
+export { isBackVisible, subscribeBack, triggerBack } from './backStack';
 export { useMainButton } from './useMainButton';
+export { suppressMainButton, useMainButtonStore } from './mainButtonStore';
+export { useSettingsButton } from './useSettingsButton';
 export { useHapticFeedback } from './useHapticFeedback';
 export { useTelegramUser, type TelegramUser } from './useTelegramUser';
 export { useTheme, type Theme } from './useTheme';
 export { readRawInitData } from './useRawInitData';
+export { isMockEnv } from './mockFlag';
