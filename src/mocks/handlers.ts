@@ -175,10 +175,25 @@ function fakeParse(text: string): {
 } {
   const lower = text.toLowerCase();
   const now = new Date();
-  const nine = (d: Date) => setSeconds(setMinutes(setHours(d, 9), 0), 0);
-  const scheduledAt = lower.includes('tomorrow')
-    ? nine(addDays(startOfDay(now), 1))
-    : addMinutes(now, 60);
+  // "at 5", "at 5pm", "at 17:30": a bare 1–11 reads as afternoon, like a
+  // model would guess; the app flags it as ambiguous.
+  const clock = /\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/.exec(lower);
+  let hour = 9;
+  let minute = 0;
+  if (clock) {
+    hour = Number(clock[1]) % 24;
+    minute = Number(clock[2] ?? 0);
+    if (clock[3] === 'pm' && hour < 12) hour += 12;
+    else if (clock[3] === 'am' && hour === 12) hour = 0;
+    else if (!clock[3] && !clock[2] && hour >= 1 && hour <= 11) hour += 12;
+  }
+  const at = (d: Date) => setSeconds(setMinutes(setHours(d, hour), minute), 0);
+  let scheduledAt = lower.includes('tomorrow')
+    ? at(addDays(startOfDay(now), 1))
+    : clock
+      ? at(startOfDay(now))
+      : addMinutes(now, 60);
+  if (scheduledAt.getTime() <= now.getTime()) scheduledAt = addDays(scheduledAt, 1);
   let recurrence: Recurrence | null = null;
   if (/every day|daily/.test(lower)) recurrence = { type: 'daily' };
   else if (/weekdays?/.test(lower)) recurrence = { type: 'weekdays' };
@@ -186,6 +201,7 @@ function fakeParse(text: string): {
   else if (/every month|monthly/.test(lower)) recurrence = { type: 'monthly' };
   const description = text
     .replace(/\b(remind me to|tomorrow|today|every (day|week|month)|daily|weekly|monthly|weekdays?)\b/gi, '')
+    .replace(/\bat\s+\d{1,2}(?::\d{2})?\s*(am|pm)?\b/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
   return { description: description || text.trim(), scheduledAt, recurrence };

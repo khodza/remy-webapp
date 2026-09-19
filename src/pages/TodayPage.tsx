@@ -1,4 +1,4 @@
-import { CalendarDays, CloudOff, Settings2 } from 'lucide-react';
+import { CalendarDays, CalendarRange, CloudOff, Search, Settings2 } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCategoryMap } from '@/features/categories';
@@ -22,7 +22,7 @@ import type { Task } from '@/shared/api';
 import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
-import { Button, Empty, IconButton, Screen, Segmented, SkeletonRows } from '@/shared/ui';
+import { Button, Empty, FieldRow, Group, IconButton, Screen, Segmented, SkeletonRows } from '@/shared/ui';
 
 const DONE_VARS = { view: 'done', limit: 100 } as const;
 
@@ -94,6 +94,9 @@ export function TodayPage() {
             <span className="shrink-0 text-[13.5px] font-bold text-muted">{formatInTz(day.start, tz, 'EEE d')}</span>
           </h1>
           <div className="flex shrink-0 items-center gap-0.5">
+            <IconButton label="Search" onClick={() => navigate('/search')}>
+              <Search size={19} />
+            </IconButton>
             <Segmented
               label="View"
               value={view}
@@ -103,9 +106,6 @@ export function TodayPage() {
                 { value: 'list', label: 'List' },
               ]}
             />
-            <IconButton label="Settings" onClick={() => navigate('/settings')}>
-              <Settings2 size={19} />
-            </IconButton>
           </div>
         </header>
 
@@ -180,6 +180,13 @@ export function TodayPage() {
           onWeek={() => navigate('/week')}
         />
       )}
+
+      {loaded ? (
+        <Group className="mt-6">
+          <FieldRow icon={<CalendarRange size={16} />} label="Week & Inbox" value={day.inboxCount ? `${day.inboxCount} undated` : undefined} onClick={() => navigate('/week')} />
+          <FieldRow icon={<Settings2 size={16} />} iconTone="warn" label="Settings" onClick={() => navigate('/settings')} />
+        </Group>
+      ) : null}
     </Screen>
   );
 }

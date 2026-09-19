@@ -6,7 +6,8 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { TaskDetailPage } from '@/pages/TaskDetailPage';
 import { TimezonePage } from '@/pages/TimezonePage';
 import { TodayPage } from '@/pages/TodayPage';
-import { UpcomingPage } from '@/pages/UpcomingPage';
+import { SearchPage } from '@/pages/SearchPage';
+import { WeekPage } from '@/pages/WeekPage';
 import { useSettingsButton } from '@/shared/lib/telegram';
 import { useDeepLink } from './useDeepLink';
 
@@ -29,8 +30,9 @@ export function Router() {
       <AppWiring />
       <Routes>
         <Route path="/" element={<TodayPage />} />
-        <Route path="/upcoming" element={<UpcomingPage />} />
-        <Route path="/week" element={<UpcomingPage />} />
+        <Route path="/week" element={<WeekPage />} />
+        <Route path="/upcoming" element={<Navigate to="/week" replace />} />
+        <Route path="/search" element={<SearchPage />} />
         <Route path="/catchup" element={<CatchUpPage />} />
         <Route path="/create" element={<CreateTaskPage />} />
         <Route path="/tasks/:id" element={<TaskDetailPage />} />

@@ -100,10 +100,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Visible keyboard focus, invisible for touch. */
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+/* Visible keyboard focus, invisible for touch. In the base layer so
+   utilities (outline-none on text fields inside a Group) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

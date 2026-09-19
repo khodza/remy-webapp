@@ -1,4 +1,4 @@
-export { useBackButton, useBackHandler } from './useBackButton';
+export { useBackButton, useBackHandler, useGoBack } from './useBackButton';
 export { isBackVisible, subscribeBack, triggerBack } from './backStack';
 export { useMainButton } from './useMainButton';
 export { suppressMainButton, useMainButtonStore } from './mainButtonStore';

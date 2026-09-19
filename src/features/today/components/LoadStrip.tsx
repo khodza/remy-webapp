@@ -12,6 +12,8 @@ interface LoadStripProps {
   highlight?: string;
   nowMinute?: number | null;
   label: string;
+  /** Week rows: thinner, no hour labels, no side padding. */
+  compact?: boolean;
 }
 
 const FROM = 6 * 60;
@@ -26,10 +28,10 @@ const TONES: Record<StripTick['tone'], string> = {
 };
 
 /** 06:00–24:00 at a glance: where the day's reminders sit, and now. */
-export function LoadStrip({ ticks, highlight, nowMinute = null, label }: LoadStripProps) {
+export function LoadStrip({ ticks, highlight, nowMinute = null, label, compact = false }: LoadStripProps) {
   return (
-    <div className="px-4" aria-label={`${label}: ${ticks.length} reminders`}>
-      <div className="relative h-7 overflow-hidden rounded-lg bg-past">
+    <div className={compact ? 'min-w-0 flex-1' : 'px-4'} aria-label={`${label}: ${ticks.length} reminders`}>
+      <div className={cx('relative overflow-hidden rounded-lg bg-past', compact ? 'h-5' : 'h-7')}>
         {nowMinute !== null ? (
           <>
             <div className="absolute inset-y-0 left-0 bg-rule/60" style={{ width: pct(nowMinute) }} aria-hidden="true" />
@@ -40,16 +42,22 @@ export function LoadStrip({ ticks, highlight, nowMinute = null, label }: LoadStr
           <i
             key={tick.id}
             aria-hidden="true"
-            className={cx('absolute rounded-sm', TONES[tick.tone], tick.id === highlight ? 'inset-y-1 w-2 -translate-x-1 ring-2 ring-surface' : 'inset-y-2 w-1 -translate-x-0.5 opacity-70')}
+            className={cx(
+              'absolute rounded-sm',
+              TONES[tick.tone],
+              tick.id === highlight ? 'inset-y-1 w-2 -translate-x-1 ring-2 ring-surface' : compact ? 'inset-y-1 w-1.5 -translate-x-0.5' : 'inset-y-2 w-1 -translate-x-0.5 opacity-70',
+            )}
             style={{ left: pct(tick.minute) }}
           />
         ))}
       </div>
-      <div className="tnum mt-1 flex justify-between text-[10px] font-extrabold text-muted">
-        <span>06:00</span>
-        <span>{label}</span>
-        <span>24:00</span>
-      </div>
+      {compact ? null : (
+        <div className="tnum mt-1 flex justify-between text-[10px] font-extrabold text-muted">
+          <span>06:00</span>
+          <span>{label}</span>
+          <span>24:00</span>
+        </div>
+      )}
     </div>
   );
 }

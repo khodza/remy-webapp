@@ -22,7 +22,7 @@ import { dayKey, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import type { Task } from '@/shared/api';
 import type { TaskPatch } from '@/shared/api/endpoints';
 import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
-import { useMainButton } from '@/shared/lib/telegram';
+import { useGoBack, useMainButton } from '@/shared/lib/telegram';
 import { useAutosave } from '@/shared/lib/useAutosave';
 import { useNow } from '@/shared/lib/useNow';
 import { AutoTextarea, Empty, FieldRow, Group, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
@@ -51,6 +51,7 @@ export function TaskDetailPage() {
 
 function Detail({ task }: { task: Task }) {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const tz = useUserTimezone();
   const now = useNow();
   const update = useUpdateTask();
@@ -95,7 +96,7 @@ function Detail({ task }: { task: Task }) {
             title.commit();
             notes.commit();
             actions.complete(task);
-            navigate(-1);
+            goBack();
           },
         },
   );
@@ -213,7 +214,7 @@ function Detail({ task }: { task: Task }) {
           danger
           onClick={() => {
             deleteLater(task);
-            navigate(-1);
+            goBack();
           }}
         />
       </Group>

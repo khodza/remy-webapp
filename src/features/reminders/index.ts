@@ -15,8 +15,6 @@ export {
   useUpdateTask,
   type TasksQueryVars,
 } from './hooks';
-export { CreateTaskForm } from './components/CreateTaskForm';
-export { ParsePreview } from './components/ParsePreview';
 export { VoiceRecordButton } from './components/VoiceRecordButton';
 export { recurrenceLabel } from './lib/recurrence';
 export { TaskRow, type RowTone } from './components/TaskRow';

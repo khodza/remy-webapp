@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pushBack } from './backStack';
 
@@ -9,18 +9,24 @@ function historyIndex(): number {
 }
 
 /**
- * Shows Telegram's Back button for a page. It goes back in history, or to
- * Today when the page was opened directly (a deep link from the bot).
+ * Back in history, or to Today when the page was opened directly (a deep
+ * link from the bot), so leaving a screen never leaves the app.
  */
-export function useBackButton(show = true) {
+export function useGoBack(): () => void {
   const navigate = useNavigate();
+  return useCallback(() => {
+    if (historyIndex() > 0) navigate(-1);
+    else navigate('/', { replace: true });
+  }, [navigate]);
+}
+
+/** Shows Telegram's Back button for a page; it runs useGoBack. */
+export function useBackButton(show = true) {
+  const goBack = useGoBack();
   useEffect(() => {
     if (!show) return undefined;
-    return pushBack(() => {
-      if (historyIndex() > 0) navigate(-1);
-      else navigate('/', { replace: true });
-    });
-  }, [show, navigate]);
+    return pushBack(goBack);
+  }, [show, goBack]);
 }
 
 /** Back closes something (a sheet) while `active`. The latest handler wins. */

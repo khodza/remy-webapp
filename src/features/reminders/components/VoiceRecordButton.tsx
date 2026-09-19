@@ -89,11 +89,9 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
 
   if (recorder.status === 'unsupported') {
     return (
-      <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface-2)] px-3 py-2 text-[color:var(--color-text-2)]">
+      <div className="flex min-h-[52px] items-center gap-2.5 px-3.5 text-muted">
         <MicOff size={16} />
-        <span className="font-sans text-xs">
-          Voice recording isn't supported on this device.
-        </span>
+        <span className="text-[13.5px] font-semibold">Voice recording isn't supported on this device.</span>
       </div>
     );
   }
@@ -102,17 +100,15 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
   const showCountdown = isRecording && recorder.durationMs >= COUNTDOWN_FROM_MS;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 px-3.5 py-3">
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => void handleToggle()}
           disabled={disabled && !isRecording}
           aria-label={isRecording ? 'Stop recording' : 'Start voice reminder'}
-          className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-sm transition active:scale-95 disabled:opacity-50 ${
-            isRecording
-              ? 'bg-[color:var(--color-danger)] text-white'
-              : 'bg-[color:var(--color-accent)] text-[color:var(--color-accent-fg)]'
+          className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-50 ${
+            isRecording ? 'bg-danger text-white' : 'bg-accent-soft text-accent'
           }`}
         >
           {isRecording ? (
@@ -121,15 +117,15 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
             <Mic size={20} />
           )}
           {isRecording && (
-            <span className="pointer-events-none absolute h-12 w-12 animate-ping rounded-full bg-[color:var(--color-danger)] opacity-40" />
+            <span className="pointer-events-none absolute h-12 w-12 animate-ping rounded-full bg-danger opacity-40" />
           )}
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="font-sans text-[13px] font-medium text-[color:var(--color-text)]">
+          <span className="text-[14.5px] font-bold text-text">
             {statusLabel(recorder.status, create.isPending)}
           </span>
-          <span className="font-mono text-xs tabular-nums text-[color:var(--color-text-2)]">
+          <span className="tnum text-[12.5px] font-semibold text-muted">
             {isRecording
               ? showCountdown
                 ? `${formatDuration(recorder.durationMs)} · ${Math.ceil(remainingMs / 1000)}s left`
@@ -149,7 +145,7 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
               setNotice(null);
             }}
             aria-label="Cancel recording"
-            className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-[color:var(--color-hairline)] px-3 font-sans text-xs text-[color:var(--color-text-2)] transition hover:border-[color:var(--color-danger)] hover:text-[color:var(--color-danger)]"
+            className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-1 rounded-xl border-[1.5px] border-rule px-3 text-[13px] font-extrabold text-muted"
           >
             <X size={14} />
             Cancel
@@ -158,9 +154,7 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
       </div>
 
       {notice && (
-        <p className="font-sans text-xs text-[color:var(--color-text-2)]">
-          {notice}
-        </p>
+        <p className="text-[12.5px] font-semibold text-muted">{notice}</p>
       )}
     </div>
   );
@@ -183,7 +177,7 @@ function statusLabel(
     case 'error':
       return 'Something went wrong';
     default:
-      return 'Tap the mic to capture';
+      return 'Say it instead';
   }
 }
 
@@ -196,5 +190,5 @@ function hint(
   if (status === 'error') {
     return 'Tap to try again';
   }
-  return 'Tap to start / stop · up to 1:30';
+  return 'Tap to record, tap again to add · up to 1:30';
 }
