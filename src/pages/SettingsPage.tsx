@@ -1,87 +1,159 @@
-import { ChevronRight, Globe } from 'lucide-react';
+import { BellOff, BellRing, CalendarDays, Globe, LayoutList, Moon, Newspaper, Sun, Tag } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCategories } from '@/features/categories';
 import { useMe } from '@/features/profile';
-import { RhythmSection, zoneCity } from '@/features/settings';
+import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features/settings';
+import { useTodayView } from '@/features/today';
+import { CONTRACT_VERSION, type Settings } from '@/shared/api';
 import { getDeviceTimezone } from '@/shared/lib/dates';
-import { Page } from '@/shared/ui';
+import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SkeletonRows, TimeField, Toggle } from '@/shared/ui';
+
+type RhythmKey = 'morningBrief' | 'eveningReview';
+
+const RHYTHM: Record<RhythmKey, { title: string; body: string }> = {
+  morningBrief: {
+    title: 'Morning brief',
+    body: "One message with today's plan, anything overdue from yesterday, and the Inbox, with buttons to reschedule or catch up.",
+  },
+  eveningReview: {
+    title: 'Evening review',
+    body: "What's still open today, one tap each: tomorrow morning, drop, or keep. The weekly wrap is sent at this time too.",
+  },
+};
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const me = useMe();
+  const settings = useSettings();
+  const categories = useCategories();
+  const save = useSaveSettings();
+  const [view, setView] = useTodayView();
+  const [editing, setEditing] = useState<RhythmKey | null>(null);
+
   const tz = me.data?.timezone ?? null;
   const detected = tz !== null && tz === getDeviceTimezone();
+  const s = settings.data;
 
   return (
-    <Page>
-      <main className="flex flex-1 flex-col gap-4 px-4 py-6">
-        <header>
-          <h1 className="font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
-            Settings
-          </h1>
-        </header>
+    <Screen>
+      <h1 className="px-4 pb-1 pt-3 text-[21px] font-extrabold tracking-[-0.02em]">Settings</h1>
 
-        {me.data && (
-          <section className="flex items-center gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] p-4">
-            <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full font-sans text-lg font-semibold text-white"
-              style={{
-                background:
-                  'linear-gradient(135deg, var(--color-accent) 0%, oklch(60% 0.12 320) 100%)',
-              }}
-            >
-              {me.data.firstName.slice(0, 1).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate font-sans text-[17px] font-semibold tracking-tight text-[color:var(--color-text)]">
-                {me.data.firstName}
-                {me.data.lastName ? ` ${me.data.lastName}` : ''}
-              </p>
-              {me.data.username && (
-                <p className="mt-0.5 truncate font-mono text-xs text-[color:var(--color-text-2)]">
-                  @{me.data.username}
-                </p>
-              )}
-            </div>
-          </section>
-        )}
+      {me.data ? (
+        <div className="flex items-center gap-3 px-4 pb-1 pt-2">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-[19px] font-extrabold text-accent-fg">
+            {me.data.firstName.slice(0, 1).toUpperCase()}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-[17px] font-extrabold">
+              {me.data.firstName}
+              {me.data.lastName ? ` ${me.data.lastName}` : ''}
+            </span>
+            <span className="block truncate text-[12.5px] font-bold text-muted">
+              {[me.data.username ? `@${me.data.username}` : null, tz ? `${zoneCity(tz)}${detected ? ', detected' : ''}` : null].filter(Boolean).join(' · ')}
+            </span>
+          </span>
+        </div>
+      ) : null}
 
-        <section className="overflow-hidden rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)]">
-          <button
-            type="button"
-            onClick={() => navigate('/settings/timezone')}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[color:var(--color-surface-2)]"
-          >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              style={{
-                background: 'var(--color-accent-soft)',
-                color: 'var(--color-accent)',
-              }}
-            >
-              <Globe size={16} />
-            </span>
-            <span className="flex-1 font-sans text-[15px] font-medium text-[color:var(--color-text)]">
-              Timezone
-            </span>
-            <span className="text-right">
-              <span className="block font-sans text-xs text-[color:var(--color-text-2)]">
-                {tz ? zoneCity(tz) : 'Detecting…'}
-              </span>
-              {detected && (
-                <span className="block font-sans text-[10px] text-[color:var(--color-text-3)]">
-                  detected
-                </span>
-              )}
-            </span>
-            <ChevronRight
-              size={16}
-              className="text-[color:var(--color-text-3)]"
+      {!s ? (
+        <div className="pt-4">
+          {settings.isError ? <Empty title="Couldn't load your settings" body="Check the connection and reopen this screen." /> : <SkeletonRows count={5} />}
+        </div>
+      ) : (
+        <>
+          <SectionHeader label="Messages from Remy" />
+          <Group>
+            <FieldRow icon={<Sun size={16} />} iconTone="warn" label="Morning brief" value={s.morningBrief.enabled ? s.morningBrief.time : 'Off'} onClick={() => setEditing('morningBrief')} />
+            <FieldRow icon={<Moon size={16} />} label="Evening review" value={s.eveningReview.enabled ? s.eveningReview.time : 'Off'} onClick={() => setEditing('eveningReview')} />
+            <FieldRow
+              icon={<Newspaper size={16} />}
+              iconTone="ok"
+              label="Weekly wrap"
+              hint={`${s.weekStartsOn === 1 ? 'Sunday' : 'Saturday'} at ${s.eveningReview.time}`}
+              trailing={<Toggle checked={s.weeklyWrap.enabled} onChange={(enabled) => save({ weeklyWrap: { enabled } })} label="Weekly wrap" />}
             />
-          </button>
-        </section>
+          </Group>
 
-        <RhythmSection />
-      </main>
-    </Page>
+          <SectionHeader label="Reminders" />
+          <Group>
+            <FieldRow
+              icon={<BellOff size={16} />}
+              iconTone="accent"
+              label="Quiet hours"
+              value={s.quietHours.enabled ? `${s.quietHours.from} – ${s.quietHours.to}` : 'Off'}
+              onClick={() => navigate('/settings/quiet')}
+            />
+            <FieldRow
+              icon={<BellRing size={16} />}
+              iconTone="danger"
+              label="If ignored, nudge again"
+              value={s.escalation.enabled && s.escalation.stepsMinutes.length ? nudgeSummary(s.escalation.stepsMinutes) : 'Off'}
+              onClick={() => navigate('/settings/quiet')}
+            />
+          </Group>
+
+          <SectionHeader label="Organisation" />
+          <Group>
+            <FieldRow icon={<Tag size={16} />} iconTone="ok" label="Categories" value={categories.data ? String(categories.data.length) : undefined} onClick={() => navigate('/settings/categories')} />
+            <FieldRow
+              icon={<LayoutList size={16} />}
+              label="Today opens in"
+              trailing={
+                <Segmented
+                  label="Today opens in"
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { value: 'timeline', label: 'Timeline' },
+                    { value: 'list', label: 'List' },
+                  ]}
+                />
+              }
+            />
+          </Group>
+
+          <SectionHeader label="Region" />
+          <Group>
+            <FieldRow icon={<Globe size={16} />} label="Time zone" value={tz ? `${zoneCity(tz)}${detected ? ' · auto' : ''}` : 'Detecting…'} onClick={() => navigate('/settings/timezone')} />
+            <FieldRow
+              icon={<CalendarDays size={16} />}
+              iconTone="warn"
+              label="Week starts on"
+              trailing={
+                <Segmented
+                  label="Week starts on"
+                  value={String(s.weekStartsOn) as '0' | '1'}
+                  onChange={(value) => save({ weekStartsOn: value === '1' ? 1 : 0 })}
+                  options={[
+                    { value: '1', label: 'Monday' },
+                    { value: '0', label: 'Sunday' },
+                  ]}
+                />
+              }
+            />
+          </Group>
+
+          <RhythmSheet editing={editing} settings={s} onClose={() => setEditing(null)} />
+        </>
+      )}
+
+      <p className="tnum px-4 pt-6 text-center text-[11.5px] font-semibold text-faint">Remy · contract {CONTRACT_VERSION}</p>
+    </Screen>
+  );
+}
+
+function RhythmSheet({ editing, settings, onClose }: { editing: RhythmKey | null; settings: Settings; onClose: () => void }) {
+  const save = useSaveSettings();
+  const key = editing ?? 'morningBrief';
+  const value = settings[key];
+  return (
+    <Sheet open={editing !== null} onClose={onClose} title={RHYTHM[key].title}>
+      <p className="pb-3 text-[13.5px] font-semibold text-muted">{RHYTHM[key].body}</p>
+      <Group className="mx-0">
+        <FieldRow label="Send it" trailing={<Toggle checked={value.enabled} onChange={(enabled) => save({ [key]: { enabled } })} label={RHYTHM[key].title} />} />
+        <FieldRow label="At" trailing={<TimeField value={value.time} disabled={!value.enabled} onChange={(time) => save({ [key]: { time } })} label={`${RHYTHM[key].title} time`} />} />
+      </Group>
+    </Sheet>
   );
 }

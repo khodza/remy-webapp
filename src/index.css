@@ -31,19 +31,6 @@
   --color-warn-soft: #fef0c7;
   --color-scrim: rgb(16 24 40 / 0.45);
 
-  /* Legacy names still used by a few components; same palette. */
-  --color-text-2: var(--color-muted);
-  --color-text-3: var(--color-faint);
-  --color-hairline: var(--color-rule);
-  --color-surface-2: var(--color-past);
-  --color-success: var(--color-ok);
-
-  --radius-card: 16px;
-  --radius-big: 16px;
-  --radius-pill: 999px;
-
-  /* Timeline density: pixels per hour (compact via [data-density]). */
-  --spacing-hour: 60px;
 }
 
 [data-theme='dark'] {
@@ -65,10 +52,6 @@
   --color-warn: #fdb022;
   --color-warn-soft: #3a2a0b;
   --color-scrim: rgb(0 0 0 / 0.6);
-}
-
-[data-density='compact'] {
-  --spacing-hour: 44px;
 }
 
 html,

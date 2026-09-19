@@ -1,8 +1,12 @@
 export { listTimezones, matchesZone, zoneCity, zoneRegion } from './timezones';
-export { RhythmSection } from './components/RhythmSection';
+export { QuietBar } from './components/QuietBar';
+export { mergeSettings, settingsKey, useSettings, useUpdateSettings } from './hooks';
+export { useSaveSettings } from './useSaveSettings';
 export {
-  mergeSettings,
-  settingsKey,
-  useSettings,
-  useUpdateSettings,
-} from './hooks';
+  DEFAULT_FIRST_NUDGE,
+  FIRST_NUDGE_OPTIONS,
+  minutesLabel,
+  nudgeSteps,
+  nudgeSummary,
+  SECOND_NUDGE_OPTIONS,
+} from './lib/nudges';

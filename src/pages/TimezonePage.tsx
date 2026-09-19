@@ -1,36 +1,21 @@
 import { Check, Loader2, LocateFixed, Search } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 import { useMe, useUpdateTimezone } from '@/features/profile';
-import {
-  listTimezones,
-  matchesZone,
-  zoneCity,
-  zoneRegion,
-} from '@/features/settings';
-import {
-  formatTime,
-  getDeviceTimezone,
-  utcOffsetLabel,
-} from '@/shared/lib/dates';
-import { useHapticFeedback } from '@/shared/lib/telegram';
-import { Page } from '@/shared/ui';
+import { listTimezones, matchesZone, zoneCity, zoneRegion } from '@/features/settings';
+import { formatTime, getDeviceTimezone, utcOffsetLabel } from '@/shared/lib/dates';
+import { useGoBack, useHapticFeedback } from '@/shared/lib/telegram';
+import { useNow } from '@/shared/lib/useNow';
+import { Group, Screen, SectionHeader, toast } from '@/shared/ui';
 
 const MAX_ROWS = 80;
 
 export function TimezonePage() {
-  const navigate = useNavigate();
+  const goBack = useGoBack();
   const me = useMe();
   const update = useUpdateTimezone();
   const haptic = useHapticFeedback();
+  const now = useNow();
   const [query, setQuery] = useState('');
-
-  // Minute-by-minute re-render so per-zone clocks stay right.
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
 
   const currentTz = me.data?.timezone ?? null;
   const deviceTz = useMemo(() => getDeviceTimezone(), []);
@@ -38,154 +23,90 @@ export function TimezonePage() {
   const zones = useMemo(() => {
     const filtered = allZones.filter((z) => matchesZone(z, query));
     // Keep the current zone visible at the top when it matches.
-    if (currentTz && filtered.includes(currentTz)) {
-      return [currentTz, ...filtered.filter((z) => z !== currentTz)];
-    }
+    if (currentTz && filtered.includes(currentTz)) return [currentTz, ...filtered.filter((z) => z !== currentTz)];
     return filtered;
   }, [allZones, query, currentTz]);
   const visible = zones.slice(0, MAX_ROWS);
 
-  const handleSelect = (tz: string) => {
+  const select = (tz: string) => {
     if (tz === currentTz) {
-      navigate(-1);
+      goBack();
       return;
     }
     haptic.selection();
     update.mutate(tz, {
       onSuccess: () => {
         haptic.notify('success');
-        navigate(-1);
+        toast({ message: `Time zone: ${zoneCity(tz)}` });
+        goBack();
       },
-      onError: () => haptic.notify('error'),
+      onError: () => {
+        haptic.notify('error');
+        toast({ message: "Couldn't change the time zone. Try again.", tone: 'danger' });
+      },
     });
   };
 
+  const row = (zone: string, label: string, detail: string, icon?: React.ReactNode) => (
+    <button
+      key={zone + label}
+      type="button"
+      onClick={() => select(zone)}
+      disabled={update.isPending}
+      className="flex min-h-14 w-full items-center gap-3 px-3.5 py-2 text-left active:bg-past disabled:opacity-60"
+    >
+      {icon}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14.5px] font-extrabold">{label}</span>
+        {detail ? <span className="block truncate text-[12px] font-semibold text-muted">{detail}</span> : null}
+      </span>
+      <span className="tnum text-right">
+        <span className="block text-[13px] font-extrabold">{formatTime(now, zone)}</span>
+        <span className="block text-[10.5px] font-bold text-muted">UTC{utcOffsetLabel(zone, now)}</span>
+      </span>
+      <span className="flex w-5 justify-center">
+        {update.isPending && update.variables === zone ? <Loader2 size={16} className="animate-spin text-accent" /> : zone === currentTz ? <Check size={16} className="text-accent" /> : null}
+      </span>
+    </button>
+  );
+
   return (
-    <Page>
-      <main className="flex flex-1 flex-col gap-4 px-4 py-6">
-        <header>
-          <h1 className="font-sans text-2xl font-bold tracking-tight text-[color:var(--color-text)]">
-            Time zone
-          </h1>
-          <p className="mt-1 font-sans text-sm text-[color:var(--color-text-2)]">
-            Remy uses this to understand "tomorrow at 6" and to show every
-            time in your local hours.
-          </p>
-        </header>
+    <Screen>
+      <h1 className="px-4 pb-1 pt-3 text-[21px] font-extrabold tracking-[-0.02em]">Time zone</h1>
+      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">Remy uses it to understand “tomorrow at 6” and to show every time in your hours.</p>
 
-        <button
-          type="button"
-          onClick={() => handleSelect(deviceTz)}
-          disabled={update.isPending}
-          className="flex min-h-14 w-full items-center gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3 text-left transition hover:bg-[color:var(--color-surface-2)] disabled:opacity-60"
-        >
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{
-              background: 'var(--color-accent-soft)',
-              color: 'var(--color-accent)',
-            }}
-          >
+      <Group>
+        {row(
+          deviceTz,
+          `Auto: ${zoneCity(deviceTz)}`,
+          `${deviceTz} · from this device`,
+          <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] bg-accent-soft text-accent">
             <LocateFixed size={16} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-sans text-[15px] font-medium text-[color:var(--color-text)]">
-              Auto: {zoneCity(deviceTz)}
-            </span>
-            <span className="block truncate font-sans text-xs text-[color:var(--color-text-2)]">
-              {deviceTz} · detected from this device
-            </span>
-          </span>
-          {currentTz === deviceTz && (
-            <Check size={16} className="text-[color:var(--color-accent)]" />
-          )}
-        </button>
+          </span>,
+        )}
+      </Group>
 
-        <label className="flex items-center gap-2 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3 focus-within:border-[color:var(--color-accent)]">
-          <Search size={16} className="text-[color:var(--color-text-3)]" />
+      <div className="px-3 pt-4">
+        <label className="flex min-h-12 items-center gap-2 rounded-xl border border-rule bg-surface px-3">
+          <Search size={16} className="text-muted" />
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search city or zone…"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search a city or zone"
             autoCapitalize="none"
             autoCorrect="off"
-            className="min-w-0 flex-1 bg-transparent font-sans text-[15px] text-[color:var(--color-text)] placeholder:text-[color:var(--color-text-3)] focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-text outline-none placeholder:font-semibold placeholder:text-faint"
           />
         </label>
+      </div>
 
-        <ul className="overflow-hidden rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)]">
-          {visible.length === 0 && (
-            <li className="px-4 py-4 font-sans text-sm text-[color:var(--color-text-2)]">
-              No zone matches “{query}”.
-            </li>
-          )}
-          {visible.map((zone, idx) => {
-            const isCurrent = zone === currentTz;
-            const isLast = idx === visible.length - 1;
-            const region = zoneRegion(zone);
-            return (
-              <li
-                key={zone}
-                className={`border-[color:var(--color-hairline)] ${isLast ? '' : 'border-b'}`}
-              >
-                <button
-                  type="button"
-                  onClick={() => handleSelect(zone)}
-                  disabled={update.isPending}
-                  className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-[color:var(--color-surface-2)] disabled:opacity-60"
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-sans text-[15px] font-medium text-[color:var(--color-text)]">
-                      {zoneCity(zone)}
-                    </span>
-                    {region && (
-                      <span className="block truncate font-sans text-[11px] text-[color:var(--color-text-2)]">
-                        {region}
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-right">
-                    <span className="block font-mono text-xs tabular-nums text-[color:var(--color-text)]">
-                      {formatTime(now, zone)}
-                    </span>
-                    <span className="block font-mono text-[10px] tabular-nums text-[color:var(--color-text-3)]">
-                      UTC{utcOffsetLabel(zone, now)}
-                    </span>
-                  </span>
-                  {isCurrent && !update.isPending && (
-                    <Check
-                      size={16}
-                      className="text-[color:var(--color-accent)]"
-                    />
-                  )}
-                  {update.isPending && update.variables === zone && (
-                    <Loader2
-                      size={16}
-                      className="animate-spin text-[color:var(--color-accent)]"
-                    />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-          {zones.length > MAX_ROWS && (
-            <li className="px-4 py-3 font-sans text-xs text-[color:var(--color-text-2)]">
-              Showing {MAX_ROWS} of {zones.length}. Keep typing to narrow down.
-            </li>
-          )}
-        </ul>
-
-        {update.isError && (
-          <div className="rounded-[var(--radius-card)] border border-[color:var(--color-danger-soft)] bg-[color:var(--color-danger-soft)] p-3">
-            <p className="font-sans text-xs text-[color:var(--color-danger)]">
-              {update.error instanceof Error
-                ? update.error.message
-                : 'Failed to update timezone.'}
-            </p>
-          </div>
-        )}
-      </main>
-    </Page>
+      <SectionHeader label={query ? `${zones.length} matches` : 'All zones'} />
+      <Group>
+        {visible.length === 0 ? <p className="px-3.5 py-4 text-[13.5px] font-semibold text-muted">No zone matches “{query}”.</p> : null}
+        {visible.map((zone) => row(zone, zoneCity(zone), zoneRegion(zone) ?? ''))}
+      </Group>
+      {zones.length > MAX_ROWS ? <p className="px-4 pt-2 text-[12px] font-semibold text-muted">Showing {MAX_ROWS} of {zones.length}. Keep typing to narrow it down.</p> : null}
+    </Screen>
   );
 }

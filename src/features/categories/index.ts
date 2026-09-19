@@ -6,5 +6,4 @@ export {
   useUpdateCategory,
   useDeleteCategory,
 } from './hooks';
-export { CategoryChip } from './components/CategoryChip';
 export { CategoryPill } from './components/CategoryPill';
