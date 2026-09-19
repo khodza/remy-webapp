@@ -5,8 +5,18 @@ import {
   type QueryClient,
   type QueryKey,
 } from '@tanstack/react-query';
+import { useCallback } from 'react';
+import { create } from 'zustand';
 import * as api from '@/shared/api';
 import type { Task, TaskView } from '@/shared/api';
+import { useHapticFeedback } from '@/shared/lib/telegram';
+import { toast } from '@/shared/ui';
+
+/**
+ * Tasks deleted in the app but still inside their Undo window: hidden from
+ * every list (even after a refetch) until the delete is sent or undone.
+ */
+const usePendingDeletes = create<{ ids: string[] }>(() => ({ ids: [] }));
 
 export interface TasksQueryVars {
   /** Server-side view; omitted = "all". */
@@ -34,10 +44,16 @@ export function useTasks(
   vars: TasksQueryVars = {},
   options: { enabled?: boolean } = {},
 ) {
+  const hidden = usePendingDeletes((s) => s.ids);
+  const select = useCallback(
+    (tasks: Task[]) => (hidden.length === 0 ? tasks : tasks.filter((t) => !hidden.includes(t.id))),
+    [hidden],
+  );
   return useQuery({
     queryKey: tasksKey(vars),
     queryFn: () => api.listTasks(vars),
     enabled: options.enabled ?? true,
+    select,
   });
 }
 
@@ -230,4 +246,38 @@ export function useDeleteTask() {
     },
     onSettled: () => invalidateTask(qc),
   });
+}
+
+/**
+ * Delete with Undo: the task disappears at once and the request is sent
+ * when the toast times out (or the app is hidden). Undo just shows it again.
+ */
+export function useDeferredDelete() {
+  const qc = useQueryClient();
+  const haptic = useHapticFeedback();
+  return (task: Task) => {
+    haptic.notify('warning');
+    usePendingDeletes.setState((s) => ({ ids: [...s.ids, task.id] }));
+    const release = () => usePendingDeletes.setState((s) => ({ ids: s.ids.filter((id) => id !== task.id) }));
+    const title = task.description.length > 40 ? `${task.description.slice(0, 39)}…` : task.description;
+    toast({
+      message: `Deleted “${title}”`,
+      action: { label: 'Undo', onClick: release },
+      onTimeout: () => {
+        api.deleteTask(task.id).then(
+          () => {
+            // Drop it from the caches before un-hiding, so it can't flash back.
+            patchLists(qc, (list) => list.filter((t) => t.id !== task.id));
+            qc.removeQueries({ queryKey: taskKey(task.id) });
+            release();
+            void qc.invalidateQueries({ queryKey: ['tasks'] });
+          },
+          () => {
+            release();
+            toast({ message: `Couldn't delete “${title}”. It's back.`, tone: 'danger' });
+          },
+        );
+      },
+    });
+  };
 }

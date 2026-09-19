@@ -1,4 +1,5 @@
 export { AuthGate } from './AuthGate';
+export { AutoTextarea } from './AutoTextarea';
 export { Button, IconButton } from './Button';
 export { CheckCircle } from './CheckCircle';
 export { Chip } from './Chip';

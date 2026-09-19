@@ -7,6 +7,8 @@ const OBJECT_ID = /^[0-9a-f]{24}$/i;
 /** Screens a bot button may open by name (`?screen=<name>` or `startapp=<name>`). */
 const SCREENS: Record<string, string> = {
   settings: '/settings',
+  catchup: '/catchup',
+  week: '/week',
 };
 
 function startParam(): string | null {

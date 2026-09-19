@@ -3,4 +3,6 @@ export { hourRange, layoutBlocks } from './lib/timeline';
 export { ListView, OverdueSection } from './components/ListView';
 export { TimelineView } from './components/TimelineView';
 export { WeekStrip } from './components/WeekStrip';
+export { LoadStrip, type StripTick } from './components/LoadStrip';
+export { useDayTicks } from './useDayTicks';
 export { useTodayView } from './useTodayView';

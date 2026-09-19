@@ -3,6 +3,7 @@ export { isBackVisible, subscribeBack, triggerBack } from './backStack';
 export { useMainButton } from './useMainButton';
 export { suppressMainButton, useMainButtonStore } from './mainButtonStore';
 export { useSettingsButton } from './useSettingsButton';
+export { useClosingConfirmation } from './useClosingConfirmation';
 export { useHapticFeedback } from './useHapticFeedback';
 export { useTelegramUser, type TelegramUser } from './useTelegramUser';
 export { useTheme, type Theme } from './useTheme';

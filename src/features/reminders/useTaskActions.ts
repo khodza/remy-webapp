@@ -3,6 +3,7 @@ import { formatWhen, useUserTimezone } from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { toast } from '@/shared/ui';
 import { useCompleteTask, useDelayTask, useReopenTask, useSnoozeTask } from './hooks';
+import type { SnoozeOption } from './lib/when';
 
 /**
  * The one-tap actions every list shares (Today, Week, Search, Catch-up):
@@ -71,5 +72,9 @@ export function useTaskActions() {
     );
   };
 
-  return { complete, reopen, delay, snoozeUntil };
+  /** A snooze chip: relative ones go through delay, the rest are absolute. */
+  const snooze = (task: Task, option: SnoozeOption) =>
+    option.action.kind === 'delay' ? delay(task, option.action.minutes) : snoozeUntil(task, option.action.until);
+
+  return { complete, reopen, delay, snoozeUntil, snooze };
 }

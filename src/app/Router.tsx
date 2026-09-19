@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { CatchUpPage } from '@/pages/CatchUpPage';
 import { CreateTaskPage } from '@/pages/CreateTaskPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TaskDetailPage } from '@/pages/TaskDetailPage';
@@ -30,6 +31,7 @@ export function Router() {
         <Route path="/" element={<TodayPage />} />
         <Route path="/upcoming" element={<UpcomingPage />} />
         <Route path="/week" element={<UpcomingPage />} />
+        <Route path="/catchup" element={<CatchUpPage />} />
         <Route path="/create" element={<CreateTaskPage />} />
         <Route path="/tasks/:id" element={<TaskDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
