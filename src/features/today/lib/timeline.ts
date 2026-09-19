@@ -83,3 +83,14 @@ export function layoutBlocks(blocks: BlockInput[], firstHour: number, hourPx: nu
   closeCluster();
   return placed;
 }
+
+/**
+ * Dragging a block: the pointer moved `dy` pixels from a block at
+ * `baseMinute`. The new time snaps to the `step`-minute grid of the day and
+ * stays within it; returns the change in minutes.
+ */
+export function snapMove(baseMinute: number, dy: number, hourPx: number, step = 15): number {
+  const target = Math.round((baseMinute + (dy / hourPx) * 60) / step) * step;
+  const clamped = Math.min(24 * 60 - step, Math.max(0, target));
+  return clamped - baseMinute;
+}

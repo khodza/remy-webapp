@@ -1,4 +1,6 @@
 import { forwardRef, useLayoutEffect, useRef, type PropsWithChildren } from 'react';
+import { useLocation } from 'react-router-dom';
+import { saveScroll, savedScroll } from '@/shared/lib/scrollMemory';
 import { useBackButton } from '@/shared/lib/telegram';
 import { cx } from './cx';
 
@@ -9,16 +11,23 @@ interface ScreenProps {
 }
 
 /**
- * The scrolling page. Starts at the top on every navigation, and keeps its
- * content clear of the bottom safe area (and of the dev MainButton mirror).
+ * The scrolling page. A new screen starts at the top; going Back returns
+ * to where it was left. Content stays clear of the bottom safe area (and
+ * of the dev MainButton mirror).
  */
 export const Screen = forwardRef<HTMLElement, PropsWithChildren<ScreenProps>>(
   function Screen({ back = true, className, children }, ref) {
     useBackButton(back);
+    const { key } = useLocation();
     const local = useRef<HTMLElement | null>(null);
+
     useLayoutEffect(() => {
-      local.current?.scrollTo({ top: 0 });
-    }, []);
+      const main = local.current;
+      if (!main) return undefined;
+      main.scrollTo({ top: savedScroll(key) ?? 0 });
+      return () => saveScroll(key, main.scrollTop);
+    }, [key]);
+
     return (
       <main
         ref={(node) => {

@@ -1,6 +1,6 @@
 import { CalendarDays, CalendarRange, CloudOff, Search, Settings2 } from 'lucide-react';
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCategoryMap } from '@/features/categories';
 import { useTaskActions, useTasks } from '@/features/reminders';
 import { useSettings } from '@/features/settings';
@@ -21,6 +21,7 @@ import {
 import type { Task } from '@/shared/api';
 import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useMainButton } from '@/shared/lib/telegram';
+import { savedScroll } from '@/shared/lib/scrollMemory';
 import { useNow } from '@/shared/lib/useNow';
 import { Button, Empty, FieldRow, Group, IconButton, Screen, Segmented, SkeletonRows } from '@/shared/ui';
 
@@ -59,11 +60,18 @@ export function TodayPage() {
     onClick: () => navigate(selected === todayKey ? '/create' : `/create?day=${selected}`),
   });
 
-  // Open with now a third of the way down (Timeline), or at the top (List).
+  // Open with now a third of the way down (Timeline), or at the top (List);
+  // coming Back keeps the position Screen restored.
   const loaded = pending.isSuccess;
+  const { key } = useLocation();
+  // The view + day whose position came back with Back; left alone until
+  // either changes (checked, not consumed, so re-runs skip it too).
+  const restoredFor = useRef(savedScroll(key) !== undefined ? `${view}|${selected}` : null);
   useLayoutEffect(() => {
     const main = screen.current;
     if (!main || !loaded) return;
+    if (restoredFor.current === `${view}|${selected}`) return;
+    restoredFor.current = null;
     if (view === 'list') {
       main.scrollTo({ top: 0 });
       return;
@@ -158,6 +166,7 @@ export function TodayPage() {
             onOpen={(item: DayItem) => open(item.task)}
             onComplete={(item: DayItem) => actions.complete(item.task)}
             onSnooze={(item: DayItem) => actions.delay(item.task, 60)}
+            onMove={(item: DayItem, minutes: number) => actions.moveTo(item.task, new Date(item.at.getTime() + minutes * 60_000))}
           />
           {!day.isToday && day.items.length === 0 ? (
             <p className="px-4 pt-3 text-center text-[13.5px] font-semibold text-muted">

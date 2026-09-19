@@ -2,7 +2,7 @@ import type { Task } from '@/shared/api';
 import { formatWhen, useUserTimezone } from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { toast } from '@/shared/ui';
-import { useCompleteTask, useDelayTask, useReopenTask, useSnoozeTask } from './hooks';
+import { useCompleteTask, useDelayTask, useReopenTask, useSnoozeTask, useUpdateTask } from './hooks';
 import type { SnoozeOption } from './lib/when';
 
 /**
@@ -16,6 +16,7 @@ export function useTaskActions() {
   const reopenMutation = useReopenTask();
   const delayMutation = useDelayTask();
   const snoozeMutation = useSnoozeTask();
+  const updateMutation = useUpdateTask();
 
   const failed = (what: string) => () => {
     haptic.notify('error');
@@ -76,5 +77,34 @@ export function useTaskActions() {
   const snooze = (task: Task, option: SnoozeOption) =>
     option.action.kind === 'delay' ? delay(task, option.action.minutes) : snoozeUntil(task, option.action.until);
 
-  return { complete, reopen, delay, snoozeUntil, snooze };
+  /**
+   * Dragged on the timeline. A repeating task moves only this occurrence
+   * (snooze); a one-off gets a new time, with Undo back to the old one.
+   */
+  const moveTo = (task: Task, at: Date) => {
+    if (at.getTime() <= Date.now()) {
+      haptic.notify('warning');
+      toast({ message: 'That time has already passed.', tone: 'danger' });
+      return;
+    }
+    if (task.recurrence || !task.scheduledAt) {
+      snoozeUntil(task, at);
+      return;
+    }
+    const previous = task.scheduledAt;
+    haptic.impact('light');
+    updateMutation.mutate(
+      { id: task.id, patch: { scheduledAt: at } },
+      {
+        onSuccess: () =>
+          toast({
+            message: `Moved to ${formatWhen(at, tz)}`,
+            action: { label: 'Undo', onClick: () => updateMutation.mutate({ id: task.id, patch: { scheduledAt: previous } }) },
+          }),
+        onError: failed('move it'),
+      },
+    );
+  };
+
+  return { complete, reopen, delay, snoozeUntil, snooze, moveTo };
 }

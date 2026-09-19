@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hourRange, layoutBlocks } from './timeline';
+import { hourRange, layoutBlocks, snapMove } from './timeline';
 
 describe('hourRange', () => {
   it('shows 06:00–24:00 by default', () => {
@@ -46,5 +46,19 @@ describe('layoutBlocks', () => {
     const blocks = place([['a', 600], ['b', 610], ['c', 900]]);
     expect(blocks.a?.columns).toBe(2);
     expect(blocks.c).toMatchObject({ column: 0, columns: 1 });
+  });
+});
+
+describe('snapMove', () => {
+  it('snaps to the quarter hour of the day, not to the drag distance', () => {
+    // 14:47 dragged down 20 px (20 min) → 15:07 → snaps to 15:00.
+    expect(snapMove(14 * 60 + 47, 20, 60)).toBe(13);
+    expect(snapMove(600, 90, 60)).toBe(90);
+    expect(snapMove(600, 5, 60)).toBe(0);
+  });
+
+  it('stays inside the day', () => {
+    expect(snapMove(60, -500, 60)).toBe(-60);
+    expect(snapMove(23 * 60, 500, 60)).toBe(45);
   });
 });

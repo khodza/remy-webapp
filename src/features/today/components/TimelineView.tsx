@@ -1,10 +1,11 @@
 import { Flag } from 'lucide-react';
-import { useRef, useState } from 'react';
 import type { Category } from '@/shared/api';
 import { formatTime, relativeToNow } from '@/shared/lib/dates';
+import { useHapticFeedback } from '@/shared/lib/telegram';
 import { cx } from '@/shared/ui';
 import { minuteOfDay, type DayItem, type DayModel } from '../lib/day';
-import { hourRange, layoutBlocks } from '../lib/timeline';
+import { hourRange, layoutBlocks, snapMove } from '../lib/timeline';
+import { useBlockGesture } from './useBlockGesture';
 
 const HOUR_COLUMN = 56;
 
@@ -18,10 +19,12 @@ interface TimelineViewProps {
   onOpen: (item: DayItem) => void;
   onComplete: (item: DayItem) => void;
   onSnooze: (item: DayItem) => void;
+  /** Dragged by this many minutes (snapped to 15). */
+  onMove: (item: DayItem, minutes: number) => void;
 }
 
 /** Proportional hour grid: blocks pinned to their minute, past dimmed, a NOW line. */
-export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOpen, onComplete, onSnooze }: TimelineViewProps) {
+export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOpen, onComplete, onSnooze, onMove }: TimelineViewProps) {
   const minutes = day.items.map((item) => minuteOfDay(item.at, tz));
   const nowMinute = day.isToday ? minuteOfDay(now, tz) : null;
   const [first, last] = hourRange(minutes, nowMinute);
@@ -47,7 +50,8 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
           style={{ top: i * hourPx }}
           aria-hidden="true"
         >
-          {String(first + i).padStart(2, '0')}:00
+          {/* The NOW pill takes the label's place when it sits on it. */}
+          {nowTop !== null && Math.abs(nowTop - i * hourPx - 8) < 14 ? null : `${String(first + i).padStart(2, '0')}:00`}
         </div>
       ))}
 
@@ -72,6 +76,8 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
             onOpen={() => onOpen(item)}
             onComplete={() => onComplete(item)}
             onSnooze={() => onSnooze(item)}
+            onMove={(minutes) => onMove(item, minutes)}
+            hourPx={hourPx}
           />
         );
       })}
@@ -91,6 +97,7 @@ interface BlockProps {
   item: DayItem;
   tz: string;
   now: Date;
+  hourPx: number;
   category: Category | undefined;
   style: React.CSSProperties;
   narrow: boolean;
@@ -99,16 +106,29 @@ interface BlockProps {
   onOpen: () => void;
   onComplete: () => void;
   onSnooze: () => void;
+  onMove: (minutes: number) => void;
 }
 
 const SWIPE_DONE = 72;
 
-/** A reminder on the grid. Tap opens it; swipe right marks it done. */
-function Block({ item, tz, now, category, style, narrow, compact, onOpen, onComplete, onSnooze }: BlockProps) {
+/** A reminder on the grid. Tap opens it, swipe right marks it done, hold and drag moves it. */
+function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen, onComplete, onSnooze, onMove }: BlockProps) {
   const { task, state, at } = item;
-  const [dx, setDx] = useState(0);
-  const drag = useRef<{ x: number; y: number; active: boolean } | null>(null);
-  const swiped = useRef(false);
+  const haptic = useHapticFeedback();
+  const baseMinute = minuteOfDay(at, tz);
+  const gesture = useBlockGesture({
+    enabled: state !== 'done',
+    onDragStart: () => haptic.impact('medium'),
+    onSwipe: (dx) => {
+      if (dx >= SWIPE_DONE) onComplete();
+    },
+    onDrop: (dy) => {
+      const minutes = snapMove(baseMinute, dy, hourPx);
+      if (minutes !== 0) onMove(minutes);
+    },
+  });
+  const { dx, dy } = gesture.offset;
+  const moveBy = gesture.dragging ? snapMove(baseMinute, dy, hourPx) : 0;
 
   const meta = [
     formatTime(at, tz),
@@ -133,52 +153,25 @@ function Block({ item, tz, now, category, style, narrow, compact, onOpen, onComp
       data-block
       aria-label={`${task.description}, ${meta}`}
       onClick={() => {
-        if (swiped.current) {
-          swiped.current = false;
-          return;
-        }
-        onOpen();
+        if (!gesture.takeSwallowedClick()) onOpen();
       }}
       onKeyDown={(event) => {
         if (event.key === 'Enter') onOpen();
       }}
-      onPointerDown={(event) => {
-        if (state === 'done') return;
-        drag.current = { x: event.clientX, y: event.clientY, active: false };
-      }}
-      onPointerMove={(event) => {
-        const d = drag.current;
-        if (!d) return;
-        const mx = event.clientX - d.x;
-        const my = event.clientY - d.y;
-        if (!d.active && mx > 10 && Math.abs(mx) > Math.abs(my) * 1.5) {
-          d.active = true;
-          event.currentTarget.setPointerCapture(event.pointerId);
-        }
-        if (d.active) setDx(Math.max(0, Math.min(mx, 120)));
-      }}
-      onPointerUp={() => {
-        const d = drag.current;
-        drag.current = null;
-        if (d?.active) {
-          swiped.current = true;
-          if (dx >= SWIPE_DONE) onComplete();
-        }
-        setDx(0);
-      }}
-      onPointerCancel={() => {
-        drag.current = null;
-        setDx(0);
-      }}
+      {...gesture.handlers}
       className={cx(
-        'absolute z-[3] cursor-pointer touch-pan-y select-none overflow-hidden rounded-lg border-l-[3px] pl-2.5 pr-2 text-left',
+        'absolute cursor-pointer touch-pan-y select-none overflow-hidden rounded-lg border-l-[3px] pl-2.5 pr-2 text-left [-webkit-touch-callout:none]',
         compact ? 'flex items-center gap-2' : 'py-1.5',
         state === 'overdue' && 'border-danger bg-[color-mix(in_oklab,var(--color-danger)_10%,var(--color-surface))]',
         state === 'later' && 'border-accent bg-accent-soft',
         state === 'done' && 'border-ok bg-accent-soft opacity-55',
-        dx === 0 && 'transition-transform',
+        gesture.dragging ? 'z-10 shadow-[0_10px_24px_rgb(16_24_40/0.22)] ring-2 ring-accent' : 'z-[3]',
+        dx === 0 && !gesture.dragging && 'transition-transform',
       )}
-      style={{ ...style, transform: dx ? `translateX(${dx}px)` : undefined }}
+      style={{
+        ...style,
+        transform: dx ? `translateX(${dx}px)` : moveBy ? `translateY(${(moveBy / 60) * hourPx}px)` : undefined,
+      }}
     >
       {dx > 0 ? (
         <span className={cx('absolute inset-y-0 left-0 flex items-center pl-2 text-[11px] font-extrabold', dx >= SWIPE_DONE ? 'text-ok' : 'text-muted')} style={{ transform: `translateX(-${dx}px)` }}>
@@ -198,13 +191,13 @@ function Block({ item, tz, now, category, style, narrow, compact, onOpen, onComp
       <p
         className={cx(
           'tnum truncate text-[11px] font-bold',
-          state === 'overdue' ? 'text-danger' : 'text-muted',
+          gesture.dragging ? 'text-accent' : state === 'overdue' ? 'text-danger' : 'text-muted',
           compact ? cx('shrink-0', !narrow && state === 'overdue' && 'pr-10') : 'mt-0.5',
         )}
       >
-        {compact ? formatTime(at, tz) : meta}
+        {gesture.dragging ? `→ ${formatTime(new Date(at.getTime() + moveBy * 60_000), tz)}` : compact ? formatTime(at, tz) : meta}
       </p>
-      {state === 'overdue' && !narrow ? (
+      {state === 'overdue' && !narrow && !gesture.dragging ? (
         <button
           type="button"
           aria-label="Snooze one hour"
