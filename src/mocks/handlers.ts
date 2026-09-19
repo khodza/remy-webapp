@@ -77,6 +77,7 @@ function toDto(task: MockTask) {
     source: task.source,
     completedAt: task.completedAt ? task.completedAt.toISOString() : null,
     completionsCount: task.completionsCount,
+    snoozeCount: task.snoozeCount,
     isOverdue: isOverdue(task),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -431,6 +432,7 @@ export const handlers = [
     const until = addMinutes(new Date(Math.max(fire.getTime(), Date.now())), body.data.minutes);
     if (task.recurrence) task.snoozedUntil = until;
     else task.scheduledAt = until;
+    task.snoozeCount += 1;
     return taskResponse(touch(task));
   }),
 
@@ -450,6 +452,7 @@ export const handlers = [
       task.scheduledAt = until;
       task.snoozedUntil = null;
     }
+    task.snoozeCount += 1;
     return taskResponse(touch(task));
   }),
 

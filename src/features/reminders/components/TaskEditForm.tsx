@@ -136,6 +136,9 @@ const SOURCE_LABEL: Record<Task['source']['type'], string> = {
   miniapp: 'Created in the app',
 };
 
+/** Show "Snoozed N times" from this many snoozes/delays on. */
+const SNOOZE_NOTICE = 3;
+
 const LABEL =
   'font-mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-2)]';
 const FIELD =
@@ -605,6 +608,12 @@ function SourceLine({ task }: { task: Task }) {
       {source.originalText && source.originalText !== task.description && (
         <p className="mt-0.5 italic text-[color:var(--color-text-3)]">
           “{source.originalText}”
+        </p>
+      )}
+      {task.snoozeCount >= SNOOZE_NOTICE && (
+        // Same signal the bot's weekly wrap gives: maybe it needs a real slot.
+        <p className="mt-0.5 text-[color:var(--color-text-3)]">
+          Snoozed {task.snoozeCount} times
         </p>
       )}
     </div>

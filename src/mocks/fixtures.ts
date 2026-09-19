@@ -45,6 +45,8 @@ export interface MockTask {
   };
   completedAt: Date | null;
   completionsCount: number;
+  /** Times snoozed or delayed, ever. */
+  snoozeCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,7 +95,14 @@ export function buildSettings(): Settings {
 type MakeOpts = Partial<
   Pick<
     MockTask,
-    'status' | 'recurrence' | 'notes' | 'priority' | 'categoryId' | 'leadMinutes' | 'completionsCount'
+    | 'status'
+    | 'recurrence'
+    | 'notes'
+    | 'priority'
+    | 'categoryId'
+    | 'leadMinutes'
+    | 'completionsCount'
+    | 'snoozeCount'
   >
 > & {
   ageDays?: number;
@@ -128,6 +137,7 @@ export function makeTask(
     },
     completedAt: status === 'completed' ? (scheduledAt ?? created) : null,
     completionsCount: opts.completionsCount ?? 0,
+    snoozeCount: opts.snoozeCount ?? 0,
     createdAt: created,
     updatedAt: created,
   };
@@ -144,6 +154,8 @@ export function buildFixtures(now = new Date()): MockTask[] {
       categoryId: CATEGORY_IDS.health,
       notes: 'Ask for a Friday slot, not Thursday. Bring the insurance card.',
       leadMinutes: 30,
+      // Snoozed often: the detail screen shows "Snoozed 5 times".
+      snoozeCount: 5,
       source: {
         type: 'forward',
         originalText: 'Your slot on Thu 10:00 is confirmed. Reply to change.',

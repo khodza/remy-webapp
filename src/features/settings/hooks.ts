@@ -30,6 +30,7 @@ export function mergeSettings(
     eveningReview: { ...current.eveningReview, ...patch.eveningReview },
     quietHours: { ...current.quietHours, ...patch.quietHours },
     escalation: { ...current.escalation, ...patch.escalation },
+    weeklyWrap: { ...current.weeklyWrap, ...patch.weeklyWrap },
   };
 }
 

@@ -116,3 +116,38 @@ deep-merge as the server via `mergeSettings`).
 - **Deep link**: the reminder's "Open in app" button opens
   `<MINI_APP_URL>?task=<id>`; `startapp=task_<id>` works too. `useDeepLink()`
   (mounted inside the Router) navigates once to `/tasks/<id>` with `replace`.
+
+## Contract 2.2 (Phase 4: daily rhythm)
+
+- **`Settings.weeklyWrap: { enabled }`** (default on). `mergeSettings` merges it
+  like every other nested object.
+- **`Task.snoozeCount`**: times the task was snoozed or delayed, ever. The
+  detail screen shows "Snoozed N times" from 3; the bot's weekly wrap flags
+  tasks at 4+.
+- What the backend does with each rhythm setting (all times are the user's
+  local wall clock, 24-hour `HH:mm`):
+  - `morningBrief` — at `time`, a message with today's reminders, overdue ones
+    and the Inbox; "Move overdue to today" button; replies to it act on its
+    numbered tasks. Sent once per local day (within 3 h after `time`, so a
+    short outage still delivers it). `/today` in the bot shows it on demand.
+  - `eveningReview` — at `time`, the reminders still open (due up to now) with
+    per-row buttons: Done, Tomorrow 09:00, No date (Skip for repeating
+    tasks), plus "All open → tomorrow".
+  - `weeklyWrap` — on the last day of the week (Sunday when `weekStartsOn` is
+    1, Saturday when 0) at the evening-review time: done count, streak,
+    overdue, most-snoozed tasks, next week.
+  - `quietHours` — reminders, heads-ups and nudges due inside `from`–`to`
+    (may wrap midnight) are held and arrive when the window ends; high
+    priority still rings when `allowHighPriority`.
+  - `escalation` — after a reminder is ignored, "still open" nudges at each of
+    `stepsMinutes` minutes after it (must be increasing; the backend rejects
+    anything else). Low-priority tasks are never nudged; snoozing or
+    rescheduling restarts the count.
+  - `weekStartsOn` — also decides the wrap day. `hour12` is stored but the app
+    shows 24-hour time.
+- **Settings UI**: `features/settings/components/RhythmSection.tsx` (Settings
+  page). Each control saves immediately with a PATCH carrying only the changed
+  nested field; the hook is optimistic and rolls back on error.
+- **Deep link**: the bot's /settings button opens `<MINI_APP_URL>?screen=settings`;
+  `startapp=settings` works too. `deepLinkTarget()` in `app/useDeepLink.ts`
+  resolves `?task=`, `?screen=` and the start param in that order.
