@@ -1,7 +1,7 @@
 import { ChevronRight, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMe } from '@/features/profile';
-import { zoneCity } from '@/features/settings';
+import { RhythmSection, zoneCity } from '@/features/settings';
 import { getDeviceTimezone } from '@/shared/lib/dates';
 import { Page } from '@/shared/ui';
 
@@ -79,6 +79,8 @@ export function SettingsPage() {
             />
           </button>
         </section>
+
+        <RhythmSection />
       </main>
     </Page>
   );
