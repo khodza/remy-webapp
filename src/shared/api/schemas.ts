@@ -47,6 +47,7 @@ export type {
   ParsedTask,
   Priority,
   Recurrence,
+  RecurrenceInput,
   RecurrenceType,
   Settings,
   SourceType,

@@ -129,6 +129,13 @@ export async function createTask(text: string): Promise<Task> {
   return TaskSchema.parse(await apiRequest<unknown>('POST', '/tasks', { body }));
 }
 
+/** Requests carry `until` as an ISO string; the app works with a Date. */
+function recurrenceBody(recurrence: Recurrence | null) {
+  if (!recurrence) return null;
+  const { until, ...rest } = recurrence;
+  return { ...rest, ...(until ? { until: until.toISOString() } : {}) };
+}
+
 export interface StructuredTaskInput {
   description: string;
   notes?: string | null;
@@ -145,9 +152,10 @@ export interface StructuredTaskInput {
 export async function createTaskStructured(
   input: StructuredTaskInput,
 ): Promise<Task> {
-  const { scheduledAt, ...rest } = input;
+  const { scheduledAt, recurrence, ...rest } = input;
   const body = CreateTaskStructuredRequestSchema.parse({
     ...rest,
+    ...(recurrence !== undefined ? { recurrence: recurrenceBody(recurrence) } : {}),
     ...(scheduledAt !== undefined
       ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null }
       : {}),
@@ -170,9 +178,10 @@ export interface TaskPatch {
 }
 
 export async function updateTask(id: string, patch: TaskPatch): Promise<Task> {
-  const { scheduledAt, ...rest } = patch;
+  const { scheduledAt, recurrence, ...rest } = patch;
   const body = UpdateTaskRequestSchema.parse({
     ...rest,
+    ...(recurrence !== undefined ? { recurrence: recurrenceBody(recurrence) } : {}),
     ...(scheduledAt !== undefined
       ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null }
       : {}),

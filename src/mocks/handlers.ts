@@ -9,7 +9,7 @@ import {
   setSeconds,
   startOfDay,
 } from 'date-fns';
-import type { Category, Recurrence, Settings } from '@/shared/api';
+import type { Category, Recurrence, RecurrenceInput, Settings } from '@/shared/api';
 import {
   CategoryListSchema,
   CategorySchema,
@@ -73,7 +73,7 @@ function toDto(task: MockTask) {
     status: task.status,
     priority: task.priority,
     categoryId: task.categoryId,
-    recurrence: task.recurrence,
+    recurrence: task.recurrence ? recurrenceToWire(task.recurrence) : null,
     source: task.source,
     completedAt: task.completedAt ? task.completedAt.toISOString() : null,
     completionsCount: task.completionsCount,
@@ -337,7 +337,7 @@ export const handlers = [
     const task = makeTask(d.description, d.scheduledAt ? new Date(d.scheduledAt) : null, {
       ageDays: 0,
       notes: d.notes ?? null,
-      recurrence: d.recurrence ?? null,
+      recurrence: d.recurrence ? recurrenceFromInput(d.recurrence) : null,
       priority: d.priority ?? 'normal',
       categoryId: d.categoryId ?? null,
       leadMinutes: d.leadMinutes ?? null,
@@ -372,7 +372,8 @@ export const handlers = [
     if (body.priority !== undefined) task.priority = body.priority;
     if (body.categoryId !== undefined) task.categoryId = body.categoryId;
     if (body.leadMinutes !== undefined) task.leadMinutes = body.leadMinutes;
-    if (body.recurrence !== undefined) task.recurrence = body.recurrence;
+    if (body.recurrence !== undefined)
+      task.recurrence = body.recurrence ? recurrenceFromInput(body.recurrence) : null;
     if (body.scheduledAt !== undefined) {
       task.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
       task.snoozedUntil = null; // an explicit reschedule replaces any snooze
@@ -476,3 +477,14 @@ export const handlers = [
     );
   }),
 ];
+
+/** Mock tasks keep `until` as a Date (like the app); the wire carries ISO strings. */
+function recurrenceToWire(recurrence: Recurrence): RecurrenceInput {
+  const { until, ...rest } = recurrence;
+  return { ...rest, ...(until ? { until: until.toISOString() } : {}) };
+}
+
+function recurrenceFromInput(input: RecurrenceInput): Recurrence {
+  const { until, ...rest } = input;
+  return { ...rest, ...(until ? { until: new Date(until) } : {}) };
+}

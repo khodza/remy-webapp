@@ -42,7 +42,7 @@ export function ParsePreview({ parsed, loading, error }: ParsePreviewProps) {
 
   if (!parsed) return null;
 
-  const repeat = recurrenceLabel(parsed.recurrence);
+  const repeat = recurrenceLabel(parsed.recurrence, tz);
 
   return (
     <div className="rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] p-3">

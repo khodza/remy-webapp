@@ -178,6 +178,17 @@ export function buildFixtures(now = new Date()): MockTask[] {
     }),
     makeTask('Dentist', at(tomorrow, 10), { categoryId: CATEGORY_IDS.health, priority: 'high' }),
     makeTask('Football with Bekzod', at(tomorrow, 19, 30), { categoryId: CATEGORY_IDS.personal }),
+    // Rules only the chat can create: the picker must show them as "Custom".
+    makeTask('Gym', at(addDays(today, 2), 7), {
+      recurrence: { type: 'weekly', byWeekday: [1, 4] },
+      categoryId: CATEGORY_IDS.health,
+      source: { type: 'text', originalText: 'gym every mon and thu at 7am' },
+    }),
+    makeTask("Mom's birthday", at(addMonths(today, 2), 9), {
+      recurrence: { type: 'yearly' },
+      categoryId: CATEGORY_IDS.personal,
+      leadMinutes: 60,
+    }),
     makeTask('Rent', at(addMonths(today, 1), 10), {
       recurrence: { type: 'monthly' },
       ageDays: 60,

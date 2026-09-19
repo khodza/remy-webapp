@@ -7,8 +7,8 @@ import { z } from 'zod';
 import { CategoryChip, useCategories } from '@/features/categories';
 import {
   PrioritySchema,
-  RecurrenceSchema,
   type Priority,
+  type Recurrence,
   type Task,
   type TaskPatch,
 } from '@/shared/api';
@@ -47,7 +47,8 @@ function buildSchema(tz: string, originalInput: string) {
       notes: z.string().max(4000),
       noDate: z.boolean(),
       scheduledAt: z.string(),
-      recurrence: RecurrenceSchema.nullable(),
+      // Client shape (until is a Date); the API layer converts it for requests.
+      recurrence: z.custom<Recurrence | null>(),
       priority: PrioritySchema,
       categoryId: z.string().nullable(),
       leadMinutes: z.number().int().positive().nullable(),

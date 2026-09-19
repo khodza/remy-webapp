@@ -389,7 +389,7 @@ function TaskRow({
   onSnooze?: (minutes: number) => void;
 }) {
   const isDone = task.status === 'completed';
-  const repeat = recurrenceLabel(task.recurrence);
+  const repeat = recurrenceLabel(task.recurrence, tz);
   const when = fireAt(task);
   return (
     <li className="flex items-start gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">

@@ -5,10 +5,17 @@ import { SettingsPage } from '@/pages/SettingsPage';
 import { TaskDetailPage } from '@/pages/TaskDetailPage';
 import { TimezonePage } from '@/pages/TimezonePage';
 import { UpcomingPage } from '@/pages/UpcomingPage';
+import { useDeepLink } from './useDeepLink';
+
+function DeepLink() {
+  useDeepLink();
+  return null;
+}
 
 export function Router() {
   return (
     <HashRouter>
+      <DeepLink />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/upcoming" element={<UpcomingPage />} />

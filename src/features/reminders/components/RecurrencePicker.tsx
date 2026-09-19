@@ -1,4 +1,6 @@
 import type { Recurrence } from '@/shared/api';
+import { useUserTimezone } from '@/shared/lib/dates';
+import { isCustomRecurrence, recurrenceLabel } from '../lib/recurrence';
 
 interface RecurrenceOption {
   key: string;
@@ -12,6 +14,7 @@ const OPTIONS: RecurrenceOption[] = [
   { key: 'weekdays', label: 'Weekdays', value: { type: 'weekdays' } },
   { key: 'weekly', label: 'Weekly', value: { type: 'weekly' } },
   { key: 'monthly', label: 'Monthly', value: { type: 'monthly' } },
+  { key: 'yearly', label: 'Yearly', value: { type: 'yearly' } },
 ];
 
 function sameRecurrence(a: Recurrence | null, b: Recurrence | null): boolean {
@@ -32,15 +35,27 @@ export function RecurrencePicker({
   onChange,
   disabled,
 }: RecurrencePickerProps) {
-  const isCustomInterval = value?.type === 'every_n_days';
+  const tz = useUserTimezone();
+  // A rule set in chat ("every Mon and Thu until December") that the chips
+  // cannot express: shown read-only, replaced only if another chip is picked.
+  const isCustom = isCustomRecurrence(value);
+  const isCustomInterval = !isCustom && value?.type === 'every_n_days';
   const intervalDays = value?.intervalDays ?? 3;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="-mx-4 overflow-x-auto px-4">
         <div className="flex w-max gap-1.5">
+          {isCustom && (
+            <span
+              data-selected="true"
+              className="whitespace-nowrap rounded-[var(--radius-pill)] border border-[color:var(--color-accent)] bg-[color:var(--color-accent-soft)] px-3 py-1.5 font-sans text-[12px] text-[color:var(--color-accent)]"
+            >
+              Custom: {recurrenceLabel(value, tz)}
+            </span>
+          )}
           {OPTIONS.map((opt) => {
-            const selected = sameRecurrence(value ?? null, opt.value);
+            const selected = !isCustom && sameRecurrence(value ?? null, opt.value);
             return (
               <button
                 key={opt.key}
@@ -67,6 +82,12 @@ export function RecurrencePicker({
           </button>
         </div>
       </div>
+
+      {isCustom && (
+        <p className="font-sans text-[12px] text-[color:var(--color-text-2)]">
+          Set by chat. Pick another option to replace it.
+        </p>
+      )}
 
       {isCustomInterval && (
         <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-3 py-2">

@@ -95,3 +95,24 @@ lists and `['task', id]`, then invalidates.
 deep-merge as the server via `mergeSettings`).
 `features/categories`: `useCategories`, `useCategoryMap`, `useCreateCategory`,
 `useUpdateCategory`, `useDeleteCategory`, `<CategoryChip>`.
+
+## Contract 2.1 (Phase 3)
+
+- **Recurrence** gained `yearly` plus optional `interval` (every N weeks /
+  months / years), `byWeekday` (`number[]`, 0 = Sun … 6 = Sat, weekly only),
+  `lastDayOfMonth` (monthly only) and `until`. In responses (`client.*`) `until`
+  is a `Date` (type `Recurrence`); in request bodies it is an ISO string (type
+  `RecurrenceInput`). `endpoints.ts` converts it (`recurrenceBody`), so feature
+  code always works with the `Date` form.
+- These richer rules are created in chat ("gym every Mon and Thu until
+  December"). `RecurrencePicker` cannot express them: it shows a read-only
+  "Custom: …" chip (`isCustomRecurrence`) and the edit form only sends
+  `recurrence` when the user actually picks another chip, so saving a task
+  never flattens a chat-made rule. `recurrenceLabel(recurrence, tz)` words every
+  shape the same way the bot does.
+- `nextFireAt` still means "when the task is due (snooze included)".
+  `leadMinutes` is now delivered by the bot: a heads-up ping that many minutes
+  before, then the reminder itself. The heads-up time never appears in the API.
+- **Deep link**: the reminder's "Open in app" button opens
+  `<MINI_APP_URL>?task=<id>`; `startapp=task_<id>` works too. `useDeepLink()`
+  (mounted inside the Router) navigates once to `/tasks/<id>` with `replace`.

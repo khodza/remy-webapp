@@ -211,7 +211,7 @@ function UpcomingRow({
   onDelete: () => void;
   onOpen: () => void;
 }) {
-  const repeat = recurrenceLabel(task.recurrence);
+  const repeat = recurrenceLabel(task.recurrence, tz);
   return (
     <li className="flex items-center gap-3 rounded-[var(--radius-big)] border border-[color:var(--color-hairline)] bg-[color:var(--color-surface)] px-4 py-3">
       <button
