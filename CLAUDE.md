@@ -154,6 +154,13 @@ arguments so it is testable.
   same sheets as Detail, "Looks similar", voice. Saves via `/tasks/structured`.
 - `/week` Week + Inbox (`/upcoming` redirects) · `/search` · `/settings`,
   `/settings/quiet`, `/settings/categories`, `/settings/timezone`.
+- **Your data** (`features/data`): `/settings/calendar` turns the private
+  calendar feed on/off, shows the link (made absolute from the API base by
+  `feedLinks`, warns when it points at localhost), opens Google's "add by
+  URL" page or `webcal://` for Apple, and replaces the link. Export (sheet in
+  Settings) makes the **bot send the file to the chat** (downloads don't work
+  in iOS webviews). `/settings/import`: paste a list → `parse-list` drafts →
+  untick / change times → `tasks/import` (all or nothing).
 - Deep links: `?task=<id>`, `?screen=settings|catchup|week`, `startapp=`
   the same names or `task_<id>`.
 

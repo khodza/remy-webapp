@@ -1,7 +1,7 @@
 // GENERATED FILE — DO NOT EDIT.
 // Source: remy/src/contract/remy-contract.ts (backend repo).
 // Regenerate from the backend repo with: npm run contract:sync
-// contract-sha256: 93845c216dd32711435429e8b7df95fffd80a093c5a68a7948f75254067f0c5d
+// contract-sha256: 8be3399fc20d9beab8e3bd336897886be2c3a8d54d45fe0a7e22fbd37c7e3829
 
 /**
  * Remy HTTP contract — the single source of truth for every request and
@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const CONTRACT_VERSION = '2.2.0';
+export const CONTRACT_VERSION = '2.3.0';
 
 // ---------------------------------------------------------------- enums ---
 
@@ -163,6 +163,21 @@ function buildResponses<D extends z.ZodType>(date: D) {
       scheduledAt: date,
       recurrence: RecurrenceOut.nullable(),
     }),
+    /** POST /ai/parse-list — one reviewable draft per task in the list. */
+    ImportDrafts: z.object({
+      tasks: z.array(
+        z.object({
+          description: z.string(),
+          notes: z.string().nullable(),
+          /** Null = no time given → a todo in the Inbox. */
+          scheduledAt: date.nullable(),
+          recurrence: RecurrenceOut.nullable(),
+          priority: Priority,
+          categoryId: z.string().nullable(),
+          leadMinutes: z.number().int().positive().nullable(),
+        }),
+      ),
+    }),
   };
 }
 
@@ -176,6 +191,9 @@ export type TaskWire = z.infer<typeof wire.Task>;
 export type User = z.infer<typeof client.User>;
 export type AuthResult = z.infer<typeof client.AuthResult>;
 export type ParsedTask = z.infer<typeof client.ParsedTask>;
+export type ImportDrafts = z.infer<typeof client.ImportDrafts>;
+export type ImportDraftsWire = z.infer<typeof wire.ImportDrafts>;
+export type ImportDraft = ImportDrafts['tasks'][number];
 /** Recurrence as the frontend sees it in responses (until is a Date). */
 export type Recurrence = NonNullable<Task['recurrence']>;
 
@@ -354,6 +372,48 @@ export type ListTasksQuery = z.infer<typeof ListTasksQuery>;
 export const ParseTextRequest = z.object({ text: Description }).strict();
 export type ParseTextRequest = z.infer<typeof ParseTextRequest>;
 
+/** POST /ai/parse-list — a pasted list (one task per line, or prose). */
+export const ParseListRequest = z
+  .object({ text: z.string().trim().min(1).max(8000) })
+  .strict();
+export type ParseListRequest = z.infer<typeof ParseListRequest>;
+
+/** POST /tasks/import — reviewed drafts, created in one request. */
+export const ImportTasksRequest = z
+  .object({ tasks: z.array(CreateTaskStructuredRequest).min(1).max(50) })
+  .strict();
+export type ImportTasksRequest = z.infer<typeof ImportTasksRequest>;
+
+// ------------------------------------------------------------------- data ---
+
+/**
+ * GET / POST / DELETE /calendar/feed — the private calendar subscription.
+ * POST turns it on or replaces the link (the old one stops working).
+ */
+export const CalendarFeed = z.object({
+  enabled: z.boolean(),
+  /**
+   * Public path under the API prefix, e.g. "/calendar/<secret>.ics". The
+   * client makes it absolute with its API base URL. Null when off.
+   */
+  path: z.string().nullable(),
+});
+export type CalendarFeed = z.infer<typeof CalendarFeed>;
+
+export const ExportFormat = z.enum(['csv', 'json']);
+export type ExportFormat = z.infer<typeof ExportFormat>;
+
+/** POST /export — the bot sends the file to the user's chat. */
+export const ExportRequest = z.object({ format: ExportFormat }).strict();
+export type ExportRequest = z.infer<typeof ExportRequest>;
+
+export const ExportResult = z.object({
+  filename: z.string(),
+  /** Tasks in the file (pending and done). */
+  tasks: z.number().int().nonnegative(),
+});
+export type ExportResult = z.infer<typeof ExportResult>;
+
 export const UpdateTimezoneRequest = z
   .object({ timezone: z.string().trim().min(1).max(100) })
   .strict();
@@ -392,5 +452,17 @@ export const endpoints = {
   snoozeTask: { method: 'POST', path: '/tasks/:id/snooze', auth: 'jwt' },
   deleteTask: { method: 'DELETE', path: '/tasks/:id', auth: 'jwt' },
   parseText: { method: 'POST', path: '/ai/parse', auth: 'jwt' },
+  parseList: { method: 'POST', path: '/ai/parse-list', auth: 'jwt' },
+  importTasks: { method: 'POST', path: '/tasks/import', auth: 'jwt' },
+  getCalendarFeed: { method: 'GET', path: '/calendar/feed', auth: 'jwt' },
+  enableCalendarFeed: { method: 'POST', path: '/calendar/feed', auth: 'jwt' },
+  disableCalendarFeed: {
+    method: 'DELETE',
+    path: '/calendar/feed',
+    auth: 'jwt',
+  },
+  /** The subscription itself: the secret in the path is the only auth. */
+  calendarIcs: { method: 'GET', path: '/calendar/:token.ics', auth: 'none' },
+  exportData: { method: 'POST', path: '/export', auth: 'jwt' },
 } as const;
 export type EndpointName = keyof typeof endpoints;

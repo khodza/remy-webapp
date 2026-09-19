@@ -11,6 +11,7 @@ export const TaskListSchema = client.TaskList;
 export const UserSchema = client.User;
 export const AuthResultSchema = client.AuthResult;
 export const ParsedTaskSchema = client.ParsedTask;
+export const ImportDraftsSchema = client.ImportDrafts;
 
 export {
   CONTRACT_VERSION,
@@ -34,11 +35,20 @@ export {
   UpdateSettingsRequest as UpdateSettingsRequestSchema,
   UpdateTaskRequest as UpdateTaskRequestSchema,
   UpdateTimezoneRequest as UpdateTimezoneRequestSchema,
+  CalendarFeed as CalendarFeedSchema,
+  ExportRequest as ExportRequestSchema,
+  ExportResult as ExportResultSchema,
+  ImportTasksRequest as ImportTasksRequestSchema,
+  ParseListRequest as ParseListRequestSchema,
   endpoints,
 } from './contract.gen';
 
 export type {
   AuthResult,
+  CalendarFeed,
+  ExportFormat,
+  ExportResult,
+  ImportDraft,
   Category,
   CreateCategoryRequest,
   CreateTaskStructuredRequest,

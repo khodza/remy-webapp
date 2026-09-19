@@ -158,6 +158,37 @@ await check('Categories editor adds one', async () => {
   await page.getByText('Study', { exact: true }).waitFor();
 });
 
+await check('Calendar feed turns on, shows a link, and a new link replaces it', async () => {
+  await open('/settings/calendar');
+  await page.getByRole('switch', { name: 'Calendar feed' }).click();
+  const link = page.getByRole('textbox', { name: 'Calendar link' });
+  await link.waitFor();
+  const first = await link.inputValue();
+  if (!/\/api\/v1\/calendar\/[A-Za-z0-9_-]{43}\.ics$/.test(first)) throw new Error(`odd link: ${first}`);
+  await page.getByRole('button', { name: 'Get a new link' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Get a new link' }).click();
+  await page.waitForFunction((old) => document.querySelector('input[aria-label="Calendar link"]')?.value !== old, first);
+});
+
+await check('Export sends a file to the chat', async () => {
+  await open('/settings');
+  await page.getByRole('button', { name: /^Export/ }).click();
+  await page.getByRole('dialog').getByText('Spreadsheet (CSV)').click();
+  await expectText(toast(), /^Sent remy-\d{4}-\d{2}-\d{2}\.csv to your chat/);
+});
+
+await check('Import reads a list, skips one line, and adds the rest', async () => {
+  await open('/settings/import');
+  await page.getByRole('textbox', { name: 'Your list' }).fill('- buy milk\n- dentist tomorrow at 10\n- renew passport someday');
+  await mainButton().click();
+  await page.getByText(/^3 found · 3 to add/).waitFor();
+  await page.getByRole('button', { name: /^Skip Renew passport/ }).click();
+  await expectText(mainButton(), /Add 2 reminders/);
+  await mainButton().click();
+  await expectText(toast(), /^Added 2 reminders/);
+  if (!/#\/?$/.test(page.url())) throw new Error(`not back on Today: ${page.url()}`);
+});
+
 await check('Light theme renders Today, remembering the view', async () => {
   // A new query string reloads the page; List was chosen earlier and is kept.
   await open('/', '?theme=light');

@@ -19,6 +19,16 @@ import {
   UpdateTaskRequestSchema,
   UpdateTimezoneRequestSchema,
   UserSchema,
+  CalendarFeedSchema,
+  ExportRequestSchema,
+  ExportResultSchema,
+  ImportDraftsSchema,
+  ImportTasksRequestSchema,
+  ParseListRequestSchema,
+  type CalendarFeed,
+  type ExportFormat,
+  type ExportResult,
+  type ImportDraft,
   type Category,
   type CreateCategoryRequest,
   type DeleteResult,
@@ -231,4 +241,43 @@ export async function parseText(text: string): Promise<ParsedTask> {
   return ParsedTaskSchema.parse(
     await apiRequest<unknown>('POST', '/ai/parse', { body }),
   );
+}
+
+// ------------------------------------------------------------------ data ---
+
+/** The private calendar subscription: state, turn on / new link, turn off. */
+export async function getCalendarFeed(): Promise<CalendarFeed> {
+  return CalendarFeedSchema.parse(await apiRequest<unknown>('GET', '/calendar/feed'));
+}
+
+export async function enableCalendarFeed(): Promise<CalendarFeed> {
+  return CalendarFeedSchema.parse(await apiRequest<unknown>('POST', '/calendar/feed'));
+}
+
+export async function disableCalendarFeed(): Promise<CalendarFeed> {
+  return CalendarFeedSchema.parse(await apiRequest<unknown>('DELETE', '/calendar/feed'));
+}
+
+/** The bot sends the file to the chat; this says what it sent. */
+export async function exportData(format: ExportFormat): Promise<ExportResult> {
+  const body = ExportRequestSchema.parse({ format });
+  return ExportResultSchema.parse(await apiRequest<unknown>('POST', '/export', { body }));
+}
+
+/** A pasted list → drafts to review. Nothing is saved. */
+export async function parseList(text: string): Promise<ImportDraft[]> {
+  const body = ParseListRequestSchema.parse({ text });
+  return ImportDraftsSchema.parse(await apiRequest<unknown>('POST', '/ai/parse-list', { body })).tasks;
+}
+
+/** The reviewed drafts, created in one request (all or nothing). */
+export async function importTasks(tasks: StructuredTaskInput[]): Promise<Task[]> {
+  const body = ImportTasksRequestSchema.parse({
+    tasks: tasks.map(({ scheduledAt, recurrence, ...rest }) => ({
+      ...rest,
+      ...(recurrence !== undefined ? { recurrence: recurrenceBody(recurrence) } : {}),
+      ...(scheduledAt !== undefined ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null } : {}),
+    })),
+  });
+  return TaskListSchema.parse(await apiRequest<unknown>('POST', '/tasks/import', { body })).tasks;
 }

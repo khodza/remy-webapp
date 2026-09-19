@@ -1,13 +1,14 @@
-import { BellOff, BellRing, CalendarDays, Globe, LayoutList, Moon, Newspaper, Sun, Tag } from 'lucide-react';
+import { BellOff, BellRing, CalendarDays, CalendarPlus, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Sun, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
+import { useCalendarFeed, useExportData } from '@/features/data';
 import { useMe } from '@/features/profile';
 import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features/settings';
 import { useTodayView } from '@/features/today';
 import { CONTRACT_VERSION, type Settings } from '@/shared/api';
 import { getDeviceTimezone } from '@/shared/lib/dates';
-import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SkeletonRows, TimeField, Toggle } from '@/shared/ui';
+import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SheetOption, SkeletonRows, TimeField, toast, Toggle } from '@/shared/ui';
 
 type RhythmKey = 'morningBrief' | 'eveningReview';
 
@@ -30,6 +31,9 @@ export function SettingsPage() {
   const save = useSaveSettings();
   const [view, setView] = useTodayView();
   const [editing, setEditing] = useState<RhythmKey | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const feed = useCalendarFeed();
+  const exportData = useExportData();
 
   const tz = me.data?.timezone ?? null;
   const detected = tz !== null && tz === getDeviceTimezone();
@@ -134,7 +138,44 @@ export function SettingsPage() {
             />
           </Group>
 
+          <SectionHeader label="Your data" />
+          <Group>
+            <FieldRow
+              icon={<CalendarPlus size={16} />}
+              label="Calendar feed"
+              hint="Reminders in Google or Apple Calendar"
+              value={feed.data ? (feed.data.enabled ? 'On' : 'Off') : undefined}
+              onClick={() => navigate('/settings/calendar')}
+            />
+            <FieldRow icon={<FileDown size={16} />} iconTone="ok" label="Export" hint="A file in your chat" value="CSV · JSON" onClick={() => setExporting(true)} />
+            <FieldRow icon={<ListPlus size={16} />} iconTone="warn" label="Import a list" hint="Paste lines, check, add" onClick={() => navigate('/settings/import')} />
+          </Group>
+
           <RhythmSheet editing={editing} settings={s} onClose={() => setEditing(null)} />
+          <Sheet open={exporting} onClose={() => setExporting(false)} title="Export">
+            <p className="pb-2 text-[13.5px] font-semibold text-muted">Remy sends the file to your chat, where you can save or share it. Pending and done reminders.</p>
+            <div className="-mx-1">
+              {(
+                [
+                  { format: 'csv', label: 'Spreadsheet (CSV)', detail: 'Opens in Excel, Numbers, Google Sheets' },
+                  { format: 'json', label: 'Full record (JSON)', detail: 'Everything, for backups' },
+                ] as const
+              ).map((option) => (
+                <SheetOption
+                  key={option.format}
+                  label={option.label}
+                  detail={option.detail}
+                  onClick={() => {
+                    setExporting(false);
+                    exportData.mutate(option.format, {
+                      onSuccess: (result) => toast({ message: `Sent ${result.filename} to your chat (${result.tasks} tasks)` }),
+                      onError: () => toast({ message: "Couldn't export. Try again.", tone: 'danger' }),
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          </Sheet>
         </>
       )}
 

@@ -21,7 +21,10 @@ import {
   CreateTaskFromTextRequestSchema,
   CreateTaskStructuredRequestSchema,
   DelayTaskRequestSchema,
+  ExportRequestSchema,
+  ImportTasksRequestSchema,
   ListTasksQuerySchema,
+  ParseListRequestSchema,
   ParseTextRequestSchema,
   SettingsSchema,
   SnoozeTaskRequestSchema,
@@ -90,6 +93,17 @@ let tasks: MockTask[] = buildFixtures();
 let user = { ...mockUser };
 let settings: Settings = buildSettings();
 let categories: Category[] = buildCategories();
+/** Calendar feed secret; null = off. */
+let calendarToken: string | null = null;
+
+function feedDto() {
+  return { enabled: calendarToken !== null, path: calendarToken ? `/calendar/${calendarToken}.ics` : null };
+}
+
+function randomToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
 
 function isOverdue(task: MockTask): boolean {
   const fire = nextFireAt(task);
@@ -534,6 +548,97 @@ export const handlers = [
         recurrence: parsed.recurrence,
       }),
     );
+  }),
+
+  // ---------------------------------------------------------------- data ---
+  http.get(`${API}/calendar/feed`, async () => {
+    await delay(LATENCY_MS);
+    return HttpResponse.json(feedDto());
+  }),
+
+  http.post(`${API}/calendar/feed`, async () => {
+    await delay(LATENCY_MS);
+    calendarToken = randomToken();
+    return HttpResponse.json(feedDto(), { status: 201 });
+  }),
+
+  http.delete(`${API}/calendar/feed`, async () => {
+    await delay(LATENCY_MS);
+    calendarToken = null;
+    return HttpResponse.json(feedDto());
+  }),
+
+  http.get(`${API}/calendar/:file`, ({ params }) => {
+    if (!calendarToken || paramId(params['file']) !== `${calendarToken}.ics`) {
+      return error(404, 'NOT_FOUND', 'Calendar not found');
+    }
+    const body = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Remy//Mock//EN', 'X-WR-CALNAME:Remy (mock)', 'END:VCALENDAR', ''].join('\r\n');
+    return new HttpResponse(body, { headers: { 'Content-Type': 'text/calendar; charset=utf-8' } });
+  }),
+
+  http.post(`${API}/export`, async ({ request }) => {
+    await delay(LATENCY_MS * 2);
+    const body = ExportRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('format must be csv or json');
+    const date = new Date().toISOString().slice(0, 10);
+    return HttpResponse.json({
+      filename: `remy-${date}.${body.data.format}`,
+      tasks: tasks.filter((t) => t.status !== 'deleted').length,
+    });
+  }),
+
+  http.post(`${API}/ai/parse-list`, async ({ request }) => {
+    await delay(LATENCY_MS * 3);
+    const body = ParseListRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest('text is required');
+    const lines = body.data.text
+      .split(/\r?\n/)
+      .map((l) => l.replace(/^\s*(?:[-*•]|\d{1,3}[.)]|\[[ xX]?\])\s*/, '').trim())
+      .filter(Boolean)
+      .slice(0, 50);
+    // Like the real assistant: a line with a time gets one, others are todos.
+    const drafts = lines.map((line) => {
+      const timed = /\b(today|tomorrow|tonight|at \d|every|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(line);
+      const parsed = fakeParse(line);
+      // Tags, "!" and day words are the assistant's to read, not the title's.
+      const title = parsed.description
+        .replace(/\s*#[\p{L}\d_-]+/gu, '')
+        .replace(/\s*!+/g, '')
+        .replace(/\b(every )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|someday)\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim() || parsed.description;
+      return {
+        description: title.charAt(0).toUpperCase() + title.slice(1),
+        notes: null,
+        scheduledAt: timed ? parsed.scheduledAt.toISOString() : null,
+        recurrence: timed && parsed.recurrence ? recurrenceToWire(parsed.recurrence) : null,
+        priority: /!|urgent|important/i.test(line) ? 'high' : 'normal',
+        categoryId: suggestCategory(line),
+        leadMinutes: null,
+      };
+    });
+    return HttpResponse.json(wire.ImportDrafts.parse({ tasks: drafts }));
+  }),
+
+  http.post(`${API}/tasks/import`, async ({ request }) => {
+    await delay(LATENCY_MS * 2);
+    const body = ImportTasksRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest(body.error.issues[0]?.message ?? 'Invalid import');
+    const created = body.data.tasks.map((d) => {
+      const task = makeTask(d.description, d.scheduledAt ? new Date(d.scheduledAt) : null, {
+        ageDays: 0,
+        notes: d.notes ?? null,
+        recurrence: d.recurrence ? recurrenceFromInput(d.recurrence) : null,
+        priority: d.priority ?? 'normal',
+        categoryId: d.categoryId ?? null,
+        leadMinutes: d.leadMinutes ?? null,
+        source: { type: 'miniapp', originalText: d.originalText ?? null },
+      });
+      task.timezone = user.timezone ?? 'UTC';
+      return task;
+    });
+    tasks = [...tasks, ...created];
+    return HttpResponse.json({ tasks: created.map(toDto) }, { status: 201 });
   }),
 ];
 

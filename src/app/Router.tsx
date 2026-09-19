@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { CatchUpPage } from '@/pages/CatchUpPage';
+import { CalendarFeedPage } from '@/pages/CalendarFeedPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
+import { ImportPage } from '@/pages/ImportPage';
 import { QuietHoursPage } from '@/pages/QuietHoursPage';
 import { CreateTaskPage } from '@/pages/CreateTaskPage';
 import { SettingsPage } from '@/pages/SettingsPage';
@@ -42,6 +44,8 @@ export function Router() {
         <Route path="/settings/timezone" element={<TimezonePage />} />
         <Route path="/settings/quiet" element={<QuietHoursPage />} />
         <Route path="/settings/categories" element={<CategoriesPage />} />
+        <Route path="/settings/calendar" element={<CalendarFeedPage />} />
+        <Route path="/settings/import" element={<ImportPage />} />
         {GalleryPage && (
           <Route
             path="/dev/gallery"
