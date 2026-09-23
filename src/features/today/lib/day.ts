@@ -132,6 +132,34 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
   };
 }
 
+export interface CalendarDay {
+  key: DayKey;
+  /** Midnight in the user zone. */
+  start: Date;
+}
+
+/** The calendar week (Mon–Sun or Sun–Sat) that contains `anchor`. */
+export function weekDays(anchor: DayKey, tz: string, weekStartsOn: 0 | 1, now: Date = new Date()): CalendarDay[] {
+  const start = dayStart(anchor, tz) ?? startOfDayInTz(now, tz);
+  const first = startOfWeek(inTz(start, tz), { weekStartsOn });
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(new TZDate(first.getFullYear(), first.getMonth(), first.getDate() + i, tz).getTime());
+    return { key: dayKey(day, tz), start: day };
+  });
+}
+
+/**
+ * `at` moved to another calendar day, keeping its wall-clock time in `tz`
+ * (09:30 stays 09:30 across a DST change). Null for a malformed key.
+ */
+export function sameTimeOnDay(at: Date, key: DayKey, tz: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!m) return null;
+  const local = inTz(at, tz);
+  const moved = new TZDate(Number(m[1]), Number(m[2]) - 1, Number(m[3]), local.getHours(), local.getMinutes(), tz);
+  return Number.isNaN(moved.getTime()) ? null : new Date(moved.getTime());
+}
+
 export interface WeekDay {
   key: DayKey;
   start: Date;
@@ -149,12 +177,7 @@ export function buildWeek(
   now: Date,
   weekStartsOn: 0 | 1,
 ): WeekDay[] {
-  const anchor = dayStart(selected, tz) ?? startOfDayInTz(now, tz);
-  const first = startOfWeek(inTz(anchor, tz), { weekStartsOn });
-  const days: WeekDay[] = Array.from({ length: 7 }, (_, i) => {
-    const start = new Date(new TZDate(first.getFullYear(), first.getMonth(), first.getDate() + i, tz).getTime());
-    return { key: dayKey(start, tz), start, count: 0, overdue: false };
-  });
+  const days: WeekDay[] = weekDays(selected, tz, weekStartsOn, now).map((day) => ({ ...day, count: 0, overdue: false }));
   const index = new Map(days.map((d, i) => [d.key, i]));
   const bump = (date: Date, overdue: boolean) => {
     const i = index.get(dayKey(date, tz));

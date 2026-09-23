@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '@/shared/api';
-import { buildDay, buildWeek, dayKey, dayStart, minuteOfDay, shiftWeek } from './day';
+import { buildDay, buildWeek, dayKey, dayStart, minuteOfDay, sameTimeOnDay, shiftWeek, weekDays } from './day';
 
 const TZ = 'Asia/Tashkent'; // UTC+5
 // Wed 17 Sep 2026, 14:47 in Tashkent.
@@ -125,5 +125,38 @@ describe('buildWeek', () => {
   it('starts on Sunday when asked', () => {
     const week = buildWeek([], [], '2026-09-17', TZ, NOW, 0);
     expect(week[0]?.key).toBe('2026-09-13');
+  });
+});
+
+describe('weekDays', () => {
+  it('starts the calendar week on Monday or Sunday', () => {
+    // Thu 17 Sep 2026.
+    expect(weekDays('2026-09-17', TZ, 1).map((d) => d.key)).toEqual([
+      '2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18', '2026-09-19', '2026-09-20',
+    ]);
+    expect(weekDays('2026-09-17', TZ, 0)[0]?.key).toBe('2026-09-13');
+    expect(weekDays('2026-09-20', TZ, 1)[0]?.key).toBe('2026-09-14');
+    expect(weekDays('2026-09-20', TZ, 0)[0]?.key).toBe('2026-09-20');
+  });
+
+  it('gives each day its midnight in the user zone', () => {
+    expect(weekDays('2026-09-17', TZ, 1)[0]?.start.toISOString()).toBe('2026-09-13T19:00:00.000Z');
+  });
+});
+
+describe('sameTimeOnDay', () => {
+  it('keeps the wall-clock time on the new day', () => {
+    expect(sameTimeOnDay(local(17, 14, 30), '2026-09-19', TZ)?.toISOString()).toBe(local(19, 14, 30).toISOString());
+  });
+
+  it('keeps it across a DST change', () => {
+    const ny = 'America/New_York';
+    // Fri 30 Oct 2026 09:30 EDT → Mon 2 Nov 2026 09:30 EST.
+    const at = new Date('2026-10-30T13:30:00Z');
+    expect(sameTimeOnDay(at, '2026-11-02', ny)?.toISOString()).toBe('2026-11-02T14:30:00.000Z');
+  });
+
+  it('rejects a malformed key', () => {
+    expect(sameTimeOnDay(NOW, 'soon', TZ)).toBeNull();
   });
 });
