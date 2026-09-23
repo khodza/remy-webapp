@@ -1,6 +1,6 @@
 export { listTimezones, matchesZone, zoneCity, zoneRegion } from './timezones';
 export { QuietBar } from './components/QuietBar';
-export { mergeSettings, settingsKey, useSettings, useUpdateSettings } from './hooks';
+export { mergeSettings, settingsKey, useClockFormatSync, useSettings, useUpdateSettings } from './hooks';
 export { useSaveSettings } from './useSaveSettings';
 export {
   DEFAULT_FIRST_NUDGE,

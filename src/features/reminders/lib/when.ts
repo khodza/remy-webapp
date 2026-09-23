@@ -1,5 +1,5 @@
 import { addDays, addMinutes, nextMonday, nextSaturday } from 'date-fns';
-import { atTimeInTz, formatInTz, formatTime, inTz, isTodayInTz, isTomorrowInTz } from '@/shared/lib/dates';
+import { atTimeInTz, formatDateTime, formatTime, inTz, isTodayInTz, isTomorrowInTz } from '@/shared/lib/dates';
 
 /**
  * Pure time choices shared by Detail, Catch-up and Create. Every option
@@ -59,11 +59,11 @@ export function quickTimes(now: Date, tz: string): QuickTime[] {
   return times.filter((time, i) => times.findIndex((other) => other.at.getTime() === time.at.getTime()) === i);
 }
 
-/** "Today 11:00", "Tomorrow 10:00", "Wed 24 Sep · 10:00". */
+/** "Today 11:00", "Tomorrow 10:00", "Wed 24 Sep · 10:00" (in the user's clock format). */
 export function describeDue(at: Date, tz: string, now: Date): string {
   if (isTodayInTz(at, tz, now)) return `Today ${formatTime(at, tz)}`;
   if (isTomorrowInTz(at, tz, now)) return `Tomorrow ${formatTime(at, tz)}`;
-  return formatInTz(at, tz, 'EEE d MMM · HH:mm');
+  return formatDateTime(at, tz);
 }
 
 export const LEAD_CHOICES: Array<number | null> = [null, 5, 10, 15, 30, 60, 120, 1440];

@@ -24,7 +24,7 @@ import { Token } from '@/features/reminders/components/Token';
 import { ambiguousTime, similarTasks, stripCategoryTags, suggestCategory } from '@/features/reminders/lib/draft';
 import { dayKey, dayStart, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import type { Priority, Recurrence } from '@/shared/api';
-import { atTimeInTz, formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
+import { atTimeInTz, formatDateTime, formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useClosingConfirmation, useGoBack, useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
 import { AutoTextarea, Button, FieldRow, Group, Screen, SectionHeader, Sheet, toast } from '@/shared/ui';
@@ -268,7 +268,7 @@ export function CreateTaskPage() {
 
       <SectionHeader label={trimmed ? 'Or set manually' : 'Details'} />
       <Group>
-        <FieldRow icon={<CalendarClock size={16} />} label="When" value={draft.scheduledAt ? formatInTz(draft.scheduledAt, tz, 'EEE d MMM · HH:mm') : 'No date'} onClick={() => setSheet('when')} />
+        <FieldRow icon={<CalendarClock size={16} />} label="When" value={draft.scheduledAt ? formatDateTime(draft.scheduledAt, tz) : 'No date'} onClick={() => setSheet('when')} />
         <FieldRow
           icon={<Repeat size={16} />}
           iconTone="warn"

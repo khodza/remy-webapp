@@ -42,6 +42,12 @@
 :root {
   /* Native date/time pickers and scrollbars follow the theme (dark below). */
   color-scheme: light;
+  /* Time column of a row: "14:05", or "11:45 PM" with the 12-hour clock. */
+  --time-col: 46px;
+}
+
+[data-clock='12'] {
+  --time-col: 64px;
 }
 
 [data-theme='dark'] {

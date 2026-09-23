@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import * as api from '@/shared/api';
 import type { Settings, UpdateSettingsRequest } from '@/shared/api';
+import { setClockHour12 } from '@/shared/stores/clock.store';
 
 export const settingsKey = ['settings'] as const;
 
@@ -50,4 +52,26 @@ export function useUpdateSettings() {
     },
     onSuccess: (settings) => qc.setQueryData<Settings>(settingsKey, settings),
   });
+}
+
+/**
+ * Keeps the app-wide 12/24-hour preference in step with the settings
+ * query: the fetch, an optimistic change and its rollback all land in the
+ * cache, and the cache event updates the clock store in the same tick, so
+ * the Settings row and every time on screen switch together. Mounted once
+ * (app/Root); it also loads settings at startup.
+ */
+export function useClockFormatSync(): void {
+  const qc = useQueryClient();
+  useSettings();
+  useEffect(() => {
+    const apply = () => {
+      const settings = qc.getQueryData<Settings>(settingsKey);
+      if (settings) setClockHour12(settings.hour12);
+    };
+    apply();
+    return qc.getQueryCache().subscribe((event) => {
+      if (event.query.queryKey[0] === settingsKey[0]) apply();
+    });
+  }, [qc]);
 }

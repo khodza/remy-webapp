@@ -21,7 +21,7 @@ import {
 import { dayKey, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import { ApiError, type Task } from '@/shared/api';
 import type { TaskPatch } from '@/shared/api/endpoints';
-import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
+import { formatDateTime, formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useGoBack, useMainButton } from '@/shared/lib/telegram';
 import { useAutosave } from '@/shared/lib/useAutosave';
 import { useNow } from '@/shared/lib/useNow';
@@ -160,7 +160,7 @@ function Detail({ task }: { task: Task }) {
         <FieldRow
           icon={<CalendarClock size={16} />}
           label="When"
-          value={due ? formatInTz(task.scheduledAt ?? due, tz, 'EEE d MMM · HH:mm') : 'No date'}
+          value={due ? formatDateTime(task.scheduledAt ?? due, tz) : 'No date'}
           {...(done ? {} : { onClick: () => setSheet('when') })}
         />
         {task.scheduledAt ? (

@@ -1,6 +1,6 @@
 import { CalendarX2 } from 'lucide-react';
 import { useState } from 'react';
-import { formatInTz, fromLocalInputValue, relativeToNow, toLocalInputValue, useUserTimezone } from '@/shared/lib/dates';
+import { formatDateTime, fromLocalInputValue, relativeToNow, toLocalInputValue, useUserTimezone } from '@/shared/lib/dates';
 import { Button, Sheet, SheetOption } from '@/shared/ui';
 import { quickTimes } from '../../lib/when';
 
@@ -47,13 +47,13 @@ export function WhenSheet({ open, onClose, title = 'When', value, now, onPick, a
       title={title}
       footer={
         <Button variant="primary" block disabled={!custom || inPast} onClick={() => custom && pick(custom)}>
-          {custom && !inPast ? `Set ${formatInTz(custom, tz, 'EEE d MMM · HH:mm')}` : 'Pick a time in the future'}
+          {custom && !inPast ? `Set ${formatDateTime(custom, tz)}` : 'Pick a time in the future'}
         </Button>
       }
     >
       <div className="-mx-1">
         {quickTimes(now, tz).map((quick) => (
-          <SheetOption key={quick.key} label={quick.label} detail={formatInTz(quick.at, tz, 'EEE d MMM · HH:mm')} onClick={() => pick(quick.at)} />
+          <SheetOption key={quick.key} label={quick.label} detail={formatDateTime(quick.at, tz)} onClick={() => pick(quick.at)} />
         ))}
         {allowClear ? (
           <SheetOption label="No date" detail="Keep it in the Inbox" icon={<CalendarX2 size={17} className="text-muted" />} selected={value === null} onClick={() => pick(null)} />

@@ -1,13 +1,14 @@
 import { Flag } from 'lucide-react';
 import type { Category } from '@/shared/api';
-import { formatTime, relativeToNow } from '@/shared/lib/dates';
+import { formatHour, formatTime, relativeToNow, useHour12 } from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { cx } from '@/shared/ui';
 import { minuteOfDay, type DayItem, type DayModel } from '../lib/day';
 import { hourRange, layoutBlocks, snapMove } from '../lib/timeline';
 import { useBlockGesture } from './useBlockGesture';
 
-const HOUR_COLUMN = 56;
+/** The hour labels' column; wider for "11:45 PM" in the NOW pill. */
+const HOUR_COLUMN = { h24: 56, h12: 66 };
 
 interface TimelineViewProps {
   day: DayModel;
@@ -25,6 +26,7 @@ interface TimelineViewProps {
 
 /** Proportional hour grid: blocks pinned to their minute, past dimmed, a NOW line. */
 export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOpen, onComplete, onSnooze, onMove }: TimelineViewProps) {
+  const hourColumn = useHour12() ? HOUR_COLUMN.h12 : HOUR_COLUMN.h24;
   const minutes = day.items.map((item) => minuteOfDay(item.at, tz));
   const nowMinute = day.isToday ? minuteOfDay(now, tz) : null;
   const [first, last] = hourRange(minutes, nowMinute);
@@ -51,7 +53,7 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
           aria-hidden="true"
         >
           {/* The NOW pill takes the label's place when it sits on it. */}
-          {nowTop !== null && Math.abs(nowTop - i * hourPx - 8) < 14 ? null : `${String(first + i).padStart(2, '0')}:00`}
+          {nowTop !== null && Math.abs(nowTop - i * hourPx - 8) < 14 ? null : formatHour(first + i)}
         </div>
       ))}
 
@@ -69,8 +71,8 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
             style={{
               top: block.top + 2,
               height: block.height,
-              left: `calc(${HOUR_COLUMN}px + (100% - ${HOUR_COLUMN + 8}px) * ${block.column / block.columns})`,
-              width: `calc((100% - ${HOUR_COLUMN + 8}px) / ${block.columns} - 4px)`,
+              left: `calc(${hourColumn}px + (100% - ${hourColumn + 8}px) * ${block.column / block.columns})`,
+              width: `calc((100% - ${hourColumn + 8}px) / ${block.columns} - 4px)`,
             }}
             narrow={block.columns > 1}
             onOpen={() => onOpen(item)}
@@ -86,7 +88,7 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
         // Under the blocks (z-3); its time pill sits in the hour column, which blocks never cover.
         <div className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now" style={{ top: nowTop }} data-now>
           <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">{formatTime(now, tz)}</span>
-          {emptyNote ? <p className="absolute left-[64px] right-3 top-3 text-[13px] font-bold text-muted">{emptyNote}</p> : null}
+          {emptyNote ? <p className="absolute right-3 top-3 text-[13px] font-bold text-muted" style={{ left: hourColumn + 8 }}>{emptyNote}</p> : null}
         </div>
       ) : null}
     </div>

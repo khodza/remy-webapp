@@ -1,9 +1,10 @@
+import { formatClock, formatHour } from '@/shared/lib/dates';
 import { quietSegments, toMinutes } from '../lib/nudges';
 
-/** 00:00–24:00 with the quiet window shaded and now marked. */
+/** The whole day with the quiet window shaded and now marked. */
 export function QuietBar({ from, to, enabled, nowMinute }: { from: string; to: string; enabled: boolean; nowMinute: number }) {
   return (
-    <div className="px-4" aria-label={enabled ? `Quiet from ${from} to ${to}` : 'Quiet hours off'}>
+    <div className="px-4" aria-label={enabled ? `Quiet from ${formatClock(from)} to ${formatClock(to)}` : 'Quiet hours off'}>
       <div className="relative h-8 overflow-hidden rounded-lg bg-accent-soft">
         {enabled
           ? quietSegments(from, to).map(([left, width]) => (
@@ -12,17 +13,15 @@ export function QuietBar({ from, to, enabled, nowMinute }: { from: string; to: s
           : null}
         <i className="absolute inset-y-0 border-l-2 border-now" style={{ left: `${(nowMinute / 1440) * 100}%` }} aria-hidden="true" />
         {enabled ? (
-          <span className="tnum absolute top-1/2 -translate-y-1/2 rounded-md bg-surface px-1.5 text-[10.5px] font-extrabold text-muted" style={{ left: `calc(${(toMinutes(from) / 1440) * 100}% - 40px)` }}>
-            {from}
+          <span className="tnum absolute top-1/2 -translate-x-[calc(100%+4px)] -translate-y-1/2 rounded-md bg-surface px-1.5 text-[10.5px] font-extrabold whitespace-nowrap text-muted" style={{ left: `${(toMinutes(from) / 1440) * 100}%` }}>
+            {formatClock(from)}
           </span>
         ) : null}
       </div>
       <div className="tnum mt-1 flex justify-between text-[10px] font-extrabold text-muted">
-        <span>00:00</span>
-        <span>06:00</span>
-        <span>12:00</span>
-        <span>18:00</span>
-        <span>24:00</span>
+        {[0, 6, 12, 18, 24].map((hour) => (
+          <span key={hour}>{formatHour(hour)}</span>
+        ))}
       </div>
     </div>
   );

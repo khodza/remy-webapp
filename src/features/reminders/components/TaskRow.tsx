@@ -52,7 +52,7 @@ export function TaskRow({ task, tz, tone, time, timeSub, category, onOpen, onTog
       onKeyDown={(event) => {
         if (event.key === 'Enter') onOpen();
       }}
-      className="grid min-h-14 cursor-pointer grid-cols-[46px_minmax(0,1fr)_auto] items-center gap-2.5 py-2 pl-3.5 pr-3 transition active:bg-past"
+      className="grid min-h-14 cursor-pointer grid-cols-[var(--time-col)_minmax(0,1fr)_auto] items-center gap-2.5 py-2 pl-3.5 pr-3 transition active:bg-past"
     >
       <div className="tnum leading-tight">
         <span className={cx('block text-[13px] font-extrabold', tone === 'overdue' ? 'text-danger' : 'text-muted')}>{time}</span>

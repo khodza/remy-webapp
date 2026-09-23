@@ -1,3 +1,4 @@
+import { formatHour } from '@/shared/lib/dates';
 import { cx } from '@/shared/ui';
 
 export interface StripTick {
@@ -27,7 +28,7 @@ const TONES: Record<StripTick['tone'], string> = {
   ok: 'bg-ok',
 };
 
-/** 06:00–24:00 at a glance: where the day's reminders sit, and now. */
+/** 6 in the morning to midnight at a glance: where the day's reminders sit, and now. */
 export function LoadStrip({ ticks, highlight, nowMinute = null, label, compact = false }: LoadStripProps) {
   return (
     <div className={compact ? 'min-w-0 flex-1' : 'px-4'} aria-label={`${label}: ${ticks.length} reminders`}>
@@ -53,9 +54,9 @@ export function LoadStrip({ ticks, highlight, nowMinute = null, label, compact =
       </div>
       {compact ? null : (
         <div className="tnum mt-1 flex justify-between text-[10px] font-extrabold text-muted">
-          <span>06:00</span>
+          <span>{formatHour(6)}</span>
           <span>{label}</span>
-          <span>24:00</span>
+          <span>{formatHour(24)}</span>
         </div>
       )}
     </div>

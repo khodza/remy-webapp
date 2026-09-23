@@ -6,7 +6,7 @@ import { useCategoryMap } from '@/features/categories';
 import { describeDue, TaskRow, useTaskActions, useTasks, useUpdateTask, WhenSheet } from '@/features/reminders';
 import { dayKey, dueAt, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import type { Task } from '@/shared/api';
-import { formatInTz, formatTime, inTz, startOfDayInTz, useUserTimezone } from '@/shared/lib/dates';
+import { formatHour, formatInTz, formatTime, inTz, startOfDayInTz, useUserTimezone } from '@/shared/lib/dates';
 import { useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
 import { cx, Empty, Group, IconButton, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
@@ -70,7 +70,7 @@ export function WeekPage() {
         </div>
       </header>
 
-      <SectionHeader label="Load · 06:00 → 24:00" right={<span className="font-bold normal-case text-muted">tap a day</span>} />
+      <SectionHeader label={`Load · ${formatHour(6)} → ${formatHour(24)}`} right={<span className="font-bold normal-case text-muted">tap a day</span>} />
       <Group>
         {days.map((day) => (
           <WeekRow

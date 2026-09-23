@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setClockHour12 } from '@/shared/stores/clock.store';
 import {
   atTimeInTz,
+  clockHour12,
   compareByFireAt,
+  formatClock,
+  formatDateTime,
+  formatHour,
+  formatTime,
   formatWhen,
+  timePattern,
   fromLocalInputValue,
   isTodayInTz,
   isTomorrowInTz,
@@ -67,5 +74,65 @@ describe('compareByFireAt', () => {
     const plain = { scheduledAt: new Date('2026-09-17T09:00:00Z'), nextFireAt: null };
     const todo = { scheduledAt: null, nextFireAt: null };
     expect([todo, series, plain].sort(compareByFireAt)).toEqual([plain, series, todo]);
+  });
+});
+
+describe('12/24-hour time format', () => {
+  afterEach(() => setClockHour12(false));
+  const afternoon = new Date('2026-09-17T09:47:00Z'); // 14:47 in Tashkent
+  const morning = new Date('2026-09-17T04:05:00Z'); // 09:05
+  const midnight = new Date('2026-09-16T19:00:00Z'); // 00:00
+  const noon = new Date('2026-09-17T07:00:00Z'); // 12:00
+
+  it('formats a time either way', () => {
+    expect(formatTime(afternoon, TASHKENT, false)).toBe('14:47');
+    expect(formatTime(afternoon, TASHKENT, true)).toBe('2:47 PM');
+    expect(formatTime(morning, TASHKENT, false)).toBe('09:05');
+    expect(formatTime(morning, TASHKENT, true)).toBe('9:05 AM');
+    expect(formatTime(midnight, TASHKENT, true)).toBe('12:00 AM');
+    expect(formatTime(noon, TASHKENT, true)).toBe('12:00 PM');
+    expect(timePattern(true)).toBe('h:mm a');
+  });
+
+  it('reads the zone before the clock: the same instant in New York', () => {
+    expect(formatTime(afternoon, NY, true)).toBe('5:47 AM');
+    expect(formatTime(afternoon, NY, false)).toBe('05:47');
+  });
+
+  it('carries the format into date + time and "when" labels', () => {
+    const now = new Date('2026-09-17T06:00:00Z');
+    expect(formatDateTime(afternoon, TASHKENT, true)).toBe('Thu 17 Sep · 2:47 PM');
+    expect(formatWhen(afternoon, TASHKENT, now, true)).toBe('2:47 PM');
+    expect(formatWhen(new Date('2026-09-18T09:47:00Z'), TASHKENT, now, true)).toBe('Fri 18 Sep · 2:47 PM');
+  });
+
+  it('formats settings wall-clock strings', () => {
+    expect(formatClock('08:00', false)).toBe('08:00');
+    expect(formatClock('8:30', false)).toBe('08:30');
+    expect(formatClock('08:00', true)).toBe('8:00 AM');
+    expect(formatClock('21:30', true)).toBe('9:30 PM');
+    expect(formatClock('00:15', true)).toBe('12:15 AM');
+    expect(formatClock('12:00', true)).toBe('12:00 PM');
+    expect(formatClock('nonsense', true)).toBe('nonsense');
+    expect(formatClock('25:00', true)).toBe('25:00');
+  });
+
+  it('labels hour marks, including both ends of the day', () => {
+    expect(formatHour(6, false)).toBe('06:00');
+    expect(formatHour(24, false)).toBe('24:00');
+    expect(formatHour(0, true)).toBe('12 AM');
+    expect(formatHour(6, true)).toBe('6 AM');
+    expect(formatHour(12, true)).toBe('12 PM');
+    expect(formatHour(18, true)).toBe('6 PM');
+    expect(formatHour(24, true)).toBe('12 AM');
+  });
+
+  it('defaults to the stored preference', () => {
+    expect(clockHour12()).toBe(false);
+    expect(formatTime(afternoon, TASHKENT)).toBe('14:47');
+    setClockHour12(true);
+    expect(clockHour12()).toBe(true);
+    expect(formatTime(afternoon, TASHKENT)).toBe('2:47 PM');
+    expect(formatClock('20:00')).toBe('8:00 PM');
   });
 });

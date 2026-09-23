@@ -3,6 +3,7 @@ import { Providers } from '@/app/Providers';
 import { Router } from '@/app/Router';
 import { RefreshCw } from 'lucide-react';
 import { useEnsureTimezone } from '@/features/profile';
+import { useClockFormatSync } from '@/features/settings';
 import { Button, Placeholder } from '@/shared/ui';
 
 function ErrorFallback({ error }: { error: unknown }) {
@@ -27,8 +28,10 @@ function ErrorFallback({ error }: { error: unknown }) {
   );
 }
 
-function TimezoneBootstrap() {
+/** Profile zone detection and the 12/24-hour preference, once per app. */
+function Bootstrap() {
   useEnsureTimezone();
+  useClockFormatSync();
   return null;
 }
 
@@ -36,7 +39,7 @@ export function Root() {
   return (
     <ErrorBoundary fallback={ErrorFallback}>
       <Providers>
-        <TimezoneBootstrap />
+        <Bootstrap />
         <Router />
       </Providers>
     </ErrorBoundary>

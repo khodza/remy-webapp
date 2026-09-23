@@ -1,4 +1,4 @@
-import { BellOff, BellRing, CalendarDays, CalendarPlus, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Sun, Tag } from 'lucide-react';
+import { BellOff, BellRing, CalendarDays, CalendarPlus, Clock, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Sun, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
@@ -7,7 +7,8 @@ import { useMe } from '@/features/profile';
 import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features/settings';
 import { useTodayView } from '@/features/today';
 import { CONTRACT_VERSION, type Settings } from '@/shared/api';
-import { getDeviceTimezone } from '@/shared/lib/dates';
+import { formatClock, formatTime, getDeviceTimezone, useHour12, useUserTimezone } from '@/shared/lib/dates';
+import { useNow } from '@/shared/lib/useNow';
 import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SheetOption, SkeletonRows, TimeField, toast, Toggle } from '@/shared/ui';
 
 type RhythmKey = 'morningBrief' | 'eveningReview';
@@ -34,6 +35,9 @@ export function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const feed = useCalendarFeed();
   const exportData = useExportData();
+  const hour12 = useHour12();
+  const now = useNow();
+  const zone = useUserTimezone();
 
   const tz = me.data?.timezone ?? null;
   const detected = tz !== null && tz === getDeviceTimezone();
@@ -68,13 +72,13 @@ export function SettingsPage() {
         <>
           <SectionHeader label="Messages from Remy" />
           <Group>
-            <FieldRow icon={<Sun size={16} />} iconTone="warn" label="Morning brief" value={s.morningBrief.enabled ? s.morningBrief.time : 'Off'} onClick={() => setEditing('morningBrief')} />
-            <FieldRow icon={<Moon size={16} />} label="Evening review" value={s.eveningReview.enabled ? s.eveningReview.time : 'Off'} onClick={() => setEditing('eveningReview')} />
+            <FieldRow icon={<Sun size={16} />} iconTone="warn" label="Morning brief" value={s.morningBrief.enabled ? formatClock(s.morningBrief.time, hour12) : 'Off'} onClick={() => setEditing('morningBrief')} />
+            <FieldRow icon={<Moon size={16} />} label="Evening review" value={s.eveningReview.enabled ? formatClock(s.eveningReview.time, hour12) : 'Off'} onClick={() => setEditing('eveningReview')} />
             <FieldRow
               icon={<Newspaper size={16} />}
               iconTone="ok"
               label="Weekly wrap"
-              hint={`${s.weekStartsOn === 1 ? 'Sunday' : 'Saturday'} at ${s.eveningReview.time}`}
+              hint={`${s.weekStartsOn === 1 ? 'Sunday' : 'Saturday'} at ${formatClock(s.eveningReview.time, hour12)}`}
               trailing={<Toggle checked={s.weeklyWrap.enabled} onChange={(enabled) => save({ weeklyWrap: { enabled } })} label="Weekly wrap" />}
             />
           </Group>
@@ -85,7 +89,7 @@ export function SettingsPage() {
               icon={<BellOff size={16} />}
               iconTone="accent"
               label="Quiet hours"
-              value={s.quietHours.enabled ? `${s.quietHours.from} – ${s.quietHours.to}` : 'Off'}
+              value={s.quietHours.enabled ? `${formatClock(s.quietHours.from, hour12)} – ${formatClock(s.quietHours.to, hour12)}` : 'Off'}
               onClick={() => navigate('/settings/quiet')}
             />
             <FieldRow
@@ -120,6 +124,23 @@ export function SettingsPage() {
           <SectionHeader label="Region" />
           <Group>
             <FieldRow icon={<Globe size={16} />} label="Time zone" value={tz ? `${zoneCity(tz)}${detected ? ' · auto' : ''}` : 'Detecting…'} onClick={() => navigate('/settings/timezone')} />
+            <FieldRow
+              icon={<Clock size={16} />}
+              iconTone="ok"
+              label="Time format"
+              hint={`Now ${formatTime(now, zone, s.hour12)}`}
+              trailing={
+                <Segmented
+                  label="Time format"
+                  value={s.hour12 ? '12' : '24'}
+                  onChange={(value) => save({ hour12: value === '12' })}
+                  options={[
+                    { value: '24', label: '24 h' },
+                    { value: '12', label: '12 h' },
+                  ]}
+                />
+              }
+            />
             <FieldRow
               icon={<CalendarDays size={16} />}
               iconTone="warn"
