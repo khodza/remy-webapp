@@ -25,6 +25,7 @@ import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared
 import { useMainButton } from '@/shared/lib/telegram';
 import { savedScroll } from '@/shared/lib/scrollMemory';
 import { useNow } from '@/shared/lib/useNow';
+import { useRefreshScreen } from '@/shared/lib/useRefreshScreen';
 import { Button, Empty, FieldRow, Group, IconButton, Screen, Segmented, SkeletonRows } from '@/shared/ui';
 
 const DONE_VARS = { view: 'done', limit: 100 } as const;
@@ -46,6 +47,7 @@ export function TodayPage() {
   const [view, setView] = useTodayView();
   const actions = useTaskActions();
   const screen = useRef<HTMLElement>(null);
+  const refresh = useRefreshScreen();
 
   const day = useMemo(
     () => buildDay(pending.data ?? [], completed.data ?? [], selected, tz, now),
@@ -96,7 +98,7 @@ export function TodayPage() {
   const toggle = (task: Task, done: boolean) => (done ? actions.reopen(task) : actions.complete(task));
 
   return (
-    <Screen back={false} ref={screen}>
+    <Screen back={false} ref={screen} onRefresh={refresh}>
       {/* Pinned: the day stays in view while the grid scrolls under it. */}
       <div className="sticky top-0 z-10 bg-bg" data-pinned>
         <header className="flex items-center justify-between gap-2 pb-2 pl-4 pr-2 pt-2">

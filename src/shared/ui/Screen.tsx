@@ -1,6 +1,8 @@
+import { RefreshCw } from 'lucide-react';
 import { forwardRef, useLayoutEffect, useRef, type PropsWithChildren } from 'react';
 import { useLocation } from 'react-router-dom';
 import { saveScroll, savedScroll } from '@/shared/lib/scrollMemory';
+import { PULL_THRESHOLD, usePullToRefresh } from '@/shared/lib/usePullToRefresh';
 import { useBackButton } from '@/shared/lib/telegram';
 import { cx } from './cx';
 
@@ -8,6 +10,8 @@ interface ScreenProps {
   /** Show Telegram's Back button (off on the root screen). */
   back?: boolean;
   className?: string;
+  /** Pull down at the top to run this (lists: refetch what is on screen). */
+  onRefresh?: () => Promise<unknown>;
 }
 
 /**
@@ -16,10 +20,11 @@ interface ScreenProps {
  * of the dev MainButton mirror).
  */
 export const Screen = forwardRef<HTMLElement, PropsWithChildren<ScreenProps>>(
-  function Screen({ back = true, className, children }, ref) {
+  function Screen({ back = true, className, onRefresh, children }, ref) {
     useBackButton(back);
     const { key } = useLocation();
     const local = useRef<HTMLElement | null>(null);
+    const pull = usePullToRefresh(local, onRefresh);
 
     useLayoutEffect(() => {
       const main = local.current;
@@ -43,8 +48,31 @@ export const Screen = forwardRef<HTMLElement, PropsWithChildren<ScreenProps>>(
           className,
         )}
       >
+        {onRefresh ? <PullIndicator distance={pull.distance} ready={pull.ready} refreshing={pull.refreshing} /> : null}
         {children}
       </main>
     );
   },
 );
+
+/** The gap a pull opens at the top, with a spinner that turns as you pull. */
+function PullIndicator({ distance, ready, refreshing }: { distance: number; ready: boolean; refreshing: boolean }) {
+  return (
+    <div
+      className={cx('flex items-end justify-center overflow-hidden', distance === 0 && 'transition-[height] duration-200')}
+      style={{ height: distance }}
+      aria-hidden={!refreshing}
+      role={refreshing ? 'status' : undefined}
+      aria-label={refreshing ? 'Refreshing' : undefined}
+    >
+      <span className={cx('mb-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-surface shadow-[0_1px_4px_rgb(16_24_40/0.15)]', ready ? 'text-accent' : 'text-muted')}>
+        <RefreshCw
+          size={15}
+          strokeWidth={2.5}
+          className={refreshing ? 'animate-spin' : undefined}
+          style={refreshing ? undefined : { transform: `rotate(${(distance / PULL_THRESHOLD) * 270}deg)` }}
+        />
+      </span>
+    </div>
+  );
+}

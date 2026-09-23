@@ -9,6 +9,7 @@ import type { Task } from '@/shared/api';
 import { formatDateTime, formatHour, formatInTz, formatTime, useUserTimezone } from '@/shared/lib/dates';
 import { useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
+import { useRefreshScreen } from '@/shared/lib/useRefreshScreen';
 import { cx, Empty, Group, IconButton, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
 
 /**
@@ -30,6 +31,7 @@ export function WeekPage() {
   const [offset, setOffset] = useState(0);
   const [scheduling, setScheduling] = useState<Task | null>(null);
   const todayKey = dayKey(now, tz);
+  const refresh = useRefreshScreen();
 
   useMainButton({ text: 'New reminder', onClick: () => navigate('/create') });
 
@@ -69,7 +71,7 @@ export function WeekPage() {
   const last = days[6];
 
   return (
-    <Screen>
+    <Screen onRefresh={refresh}>
       <header className="flex items-center justify-between pb-1 pl-4 pr-2 pt-3">
         <h1 className="flex items-baseline gap-1.5 text-[21px] font-extrabold tracking-[-0.02em]">
           Week
