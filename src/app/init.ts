@@ -9,16 +9,23 @@ import {
   viewport,
 } from '@telegram-apps/sdk-react';
 
+/**
+ * SDK debug logs and the eruda console exist only in dev builds, or in a
+ * build made with VITE_DEBUG_TOOLS=1 (a device-testing build). Static, so a
+ * normal production build does not even contain the eruda chunk.
+ */
+export const DEBUG_TOOLS = import.meta.env.DEV || import.meta.env.VITE_DEBUG_TOOLS === '1';
+
 export interface InitOptions {
   debug: boolean;
   eruda: boolean;
 }
 
 export async function init(options: InitOptions): Promise<void> {
-  setDebug(options.debug);
+  setDebug(DEBUG_TOOLS && options.debug);
   initSDK();
 
-  if (options.eruda) {
+  if (DEBUG_TOOLS && options.eruda) {
     void import('eruda').then(({ default: eruda }) => {
       eruda.init();
       eruda.position({ x: window.innerWidth - 50, y: 0 });

@@ -13,7 +13,12 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   build: {
-    target: 'esnext',
+    // Telegram opens the app in the system WebView: WebKit on iOS (Telegram
+    // supports iOS 15+ in practice), Android System WebView (Chromium,
+    // updated through the Play Store, but some devices lag years behind).
+    // ES2022 syntax with Safari 15 as the floor; anything newer is lowered.
+    // A top-level await would fail this target at build time (F26).
+    target: ['es2022', 'safari15', 'chrome100'],
     minify: 'terser',
   },
   server: {

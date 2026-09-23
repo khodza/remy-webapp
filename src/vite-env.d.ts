@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   /** `1` enables the MSW mock API (dev only). */
   readonly VITE_MOCK_API?: string;
+  /** `1` at build time: SDK debug logs + eruda on mobile in a production build. */
+  readonly VITE_DEBUG_TOOLS?: string;
   /** Telegram user id used by the mocked initData outside Telegram. */
   readonly VITE_MOCK_TG_USER_ID?: string;
 }

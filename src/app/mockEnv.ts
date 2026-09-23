@@ -4,8 +4,13 @@ import {
   mockTelegramEnv,
 } from '@telegram-apps/sdk-react';
 
-// Only mock in dev — tree-shaken out of production bundles.
-if (import.meta.env.DEV) {
+/**
+ * Outside Telegram (a plain browser in dev), fake the environment the SDK
+ * expects. index.tsx imports this module only in dev builds, so none of it
+ * ships to production.
+ */
+export async function mockTelegramEnvIfNeeded(): Promise<void> {
+  if (!import.meta.env.DEV) return;
   if (!(await isTMA('complete'))) {
     window.__REMY_MOCK_ENV__ = true;
     // ?theme=light previews the light palette; the default mock is dark.
