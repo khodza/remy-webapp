@@ -33,6 +33,10 @@ export function ImportPage() {
 
   const lines = text.split('\n').filter((l) => l.trim()).length;
   const selected = drafts ? drafts.filter((_, i) => !skipped.has(i)) : [];
+  // Same rule as the When sheet and Create (F15): a time that has already
+  // passed is not saved. The row turns red; fix it or leave the line out.
+  const isPast = (draft: ImportDraft) => draft.scheduledAt !== null && draft.scheduledAt.getTime() <= now.getTime();
+  const pastCount = selected.filter(isPast).length;
   useClosingConfirmation(text.trim().length > 0 && !create.isSuccess);
   // Back from the review returns to the list instead of leaving.
   useBackHandler(drafts !== null, () => setDrafts(null));
@@ -72,8 +76,12 @@ export function ImportPage() {
     drafts === null
       ? { text: parse.isPending ? 'Reading…' : 'Read the list', enabled: lines > 0 && lines <= MAX_LINES && !parse.isPending, loading: parse.isPending, onClick: read }
       : {
-          text: selected.length ? `Add ${selected.length} ${selected.length === 1 ? 'reminder' : 'reminders'}` : 'Nothing selected',
-          enabled: selected.length > 0 && !create.isPending,
+          text: pastCount
+            ? `Fix ${pastCount} past ${pastCount === 1 ? 'time' : 'times'}`
+            : selected.length
+              ? `Add ${selected.length} ${selected.length === 1 ? 'reminder' : 'reminders'}`
+              : 'Nothing selected',
+          enabled: selected.length > 0 && pastCount === 0 && !create.isPending,
           loading: create.isPending,
           onClick: add,
         },
@@ -121,6 +129,7 @@ export function ImportPage() {
             const on = !skipped.has(i);
             const repeat = recurrenceLabel(draft.recurrence, tz);
             const category = draft.categoryId ? categories.get(draft.categoryId) : undefined;
+            const past = on && isPast(draft);
             return (
               <div key={i} className={`flex min-h-14 items-center gap-3 py-2 pl-3.5 pr-2 ${on ? '' : 'opacity-45'}`}>
                 <CheckCircle
@@ -148,15 +157,22 @@ export function ImportPage() {
                 <button
                   type="button"
                   onClick={() => setEditing(i)}
-                  className={`tnum min-h-11 shrink-0 rounded-xl px-2.5 text-right text-[12.5px] font-extrabold ${draft.scheduledAt ? 'text-accent' : 'text-muted'}`}
+                  aria-label={past ? `${draft.description}: the time has passed, pick another` : undefined}
+                  className={`tnum min-h-11 shrink-0 rounded-xl px-2.5 text-right text-[12.5px] font-extrabold ${past ? 'text-danger' : draft.scheduledAt ? 'text-accent' : 'text-muted'}`}
                 >
                   {draft.scheduledAt ? describeDue(draft.scheduledAt, tz, now) : 'Inbox'}
+                  {past ? <span className="block text-[11px]">passed · change</span> : null}
                 </button>
               </div>
             );
           })}
         </Group>
       )}
+      {pastCount > 0 ? (
+        <p className="px-4 pt-2 text-[12.5px] font-bold text-danger">
+          {pastCount === 1 ? 'One time has' : `${pastCount} times have`} already passed. Tap it to pick a new one, or leave the line out.
+        </p>
+      ) : null}
       <p className="px-4 pt-2 text-[12.5px] font-semibold text-muted">Tap a circle to leave a line out, or a time to change it.</p>
 
       <WhenSheet
