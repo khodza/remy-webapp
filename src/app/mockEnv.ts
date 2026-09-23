@@ -11,7 +11,11 @@ import {
  */
 export async function mockTelegramEnvIfNeeded(): Promise<void> {
   if (!import.meta.env.DEV) return;
-  if (!(await isTMA('complete'))) {
+  // Telegram never puts ?theme= in the URL: it means "a browser, mock it".
+  // The dev gallery's light/dark iframes rely on this (inside an iframe the
+  // SDK would otherwise wait for the parent page to answer as Telegram).
+  const forced = new URLSearchParams(window.location.search).has('theme');
+  if (forced || !(await isTMA('complete'))) {
     window.__REMY_MOCK_ENV__ = true;
     // ?theme=light previews the light palette; the default mock is dark.
     const light = new URLSearchParams(window.location.search).get('theme') === 'light';

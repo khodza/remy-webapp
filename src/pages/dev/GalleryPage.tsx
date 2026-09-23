@@ -1,7 +1,9 @@
 import { Bell, Clock, Inbox, Repeat, Tag } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMainButton } from '@/shared/lib/telegram';
 import {
+  AutoTextarea,
   Button,
   CheckCircle,
   Chip,
@@ -15,17 +17,62 @@ import {
   Sheet,
   SheetOption,
   SkeletonRows,
+  TimeField,
   toast,
   Toggle,
 } from '@/shared/ui';
 
-/** Dev-only (#/dev/gallery): every kit component in both themes. */
+const PHONE = { width: 390, height: 844 };
+
+/**
+ * Dev-only (#/dev/gallery): every kit component, light and dark side by
+ * side. Each side is the kit panel (#/dev/gallery?panel) in an iframe with
+ * its own mocked Telegram theme (`?theme=light|dark`, see app/mockEnv), so
+ * the real tokens and useTheme() apply and nothing is restyled by hand.
+ */
 export function GalleryPage() {
+  const [params] = useSearchParams();
+  if (params.has('panel')) return <KitPanel />;
+
+  const src = (theme: 'light' | 'dark') => `${window.location.pathname}?theme=${theme}#/dev/gallery?panel`;
+  return (
+    <Screen>
+      <h1 className="px-4 pb-1 pt-3 text-[22px] font-extrabold tracking-tight">Kit · light and dark</h1>
+      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">Each phone is the kit in its own theme. Open #/dev/gallery?panel for one at full size.</p>
+      <div className="flex flex-wrap justify-center gap-4 px-3 pb-4">
+        {(['light', 'dark'] as const).map((theme) => (
+          <figure key={theme} className="m-0 flex flex-col items-center gap-1.5">
+            <iframe
+              title={`Kit, ${theme} theme`}
+              src={src(theme)}
+              width={PHONE.width}
+              height={PHONE.height}
+              className="max-w-full rounded-[28px] border border-rule bg-surface"
+            />
+            <figcaption className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">{theme}</figcaption>
+          </figure>
+        ))}
+      </div>
+    </Screen>
+  );
+}
+
+function KitPanel() {
+  // Same-origin iframes share sessionStorage, where the SDK keeps theme
+  // params, so both frames would restore the last one written. The frame's
+  // own ?theme= wins here (after useTheme's layout effect has run).
+  useEffect(() => {
+    const theme = new URLSearchParams(window.location.search).get('theme');
+    if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+  });
+
   const [view, setView] = useState<'timeline' | 'list'>('timeline');
   const [on, setOn] = useState(true);
   const [done, setDone] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [repeat, setRepeat] = useState('none');
+  const [note, setNote] = useState('Grows with its text.\nTry a few more lines.');
+  const [time, setTime] = useState('08:30');
   useMainButton({ text: 'New reminder', onClick: () => toast({ message: 'MainButton tapped' }) });
 
   return (
@@ -71,6 +118,19 @@ export function GalleryPage() {
         <FieldRow icon={<Repeat size={16} />} iconTone="warn" label="Repeat" value={repeat === 'none' ? 'Never' : repeat} onClick={() => setSheet(true)} />
         <FieldRow icon={<Bell size={16} />} iconTone="ok" label="Nudges" hint="Re-ping until you act" trailing={<Toggle checked={on} onChange={setOn} label="Nudges" />} />
         <FieldRow icon={<Tag size={16} />} iconTone="danger" label="Delete" danger onClick={() => toast({ message: 'Deleted “Pay the bill”', action: { label: 'Undo', onClick: () => toast({ message: 'Restored' }) } })} />
+      </Group>
+
+      <SectionHeader label="Fields" />
+      <Group>
+        <AutoTextarea
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          aria-label="AutoTextarea"
+          placeholder="AutoTextarea"
+          className="block min-h-[64px] w-full resize-none overflow-hidden bg-transparent px-3.5 py-3 text-[15px] font-semibold text-text outline-none placeholder:text-faint"
+        />
+        <FieldRow icon={<Clock size={16} />} label="TimeField" hint={`value ${time}`} trailing={<TimeField value={time} onChange={setTime} label="TimeField" />} />
+        <FieldRow label="TimeField, disabled" trailing={<TimeField value="22:00" onChange={() => undefined} label="Disabled TimeField" disabled />} />
       </Group>
 
       <SectionHeader label="Snooze" />
