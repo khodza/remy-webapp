@@ -4,6 +4,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 
 import { Root } from '@/app/Root';
 import { DEBUG_TOOLS, init } from '@/app/init';
+import { applyStoredDensity } from '@/shared/lib/density';
 import { EnvUnsupported } from '@/shared/ui';
 
 import './index.css';
@@ -39,6 +40,7 @@ async function bootstrap(): Promise<void> {
     eruda: DEBUG_TOOLS && ['ios', 'android'].includes(platform),
   });
 
+  applyStoredDensity();
   root.render(
     <StrictMode>
       <Root />

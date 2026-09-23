@@ -37,6 +37,13 @@
   /* Text on a solid status colour (now / ok / danger), which turn light in dark. */
   --color-on-status: #ffffff;
 
+  /* Row density (U24): min-h-row / py-row-y on task rows, min-h-field /
+     py-field-y on settings-style rows. Compact below; never under 44px. */
+  --spacing-row: 3.5rem;
+  --spacing-row-y: 0.5rem;
+  --spacing-field: 52px;
+  --spacing-field-y: 0.375rem;
+
 }
 
 :root {
@@ -47,7 +54,15 @@
 }
 
 [data-clock='12'] {
-  --time-col: 64px;
+  --time-col: 70px;
+}
+
+/* "Compact rows" in Settings (per device, shared/lib/density.ts). */
+[data-density='compact'] {
+  --spacing-row: 2.75rem;
+  --spacing-row-y: 0.25rem;
+  --spacing-field: 2.75rem;
+  --spacing-field-y: 0.125rem;
 }
 
 [data-theme='dark'] {

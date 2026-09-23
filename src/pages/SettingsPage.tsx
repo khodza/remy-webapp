@@ -1,4 +1,4 @@
-import { BellOff, BellRing, CalendarDays, CalendarPlus, Clock, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Sun, Tag } from 'lucide-react';
+import { BellOff, BellRing, CalendarDays, CalendarPlus, Clock, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Rows3, Sun, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
@@ -8,6 +8,7 @@ import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features
 import { useTodayView } from '@/features/today';
 import { CONTRACT_VERSION, type Settings } from '@/shared/api';
 import { formatClock, formatTime, getDeviceTimezone, useHour12, useUserTimezone } from '@/shared/lib/dates';
+import { useDensity } from '@/shared/lib/density';
 import { useNow } from '@/shared/lib/useNow';
 import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SheetOption, SkeletonRows, TimeField, toast, Toggle } from '@/shared/ui';
 
@@ -36,6 +37,7 @@ export function SettingsPage() {
   const feed = useCalendarFeed();
   const exportData = useExportData();
   const hour12 = useHour12();
+  const [density, setDensity] = useDensity();
   const now = useNow();
   const zone = useUserTimezone();
 
@@ -118,6 +120,13 @@ export function SettingsPage() {
                   ]}
                 />
               }
+            />
+            <FieldRow
+              icon={<Rows3 size={16} />}
+              iconTone="warn"
+              label="Compact rows"
+              hint="More on screen · this phone only"
+              trailing={<Toggle checked={density === 'compact'} onChange={(on) => setDensity(on ? 'compact' : 'comfortable')} label="Compact rows" />}
             />
           </Group>
 

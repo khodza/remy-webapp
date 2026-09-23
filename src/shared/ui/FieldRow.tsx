@@ -40,7 +40,7 @@ export function FieldRow({ icon, iconTone = 'accent', label, value, trailing, on
       )}
     </>
   );
-  const classes = 'flex min-h-[52px] w-full items-center gap-2.5 px-3.5 py-1.5 text-left';
+  const classes = 'flex min-h-field w-full items-center gap-2.5 px-3.5 py-field-y text-left';
   return onClick && !trailing ? (
     <button type="button" onClick={onClick} className={cx(classes, 'transition active:bg-past')}>
       {body}

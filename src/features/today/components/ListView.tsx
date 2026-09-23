@@ -146,7 +146,7 @@ export function ListView({ day, emptyNote, onCatchUp, onWeek, ...ctx }: ListView
 
       {day.inboxCount > 0 ? (
         <Group className="mt-4">
-          <button type="button" onClick={onWeek} className="flex min-h-[52px] w-full items-center gap-2.5 px-3.5 text-left active:bg-past">
+          <button type="button" onClick={onWeek} className="flex min-h-field w-full items-center gap-2.5 px-3.5 text-left active:bg-past">
             <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-accent-soft text-accent">
               <Inbox size={16} />
             </span>

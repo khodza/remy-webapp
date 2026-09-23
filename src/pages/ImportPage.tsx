@@ -131,7 +131,7 @@ export function ImportPage() {
             const category = draft.categoryId ? categories.get(draft.categoryId) : undefined;
             const past = on && isPast(draft);
             return (
-              <div key={i} className={`flex min-h-14 items-center gap-3 py-2 pl-3.5 pr-2 ${on ? '' : 'opacity-45'}`}>
+              <div key={i} className={`flex min-h-row items-center gap-3 py-row-y pl-3.5 pr-2 ${on ? '' : 'opacity-45'}`}>
                 <CheckCircle
                   done={on}
                   label={on ? `Skip ${draft.description}` : `Add ${draft.description}`}

@@ -121,7 +121,7 @@ export function WeekPage() {
           {inbox.map((task) => {
             const category = task.categoryId ? categories.get(task.categoryId) : undefined;
             return (
-              <div key={task.id} className="flex min-h-14 items-center gap-2 py-2 pl-3.5 pr-2">
+              <div key={task.id} className="flex min-h-row items-center gap-2 py-row-y pl-3.5 pr-2">
                 <button type="button" onClick={() => navigate(`/tasks/${task.id}`)} className="min-w-0 flex-1 text-left">
                   <span className="block truncate text-[14.5px] font-extrabold">{task.description}</span>
                   <span className="block truncate text-[11.5px] font-bold text-muted">
@@ -239,7 +239,7 @@ interface WeekRowProps {
 function WeekRow({ dropKey, over, start, isToday, count, tz, now, onOpen }: WeekRowProps) {
   const ticks = useDayTicks(start, tz, now);
   return (
-    <button type="button" onClick={onOpen} {...(dropKey ? { 'data-drop-day': dropKey } : {})} className={cx('flex min-h-[52px] w-full items-center gap-3 px-3.5 text-left active:bg-past', over && 'bg-accent-soft')}>
+    <button type="button" onClick={onOpen} {...(dropKey ? { 'data-drop-day': dropKey } : {})} className={cx('flex min-h-field w-full items-center gap-3 px-3.5 text-left active:bg-past', over && 'bg-accent-soft')}>
       <span className="w-11 shrink-0 leading-tight">
         <span className="block text-[14px] font-extrabold">{formatInTz(start, tz, 'EEE')}</span>
         <span className={cx('tnum block text-[10.5px] font-extrabold', isToday ? 'text-accent' : 'text-muted')}>{isToday ? 'TODAY' : formatInTz(start, tz, 'd')}</span>

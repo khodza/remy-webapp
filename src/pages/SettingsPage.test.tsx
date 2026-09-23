@@ -68,3 +68,33 @@ describe('Settings: time format', () => {
     expect(screen.getByRole('radio', { name: '12 h' }).getAttribute('aria-checked')).toBe('true');
   });
 });
+
+describe('Settings: compact rows', () => {
+  beforeEach(() => signIn());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.density;
+  });
+
+  it('is a device preference: data-density on <html> and localStorage, no PATCH', async () => {
+    const { calls } = mockApi({
+      'GET /user/me': TEST_USER,
+      'GET /settings': DEFAULT_SETTINGS,
+      'GET /categories': { categories: [] },
+      'GET /calendar/feed': { enabled: false, path: null },
+    });
+    renderWithProviders(<SettingsPage />, { route: '/settings' });
+    const toggle = await screen.findByRole('switch', { name: 'Compact rows' });
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+
+    fireEvent.click(toggle);
+    expect(document.documentElement.dataset.density).toBe('compact');
+    expect(window.localStorage.getItem('remy.density')).toBe('compact');
+    expect(screen.getByRole('switch', { name: 'Compact rows' }).getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Compact rows' }));
+    expect(document.documentElement.dataset.density).toBeUndefined();
+    expect(window.localStorage.getItem('remy.density')).toBeNull();
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
+  });
+});
