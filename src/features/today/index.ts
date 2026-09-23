@@ -14,6 +14,7 @@ export {
   type DayModel,
   type WeekDay,
 } from './lib/day';
+export { greeting, partOfDay } from './lib/greeting';
 export { hourRange, layoutBlocks } from './lib/timeline';
 export { ListView, OverdueSection } from './components/ListView';
 export { TimelineView } from './components/TimelineView';
