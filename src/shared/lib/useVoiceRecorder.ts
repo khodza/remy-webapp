@@ -23,6 +23,14 @@ export interface VoiceRecorder {
 
 export const MAX_DURATION_MS = 90_000;
 
+export interface VoiceRecorderOptions {
+  /**
+   * The recording hit the cap and stopped itself. Receives the blob exactly
+   * as a tap-to-stop `stop()` would (null when nothing was captured).
+   */
+  onAutoStop?: (blob: Blob | null) => void;
+}
+
 const PREFERRED_MIME_TYPES = [
   'audio/webm;codecs=opus',
   'audio/webm',
@@ -35,7 +43,7 @@ function pickSupportedMimeType(): string | undefined {
   return PREFERRED_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
 }
 
-export function useVoiceRecorder(): VoiceRecorder {
+export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecorder {
   const [status, setStatusRaw] = useState<RecorderStatus>(() =>
     typeof MediaRecorder === 'undefined' ||
     typeof navigator === 'undefined' ||
@@ -54,6 +62,9 @@ export function useVoiceRecorder(): VoiceRecorder {
   const intervalRef = useRef<number | null>(null);
   const stopResolverRef = useRef<((blob: Blob | null) => void) | null>(null);
   const discardRef = useRef(false);
+  // Latest callback without restarting anything when the caller re-renders.
+  const onAutoStopRef = useRef(options.onAutoStop);
+  onAutoStopRef.current = options.onAutoStop;
 
   // MediaRecorder callbacks can fire after the component is gone; guard
   // every state write so React does not warn and nothing leaks.
@@ -191,8 +202,16 @@ export function useVoiceRecorder(): VoiceRecorder {
       const elapsed = Date.now() - startedAtRef.current;
       setDurationMs(elapsed);
       if (elapsed >= MAX_DURATION_MS && recorder.state === 'recording') {
-        // Auto-stop at the cap; whoever awaits stop() gets the blob.
+        // Auto-stop at the cap. Nobody is awaiting stop() here, so onstop
+        // hands the blob to onAutoStop: the note is kept and uploaded like
+        // a tap-to-stop, not dropped.
+        if (intervalRef.current !== null) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        setDurationMs(MAX_DURATION_MS);
         setStatus('stopping');
+        stopResolverRef.current ??= (blob) => onAutoStopRef.current?.(blob);
         recorder.stop();
       }
     }, 100);

@@ -1,5 +1,5 @@
 import { Mic, MicOff, Square, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useCreateTaskFromVoice } from '../hooks';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { useVoiceRecorder } from '@/shared/lib/useVoiceRecorder';
@@ -20,19 +20,9 @@ function formatDuration(ms: number): string {
 const COUNTDOWN_FROM_MS = 60_000;
 
 export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps) {
-  const recorder = useVoiceRecorder();
   const create = useCreateTaskFromVoice();
   const haptic = useHapticFeedback();
   const [notice, setNotice] = useState<string | null>(null);
-  // Auto-stop at the cap resolves a stop() nobody awaited; capture it here.
-  const autoStopRef = useRef(false);
-
-  const isRecording = recorder.status === 'recording';
-  const disabled =
-    recorder.status === 'unsupported' ||
-    create.isPending ||
-    recorder.status === 'stopping' ||
-    recorder.status === 'requesting-permission';
 
   const upload = useCallback(
     (blob: Blob | null) => {
@@ -55,6 +45,21 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
     [create, haptic, onCreated, onError],
   );
 
+  // At the 90 s cap the recorder stops itself; upload it like a tap-to-stop.
+  const recorder = useVoiceRecorder({
+    onAutoStop: (blob) => {
+      haptic.impact('medium');
+      upload(blob);
+    },
+  });
+
+  const isRecording = recorder.status === 'recording';
+  const disabled =
+    recorder.status === 'unsupported' ||
+    create.isPending ||
+    recorder.status === 'stopping' ||
+    recorder.status === 'requesting-permission';
+
   const handleToggle = useCallback(async () => {
     if (isRecording) {
       haptic.impact('medium');
@@ -65,21 +70,6 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
     haptic.impact('light');
     await recorder.start();
   }, [isRecording, recorder, haptic, upload]);
-
-  // When the 90 s cap fires, the hook stops on its own; treat it like a tap.
-  useEffect(() => {
-    if (
-      isRecording &&
-      recorder.durationMs >= recorder.maxDurationMs &&
-      !autoStopRef.current
-    ) {
-      autoStopRef.current = true;
-      void recorder.stop().then((blob) => {
-        autoStopRef.current = false;
-        upload(blob);
-      });
-    }
-  }, [isRecording, recorder, upload]);
 
   useEffect(() => {
     if (recorder.error) {
