@@ -83,6 +83,9 @@ async function tryFetch(
   try {
     return await fetch(buildUrl(path, options.query), init);
   } catch (err) {
+    // A cancelled request is not a network failure: let the AbortError
+    // through so React Query treats it as a cancellation.
+    if (options.signal?.aborted) throw err;
     const message =
       err instanceof Error ? err.message : 'Network error';
     throw new ApiError(0, 'NETWORK_ERROR', message);

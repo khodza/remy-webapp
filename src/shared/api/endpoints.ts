@@ -236,10 +236,17 @@ export async function deleteTask(id: string): Promise<DeleteResult> {
 
 // -------------------------------------------------------------------- ai ---
 
-export async function parseText(text: string): Promise<ParsedTask> {
+/** `signal` cancels a parse the user has already typed past (F13). */
+export async function parseText(
+  text: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<ParsedTask> {
   const body = ParseTextRequestSchema.parse({ text });
   return ParsedTaskSchema.parse(
-    await apiRequest<unknown>('POST', '/ai/parse', { body }),
+    await apiRequest<unknown>('POST', '/ai/parse', {
+      body,
+      ...(options.signal ? { signal: options.signal } : {}),
+    }),
   );
 }
 

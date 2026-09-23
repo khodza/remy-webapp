@@ -1,7 +1,7 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Bell, CalendarClock, Flag, Pencil, Repeat, Sparkles, Tag } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useParsePreview } from '@/features/ai';
 import { useCategories } from '@/features/categories';
 import {
   CategorySheet,
@@ -23,11 +23,9 @@ import {
 import { Token } from '@/features/reminders/components/Token';
 import { ambiguousTime, similarTasks, stripCategoryTags, suggestCategory } from '@/features/reminders/lib/draft';
 import { dayKey, dayStart, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
-import * as api from '@/shared/api';
 import type { Priority, Recurrence } from '@/shared/api';
 import { atTimeInTz, formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useClosingConfirmation, useGoBack, useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
-import { useDebouncedValue } from '@/shared/lib/useDebouncedValue';
 import { useNow } from '@/shared/lib/useNow';
 import { AutoTextarea, Button, FieldRow, Group, Screen, SectionHeader, Sheet, toast } from '@/shared/ui';
 
@@ -41,7 +39,6 @@ interface Draft {
 }
 
 type SheetName = 'title' | 'when' | 'repeat' | 'category' | 'lead' | 'priority' | null;
-const MIN_PARSE_LENGTH = 4;
 const MAX_LENGTH = 4000;
 
 /**
@@ -72,17 +69,7 @@ export function CreateTaskPage() {
   const close = () => setSheet(null);
 
   const trimmed = text.trim();
-  const debounced = useDebouncedValue(trimmed, 450);
-  const parse = useQuery({
-    queryKey: ['parse', debounced],
-    queryFn: () => api.parseText(debounced),
-    enabled: debounced.length >= MIN_PARSE_LENGTH,
-    placeholderData: keepPreviousData,
-    staleTime: 60_000,
-    retry: 0,
-  });
-  const parsed = trimmed.length >= MIN_PARSE_LENGTH ? parse.data : undefined;
-  const understanding = trimmed.length >= MIN_PARSE_LENGTH && (debounced !== trimmed || parse.isFetching);
+  const { parsed, understanding, failed: parseFailed } = useParsePreview(text);
 
   useEffect(() => input.current?.focus(), []);
   useClosingConfirmation(trimmed.length > 0);
@@ -243,7 +230,7 @@ export function CreateTaskPage() {
       {trimmed && alternative ? (
         <p className="px-4 pt-2 text-[12.5px] font-bold text-warn">“{trimmed.match(/\b(?:at\s+)?\d{1,2}(?::\d{2})?\b/i)?.[0] ?? 'That time'}” could be morning or evening. Tap the one you mean.</p>
       ) : null}
-      {parse.isError && !understanding ? <p className="px-4 pt-2 text-[12.5px] font-bold text-danger">Couldn't read a time from that. Set it below.</p> : null}
+      {parseFailed ? <p className="px-4 pt-2 text-[12.5px] font-bold text-danger">Couldn't read a time from that. Set it below.</p> : null}
 
       {trimmed && draft.scheduledAt ? (
         <div className="pt-4">
