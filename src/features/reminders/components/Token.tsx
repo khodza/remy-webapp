@@ -10,14 +10,17 @@ const TONES: Record<Tone, string> = {
   add: 'border border-dashed border-rule text-muted',
 };
 
-/** One thing Remy understood ("Thu 18 Sep", "17:00?", "↻ every Thu"); tap to change it. */
+/**
+ * One thing Remy understood ("Thu 18 Sep", "17:00?", "↻ every Thu"); tap to
+ * change it. Drawn 36 px tall; an invisible ::before makes the hit area 44 px.
+ */
 export function Token({ tone = 'accent', onClick, children, label }: { tone?: Tone; onClick: () => void; children: ReactNode; label?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={cx('tnum inline-flex min-h-9 max-w-full items-center rounded-xl px-2.5 text-[13.5px] font-extrabold transition active:scale-[0.97]', TONES[tone])}
+      className={cx("tnum relative inline-flex min-h-9 min-w-11 max-w-full items-center rounded-xl px-2.5 text-[13.5px] font-extrabold transition active:scale-[0.97] before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']", TONES[tone])}
     >
       {/* The ellipsis needs a block: text straight inside a flex row is never clipped with "…". */}
       <span className="min-w-0 truncate [&>*]:mr-1 [&>*]:inline-block [&>*]:align-middle">{children}</span>

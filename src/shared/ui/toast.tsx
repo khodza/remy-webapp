@@ -81,7 +81,7 @@ export function Toaster() {
       >
         <span className="line-clamp-2 min-w-0 flex-1 break-words text-[14px] font-bold">{current.message}</span>
         {current.action ? (
-          <button type="button" onClick={() => settle(true)} className="min-h-10 shrink-0 rounded-xl px-3 text-[14px] font-extrabold text-accent-soft active:opacity-70">
+          <button type="button" onClick={() => settle(true)} className="relative min-h-10 shrink-0 rounded-xl px-3 text-[14px] font-extrabold text-accent-soft active:opacity-70 before:absolute before:inset-x-0 before:-inset-y-0.5 before:content-['']">
             {current.action.label}
           </button>
         ) : null}

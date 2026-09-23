@@ -74,7 +74,7 @@ export function TaskRow({ task, tz, tone, time, timeSub, category, onOpen, onTog
               onSnooze();
             }}
             aria-label="Snooze one hour"
-            className="-my-2 flex min-h-11 items-center"
+            className="-my-2 flex min-h-11 min-w-11 items-center justify-center"
           >
             <span className="rounded-md border border-danger px-1.5 py-0.5 text-[11px] font-extrabold text-danger">+1h</span>
           </button>

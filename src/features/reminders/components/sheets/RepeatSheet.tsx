@@ -52,7 +52,7 @@ export function RepeatSheet({ open, onClose, value, at, onPick }: RepeatSheetPro
         <IconButton label="More days" onClick={() => setDays((d) => Math.min(365, d + 1))}>
           <Plus size={16} />
         </IconButton>
-        <Button variant={value?.type === 'every_n_days' && value.intervalDays === days ? 'primary' : 'secondary'} className="min-h-10 px-3" onClick={() => pick({ type: 'every_n_days', intervalDays: days })}>
+        <Button variant={value?.type === 'every_n_days' && value.intervalDays === days ? 'primary' : 'secondary'} className="px-3" onClick={() => pick({ type: 'every_n_days', intervalDays: days })}>
           Set
         </Button>
       </div>
