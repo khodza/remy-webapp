@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, CircleAlert, Flag, Forward, Mic, MessageSquareText, Repeat, Tag, Trash2 } from 'lucide-react';
+import { Bell, CalendarClock, CircleAlert, CloudOff, Flag, Forward, Mic, MessageSquareText, Repeat, Tag, Trash2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
@@ -19,13 +19,13 @@ import {
   WhenSheet,
 } from '@/features/reminders';
 import { dayKey, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
-import type { Task } from '@/shared/api';
+import { ApiError, type Task } from '@/shared/api';
 import type { TaskPatch } from '@/shared/api/endpoints';
 import { formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
 import { useGoBack, useMainButton } from '@/shared/lib/telegram';
 import { useAutosave } from '@/shared/lib/useAutosave';
 import { useNow } from '@/shared/lib/useNow';
-import { AutoTextarea, Empty, FieldRow, Group, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
+import { AutoTextarea, Button, Empty, FieldRow, Group, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
 
 type SheetName = 'when' | 'lead' | 'repeat' | 'category' | 'priority' | null;
 
@@ -40,9 +40,23 @@ export function TaskDetailPage() {
         <div className="pt-4">
           <SkeletonRows count={4} />
         </div>
-      ) : (
+      ) : task.error instanceof ApiError && task.error.status === 404 ? (
         <div className="pt-6">
           <Empty icon={<CircleAlert size={20} />} title="Reminder not found" body="It may have been deleted in the chat." />
+        </div>
+      ) : (
+        // Offline or a server error is not "deleted": say so and offer a retry.
+        <div className="pt-6">
+          <Empty
+            icon={<CloudOff size={20} />}
+            title="Couldn't load this reminder"
+            body="Check your connection and try again."
+            action={
+              <Button variant="primary" onClick={() => void task.refetch()}>
+                Try again
+              </Button>
+            }
+          />
         </div>
       )}
     </Screen>

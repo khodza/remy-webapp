@@ -46,6 +46,11 @@ describe('quickTimes', () => {
     });
     expect(quickTimes(local(17, 19, 30), TZ).map((q) => q.key)).not.toContain('evening');
   });
+
+  it('never offers the same moment twice (Sunday: tomorrow morning is next week)', () => {
+    const sunday = quickTimes(local(20, 18, 30), TZ);
+    expect(sunday.map((q) => q.key)).toEqual(['hour', 'evening', 'tomorrow', 'weekend']);
+  });
 });
 
 describe('labels', () => {

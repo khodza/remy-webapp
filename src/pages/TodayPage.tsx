@@ -98,7 +98,9 @@ export function TodayPage() {
       <div className="sticky top-0 z-10 bg-bg" data-pinned>
         <header className="flex items-center justify-between gap-2 pb-2 pl-4 pr-2 pt-3">
           <h1 className="flex min-w-0 items-baseline gap-1.5 text-[21px] font-extrabold tracking-[-0.02em]">
-            {formatInTz(day.start, tz, 'MMMM')}
+            {/* "September" + the day does not fit next to the controls on a 320px phone. */}
+            <span className="min-[360px]:hidden">{formatInTz(day.start, tz, 'MMM')}</span>
+            <span className="hidden truncate min-[360px]:inline">{formatInTz(day.start, tz, 'MMMM')}</span>
             <span className="shrink-0 text-[13.5px] font-bold text-muted">{formatInTz(day.start, tz, 'EEE d')}</span>
           </h1>
           <div className="flex shrink-0 items-center gap-0.5">

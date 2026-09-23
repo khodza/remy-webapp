@@ -76,10 +76,10 @@ export function Toaster() {
         key={current.id}
         className={cx(
           'pointer-events-auto flex min-h-12 w-full max-w-md items-center gap-3 rounded-2xl py-1.5 pl-4 pr-1.5 shadow-[0_8px_24px_rgb(0_0_0/0.18)] [animation:remy-toast-in_.2s_ease-out]',
-          current.tone === 'danger' ? 'bg-danger text-white' : 'bg-text text-bg',
+          current.tone === 'danger' ? 'bg-danger text-on-status' : 'bg-text text-bg',
         )}
       >
-        <span className="min-w-0 flex-1 text-[14px] font-bold">{current.message}</span>
+        <span className="line-clamp-2 min-w-0 flex-1 break-words text-[14px] font-bold">{current.message}</span>
         {current.action ? (
           <button type="button" onClick={() => settle(true)} className="min-h-10 shrink-0 rounded-xl px-3 text-[14px] font-extrabold text-accent-soft active:opacity-70">
             {current.action.label}

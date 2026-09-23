@@ -61,14 +61,14 @@ export function WhenSheet({ open, onClose, title = 'When', value, now, onPick, a
       </div>
 
       <p className="mb-2 mt-4 text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">Pick a date and time</p>
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <input
           type="date"
           aria-label="Date"
           value={datePart}
           min={toLocalInputValue(now, tz).slice(0, 10)}
           onChange={(event) => setInput(`${event.target.value}T${timePart || '09:00'}`)}
-          className="tnum min-h-12 rounded-xl border border-rule bg-past px-3 text-[15px] font-bold text-text"
+          className="tnum min-h-12 w-full min-w-0 rounded-xl border border-rule bg-past px-2.5 text-[15px] font-bold text-text"
         />
         <input
           type="time"
@@ -76,7 +76,7 @@ export function WhenSheet({ open, onClose, title = 'When', value, now, onPick, a
           value={timePart}
           step={300}
           onChange={(event) => setInput(`${datePart}T${event.target.value}`)}
-          className="tnum min-h-12 rounded-xl border border-rule bg-past px-3 text-[15px] font-bold text-text"
+          className="tnum min-h-12 min-w-0 rounded-xl border border-rule bg-past px-2.5 text-[15px] font-bold text-text"
         />
       </div>
       <p className={`tnum mt-2 text-[12.5px] font-bold ${inPast ? 'text-danger' : 'text-muted'}`}>

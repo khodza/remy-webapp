@@ -17,9 +17,10 @@ export function Token({ tone = 'accent', onClick, children, label }: { tone?: To
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={cx('tnum inline-flex min-h-9 max-w-full items-center gap-1 truncate rounded-xl px-2.5 text-[13.5px] font-extrabold transition active:scale-[0.97]', TONES[tone])}
+      className={cx('tnum inline-flex min-h-9 max-w-full items-center rounded-xl px-2.5 text-[13.5px] font-extrabold transition active:scale-[0.97]', TONES[tone])}
     >
-      {children}
+      {/* The ellipsis needs a block: text straight inside a flex row is never clipped with "…". */}
+      <span className="min-w-0 truncate [&>*]:mr-1 [&>*]:inline-block [&>*]:align-middle">{children}</span>
     </button>
   );
 }

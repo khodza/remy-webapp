@@ -87,6 +87,16 @@ describe('buildDay', () => {
     expect(day.next).toBeNull();
   });
 
+  it('keeps a task that was just ticked off on the day as done, before the done list refetches', () => {
+    const ticked = { ...overdue, status: 'completed' as const };
+    const day = buildDay([ticked, ahead], [], '2026-09-17', TZ, NOW);
+    expect(day.done.map((i) => i.task.id)).toEqual([overdue.id]);
+    expect(day.overdue).toEqual([]);
+    // Once the done list has it, it is not shown twice.
+    const settled = buildDay([ticked], [{ ...ticked, completedAt: NOW }], '2026-09-17', TZ, NOW);
+    expect(settled.done).toHaveLength(1);
+  });
+
   it('uses the snooze time, not the series time', () => {
     const snoozed = task(local(17, 9), { snoozedUntil: local(17, 16), nextFireAt: local(17, 16) });
     const day = buildDay([snoozed], [], '2026-09-17', TZ, NOW);

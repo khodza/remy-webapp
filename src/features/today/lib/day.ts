@@ -97,12 +97,18 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
     else if (t >= end.getTime() && t < tomorrowEnd.getTime()) tomorrow.push(task);
   }
 
-  for (const task of completed) {
-    if (task.status !== 'completed' || !task.completedAt) continue;
-    if (!inDay(task.completedAt.getTime())) continue;
+  // A task just ticked off is optimistically "completed" inside the pending
+  // list until the done list refetches; without this it vanished and popped
+  // back a moment later.
+  const known = new Set(completed.map((task) => task.id));
+  const justDone = pending.filter((task) => task.status === 'completed' && !known.has(task.id));
+  for (const task of [...completed, ...justDone]) {
+    if (task.status !== 'completed') continue;
+    const completedAt = task.completedAt ?? (known.has(task.id) ? null : now);
+    if (!completedAt || !inDay(completedAt.getTime())) continue;
     // A done block stays where it was planned when that was the same day.
     const planned = dueAt(task);
-    const at = planned && inDay(planned.getTime()) ? planned : task.completedAt;
+    const at = planned && inDay(planned.getTime()) ? planned : completedAt;
     items.push({ task, at, state: 'done' });
   }
 

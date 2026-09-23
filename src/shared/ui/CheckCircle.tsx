@@ -26,7 +26,7 @@ export function CheckCircle({ done, onToggle, label, tone = 'default', disabled 
       <span
         className={cx(
           'flex h-6 w-6 items-center justify-center rounded-full border-2 transition',
-          done ? 'border-ok bg-ok text-white' : tone === 'danger' ? 'border-danger' : 'border-faint',
+          done ? 'border-ok bg-ok text-on-status' : tone === 'danger' ? 'border-danger' : 'border-faint',
         )}
       >
         {done ? <Check size={15} strokeWidth={3.5} /> : null}

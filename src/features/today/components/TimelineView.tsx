@@ -42,7 +42,7 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
 
   return (
     <div className="relative mx-3 overflow-hidden rounded-2xl border border-rule bg-surface" style={{ height }}>
-      {pastHeight > 0 ? <div className="absolute inset-x-0 top-0 bg-past opacity-70" style={{ height: pastHeight }} aria-hidden="true" /> : null}
+      {pastHeight > 0 ? <div className="absolute inset-x-0 top-0 bg-elapsed opacity-70" style={{ height: pastHeight }} aria-hidden="true" /> : null}
       {Array.from({ length: last - first }, (_, i) => (
         <div
           key={first + i}
@@ -85,7 +85,7 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
       {nowTop !== null ? (
         // Under the blocks (z-3); its time pill sits in the hour column, which blocks never cover.
         <div className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now" style={{ top: nowTop }} data-now>
-          <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-white">{formatTime(now, tz)}</span>
+          <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">{formatTime(now, tz)}</span>
           {emptyNote ? <p className="absolute left-[64px] right-3 top-3 text-[13px] font-bold text-muted">{emptyNote}</p> : null}
         </div>
       ) : null}

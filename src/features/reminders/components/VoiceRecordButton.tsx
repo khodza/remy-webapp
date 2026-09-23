@@ -108,7 +108,7 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
           disabled={disabled && !isRecording}
           aria-label={isRecording ? 'Stop recording' : 'Start voice reminder'}
           className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-50 ${
-            isRecording ? 'bg-danger text-white' : 'bg-accent-soft text-accent'
+            isRecording ? 'bg-danger text-on-status' : 'bg-accent-soft text-accent'
           }`}
         >
           {isRecording ? (

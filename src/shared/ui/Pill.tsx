@@ -11,10 +11,13 @@ const TONES: Record<Tone, string> = {
   warn: 'bg-warn-soft text-warn',
 };
 
-/** Small meta label: category, repeat, "snoozed". */
+/**
+ * Small meta label: category, repeat, "snoozed". A block, not a flex row:
+ * `text-overflow` does nothing for text sitting directly in a flex container.
+ */
 export function Pill({ tone = 'neutral', children, className }: PropsWithChildren<{ tone?: Tone; className?: string }>) {
   return (
-    <span className={cx('inline-flex max-w-full items-center gap-1 truncate rounded-full px-[7px] py-[2px] text-[11px] font-extrabold', TONES[tone], className)}>
+    <span className={cx('inline-block max-w-full truncate rounded-full px-[7px] py-[2px] align-middle text-[11px] font-extrabold [&>*]:mr-1 [&>*]:inline-block [&>span]:align-middle [&>svg]:align-[-1.5px]', TONES[tone], className)}>
       {children}
     </span>
   );

@@ -24,7 +24,7 @@ export function Segmented<T extends string>({ value, options, onChange, label, s
             className={cx(
               'rounded-lg font-extrabold transition',
               size === 'sm' ? 'min-h-8 px-2.5 text-[12px]' : 'min-h-10 flex-1 px-3 text-[13.5px]',
-              on ? 'bg-surface text-text shadow-[0_1px_2px_rgb(0_0_0/0.08)]' : 'text-muted',
+              on ? 'bg-raised text-text shadow-[0_1px_2px_rgb(0_0_0/0.08)]' : 'text-muted',
             )}
           >
             {option.label}

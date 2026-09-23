@@ -55,7 +55,8 @@ export function quickTimes(now: Date, tz: string): QuickTime[] {
   const weekend = local.getDay() === 6 || local.getDay() === 0 ? 'Next weekend' : 'This weekend';
   times.push({ key: 'weekend', label: weekend, at: atTimeInTz(nextSaturday(local), tz, 10) });
   times.push({ key: 'week', label: 'Next week', at: atTimeInTz(nextMonday(local), tz, 9) });
-  return times;
+  // On a Sunday "Tomorrow morning" and "Next week" are the same Monday 09:00.
+  return times.filter((time, i) => times.findIndex((other) => other.at.getTime() === time.at.getTime()) === i);
 }
 
 /** "Today 11:00", "Tomorrow 10:00", "Wed 24 Sep · 10:00". */

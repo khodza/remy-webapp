@@ -30,7 +30,18 @@
   --color-warn: #b54708;
   --color-warn-soft: #fef0c7;
   --color-scrim: rgb(16 24 40 / 0.45);
+  /* The selected segment: must stand out from the bg-past track in both themes. */
+  --color-raised: #ffffff;
+  /* The part of the day that is over; darker than the canvas in both themes. */
+  --color-elapsed: #eef0f4;
+  /* Text on a solid status colour (now / ok / danger), which turn light in dark. */
+  --color-on-status: #ffffff;
 
+}
+
+:root {
+  /* Native date/time pickers and scrollbars follow the theme (dark below). */
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
@@ -52,6 +63,17 @@
   --color-warn: #fdb022;
   --color-warn-soft: #3a2a0b;
   --color-scrim: rgb(0 0 0 / 0.6);
+  --color-raised: #2c3342;
+  --color-elapsed: #07090d;
+  --color-on-status: #0b0d12;
+  color-scheme: dark;
+}
+
+/* iOS zooms the page (and stays zoomed) when a focused field is under 16px. */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
 }
 
 html,
