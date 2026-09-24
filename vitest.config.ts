@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { version } from './package.json';
 
 // Two projects: pure logic (*.test.ts, node) and components / hooks
 // (*.test.tsx, jsdom + Testing Library). Whole flows are checked in a real
@@ -7,6 +8,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
+  define: { __APP_VERSION__: JSON.stringify(version) },
   test: {
     // Tests pin their own zones; this makes "device zone" deterministic.
     env: { TZ: 'UTC' },

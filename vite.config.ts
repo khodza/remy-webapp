@@ -2,9 +2,12 @@ import react from '@vitejs/plugin-react-swc';
 import tailwindcss from '@tailwindcss/vite';
 import mkcert from 'vite-plugin-mkcert';
 import { defineConfig } from 'vite';
+import { version } from './package.json';
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), process.env.HTTPS ? mkcert() : undefined],
+  // The app version rides along in client error reports (POST /client-errors).
+  define: { __APP_VERSION__: JSON.stringify(version) },
   resolve: {
     tsconfigPaths: true,
   },

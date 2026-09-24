@@ -1,10 +1,12 @@
 import {
   Component,
   type ComponentType,
+  type ErrorInfo,
   type GetDerivedStateFromError,
   type PropsWithChildren,
   type ReactNode,
 } from 'react';
+import { reportRenderError } from '@/features/diagnostics';
 
 export interface ErrorBoundaryProps extends PropsWithChildren {
   fallback?: ReactNode | ComponentType<{ error: unknown }>;
@@ -23,8 +25,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     hasError: true,
   });
 
-  override componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error, info: ErrorInfo) {
     this.setState({ error, hasError: true });
+    reportRenderError(error, info.componentStack);
   }
 
   override render() {

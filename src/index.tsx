@@ -4,6 +4,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 
 import { Root } from '@/app/Root';
 import { DEBUG_TOOLS, init } from '@/app/init';
+import { installErrorReporting } from '@/features/diagnostics';
 import { applyStoredDensity } from '@/shared/lib/density';
 import { EnvUnsupported } from '@/shared/ui';
 
@@ -41,6 +42,8 @@ async function bootstrap(): Promise<void> {
   });
 
   applyStoredDensity();
+  // Field bugs reach the server log (POST /client-errors) even without eruda.
+  installErrorReporting();
   root.render(
     <StrictMode>
       <Root />
