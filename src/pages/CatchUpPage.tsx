@@ -185,13 +185,27 @@ export function CatchUpPage() {
         <span className="min-w-0 truncate">
           {next ? `Next: ${next.description} · ${formatTime(dueAt(next) ?? now, tz)}` : 'Last one'}
         </span>
-        <button
-          type="button"
-          onClick={() => handle(card)}
-          className="-my-3 min-h-11 shrink-0 pl-3 font-extrabold text-accent"
-        >
-          Skip →
-        </button>
+        {card.recurrence ? (
+          // Gap 2: a real skip. The series moves on; nothing is marked done.
+          <button
+            type="button"
+            onClick={() => {
+              handle(card);
+              actions.skip(card);
+            }}
+            className="-my-3 min-h-11 shrink-0 pl-3 font-extrabold text-accent"
+          >
+            Skip this time →
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => handle(card)}
+            className="-my-3 min-h-11 shrink-0 pl-3 font-extrabold text-accent"
+          >
+            Skip →
+          </button>
+        )}
       </div>
 
       <WhenSheet

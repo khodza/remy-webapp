@@ -2,7 +2,7 @@ import type { Task } from '@/shared/api';
 import { formatWhen, useUserTimezone } from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
 import { toast } from '@/shared/ui';
-import { useCompleteTask, useDelayTask, useReopenTask, useSnoozeTask, useUpdateTask } from './hooks';
+import { useCompleteTask, useDelayTask, useReopenTask, useSkipOccurrence, useSnoozeTask, useUpdateTask } from './hooks';
 import type { SnoozeOption } from './lib/when';
 
 /**
@@ -17,6 +17,7 @@ export function useTaskActions() {
   const delayMutation = useDelayTask();
   const snoozeMutation = useSnoozeTask();
   const updateMutation = useUpdateTask();
+  const skipMutation = useSkipOccurrence();
 
   const failed = (what: string) => () => {
     haptic.notify('error');
@@ -54,6 +55,18 @@ export function useTaskActions() {
     haptic.impact('light');
     const next = task.status === 'pending' ? (task.nextFireAt ?? task.scheduledAt) : null;
     toast({ message: next ? `Already done. Next: ${formatWhen(next, tz)}` : 'Already done. That was the last one.' });
+  };
+
+  /** Skip this occurrence of a repeating task (nothing is marked done). */
+  const skip = (task: Task) => {
+    haptic.impact('medium');
+    skipMutation.mutate(task.id, {
+      onSuccess: (updated) => {
+        const next = updated.status === 'pending' ? (updated.nextFireAt ?? updated.scheduledAt) : null;
+        toast({ message: next ? `Skipped. Next: ${formatWhen(next, tz)}` : 'Skipped. That was the last one.' });
+      },
+      onError: failed('skip it'),
+    });
   };
 
   const reopen = (task: Task) => {
@@ -120,5 +133,5 @@ export function useTaskActions() {
     );
   };
 
-  return { complete, doneOccurrence, reopen, delay, snoozeUntil, snooze, moveTo };
+  return { complete, doneOccurrence, skip, reopen, delay, snoozeUntil, snooze, moveTo };
 }

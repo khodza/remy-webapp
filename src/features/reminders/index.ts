@@ -8,6 +8,7 @@ export {
   useCreateTaskFromVoice,
   useCompleteTask,
   useReopenTask,
+  useSkipOccurrence,
   useDelayTask,
   useSnoozeTask,
   useDeleteTask,

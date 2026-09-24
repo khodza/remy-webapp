@@ -8,6 +8,7 @@ import {
   Mic,
   MessageSquareText,
   Repeat,
+  SkipForward,
   Tag,
   Trash2,
 } from 'lucide-react';
@@ -246,6 +247,15 @@ function Detail({ task }: { task: Task }) {
       <Source task={task} />
 
       <Group className="mt-5">
+        {!done && task.recurrence ? (
+          <FieldRow
+            icon={<SkipForward size={16} />}
+            iconTone="warn"
+            label="Skip this time"
+            hint="On to the next one, without a Done"
+            onClick={() => actions.skip(task)}
+          />
+        ) : null}
         <FieldRow
           icon={<Trash2 size={16} />}
           iconTone="danger"

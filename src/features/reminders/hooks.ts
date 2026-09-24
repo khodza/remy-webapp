@@ -171,6 +171,18 @@ export function useCompleteTask() {
   });
 }
 
+/** "Not this time": a repeating task moves on to its next occurrence without a Done. */
+export function useSkipOccurrence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.skipOccurrence(id),
+    onSuccess: (updated) => {
+      syncTask(qc, updated);
+      invalidateTask(qc, updated.id);
+    },
+  });
+}
+
 export function useReopenTask() {
   const qc = useQueryClient();
   return useMutation({
