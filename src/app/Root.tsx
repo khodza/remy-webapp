@@ -4,6 +4,7 @@ import { Router } from '@/app/Router';
 import { RefreshCw } from 'lucide-react';
 import { useEnsureTimezone } from '@/features/profile';
 import { useClockFormatSync } from '@/features/settings';
+import { useTokenRefresh } from '@/shared/lib/useTokenRefresh';
 import { Button, Placeholder } from '@/shared/ui';
 
 function ErrorFallback({ error }: { error: unknown }) {
@@ -23,10 +24,11 @@ function ErrorFallback({ error }: { error: unknown }) {
   );
 }
 
-/** Profile zone detection and the 12/24-hour preference, once per app. */
+/** Profile zone detection, the 12/24-hour preference and the JWT refresh, once per app. */
 function Bootstrap() {
   useEnsureTimezone();
   useClockFormatSync();
+  useTokenRefresh();
   return null;
 }
 
