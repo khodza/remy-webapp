@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "vite",
     "dev:mock": "cross-env VITE_MOCK_API=1 vite",
@@ -18,8 +19,10 @@
     "contract:check": "node scripts/check-contract.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "smoke": "node scripts/smoke.mjs",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm contract:check"
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm contract:check && pnpm format:check"
   },
   "dependencies": {
     "@date-fns/tz": "^1.2.0",
@@ -56,6 +59,7 @@
     "jsdom": "^26.1.0",
     "msw": "^2.15.0",
     "playwright-core": "^1.63.0",
+    "prettier": "^3.9.9",
     "tailwindcss": "^4.0.0",
     "terser": "^5.44.0",
     "typescript": "^5.9.2",
