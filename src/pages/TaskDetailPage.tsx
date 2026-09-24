@@ -31,10 +31,19 @@ import {
   useUpdateTask,
   WhenSheet,
 } from '@/features/reminders';
-import { dayKey, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
+import { dayKey, isAllDay, isLate, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import { ApiError, type Task } from '@/shared/api';
 import type { TaskPatch } from '@/shared/api/endpoints';
-import { formatDateTime, formatInTz, formatTime, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
+import {
+  formatDateTime,
+  formatDayShort,
+  formatInTz,
+  formatTime,
+  isTodayInTz,
+  isTomorrowInTz,
+  relativeToNow,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { useGoBack, useMainButton } from '@/shared/lib/telegram';
 import { useAutosave } from '@/shared/lib/useAutosave';
 import { useNow } from '@/shared/lib/useNow';
@@ -94,7 +103,8 @@ function Detail({ task }: { task: Task }) {
 
   const done = task.status === 'completed';
   const due = task.nextFireAt ?? task.scheduledAt;
-  const overdue = !done && due !== null && due.getTime() < now.getTime();
+  const allDay = isAllDay(task);
+  const overdue = !done && isLate(task, now, tz);
   const category = categories.data?.find((c) => c.id === task.categoryId);
   const ticks = useDayTicks(due, tz, now, task);
 
@@ -136,6 +146,11 @@ function Detail({ task }: { task: Task }) {
     <span className="text-ok">Done{task.completedAt ? ` · ${describeDue(task.completedAt, tz, now)}` : ''}</span>
   ) : due === null ? (
     <span>Inbox · no date</span>
+  ) : allDay ? (
+    <span className={overdue ? 'text-danger' : undefined}>
+      {isTodayInTz(due, tz, now) ? 'Today' : isTomorrowInTz(due, tz, now) ? 'Tomorrow' : formatDayShort(due, tz)} · all
+      day{overdue ? ' · day over' : ''}
+    </span>
   ) : (
     <span className={overdue ? 'text-danger' : undefined}>
       {describeDue(due, tz, now)} · {relativeToNow(due, now)}
@@ -181,7 +196,13 @@ function Detail({ task }: { task: Task }) {
         <FieldRow
           icon={<CalendarClock size={16} />}
           label="When"
-          value={due ? formatDateTime(task.scheduledAt ?? due, tz) : 'No date'}
+          value={
+            due
+              ? task.allDay
+                ? `${formatDayShort(task.scheduledAt ?? due, tz)} · all day`
+                : formatDateTime(task.scheduledAt ?? due, tz)
+              : 'No date'
+          }
           {...(done ? {} : { onClick: () => setSheet('when') })}
         />
         {task.scheduledAt ? (
@@ -275,8 +296,19 @@ function Detail({ task }: { task: Task }) {
         value={task.scheduledAt}
         now={now}
         allowClear={!task.recurrence}
+        allowAllDay
+        allDay={task.allDay}
         {...(task.recurrence ? { note: 'Changes every occurrence. To move just this one, use Snooze.' } : {})}
-        onPick={(at) => save({ scheduledAt: at }, at ? `Moved to ${describeDue(at, tz, now)}` : 'Moved to the Inbox')}
+        onPick={(at, wholeDay = false) =>
+          save(
+            { scheduledAt: at, ...(at ? { allDay: wholeDay } : {}) },
+            at
+              ? wholeDay
+                ? `Moved to ${formatDayShort(at, tz)}, all day`
+                : `Moved to ${describeDue(at, tz, now)}`
+              : 'Moved to the Inbox',
+          )
+        }
       />
       <LeadSheet
         open={sheet === 'lead'}

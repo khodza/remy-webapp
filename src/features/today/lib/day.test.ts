@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '@/shared/api';
-import { buildDay, buildWeek, dayKey, dayStart, minuteOfDay, sameTimeOnDay, shiftWeek, weekDays } from './day';
+import { buildDay, buildWeek, dayKey, dayStart, isLate, minuteOfDay, sameTimeOnDay, shiftWeek, weekDays } from './day';
 
 const TZ = 'Asia/Tashkent'; // UTC+5
 // Wed 17 Sep 2026, 14:47 in Tashkent.
@@ -135,6 +135,21 @@ describe('buildDay', () => {
     const day = buildDay([], [last], '2026-09-17', TZ, NOW);
     expect(day.done).toHaveLength(1);
     expect(day.done[0]?.occurrence).toBe(false);
+  });
+
+  it('puts an all-day task first on its day and calls it late only once the day is over', () => {
+    // Pings at 09:00 (already past at 14:47) but the day is not over.
+    const papers = task(local(17, 9), { allDay: true });
+    const day = buildDay([papers, overdue, ahead], [], '2026-09-17', TZ, NOW);
+    expect(day.items.map((i) => i.task.id)).toEqual([papers.id, overdue.id, ahead.id]);
+    expect(day.later.map((i) => i.task.id)).toEqual([papers.id, ahead.id]);
+    expect(isLate(papers, NOW, TZ)).toBe(false);
+    expect(isLate(task(local(16, 9), { allDay: true }), NOW, TZ)).toBe(true);
+    expect(isLate(overdue, NOW, TZ)).toBe(true);
+    expect(isLate(task(null), NOW, TZ)).toBe(false);
+    // Snoozed to a real time, it behaves like a timed reminder again.
+    const snoozed = task(local(17, 9), { allDay: true, snoozedUntil: local(17, 11), nextFireAt: local(17, 11) });
+    expect(isLate(snoozed, NOW, TZ)).toBe(true);
   });
 
   it('uses the snooze time, not the series time', () => {

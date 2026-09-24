@@ -12,9 +12,14 @@ export function SectionHeader({ label, right }: { label: ReactNode; right?: Reac
 }
 
 /** One rounded container per section; rows inside are separated by rules. */
-export function Group({ children, className }: PropsWithChildren<{ className?: string }>) {
+export function Group({
+  children,
+  className,
+  ...rest
+}: PropsWithChildren<{ className?: string } & Record<`data-${string}`, string | boolean | undefined>>) {
   return (
     <div
+      {...rest}
       className={cx(
         'mx-3 overflow-hidden rounded-2xl border border-rule bg-surface',
         '[&>*+*]:border-t [&>*+*]:border-rule',

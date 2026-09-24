@@ -8,6 +8,8 @@ import {
   DayDropDock,
   dayKey,
   dueAt,
+  isAllDay,
+  isLate,
   LoadStrip,
   minuteOfDay,
   sameTimeOnDay,
@@ -77,7 +79,11 @@ export function WeekPage() {
       const key = dayKey(due, tz);
       map.set(key, [...(map.get(key) ?? []), task]);
     }
-    for (const list of map.values()) list.sort((a, b) => (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0));
+    // All-day tasks first, then by time.
+    for (const list of map.values())
+      list.sort(
+        (a, b) => Number(isAllDay(b)) - Number(isAllDay(a)) || (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0),
+      );
     return map;
   }, [pending.data, tz]);
   const inbox = (pending.data ?? []).filter((t) => t.status === 'pending' && dueAt(t) === null);
@@ -198,7 +204,7 @@ export function WeekPage() {
             <Group>
               {tasks.map((task) => {
                 const due = dueAt(task) ?? now;
-                const late = due.getTime() < now.getTime();
+                const late = isLate(task, now, tz);
                 const lifted = dragged?.item.id === task.id;
                 return (
                   <div
@@ -210,7 +216,7 @@ export function WeekPage() {
                       task={task}
                       tz={tz}
                       tone={late ? 'overdue' : 'later'}
-                      time={formatTime(due, tz)}
+                      time={isAllDay(task) ? 'All day' : formatTime(due, tz)}
                       category={task.categoryId ? categories.get(task.categoryId) : undefined}
                       onOpen={() => navigate(`/tasks/${task.id}`)}
                       onToggle={() => actions.complete(task)}

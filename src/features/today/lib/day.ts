@@ -1,7 +1,7 @@
 import { TZDate } from '@date-fns/tz';
 import { addDays, startOfWeek } from 'date-fns';
 import type { Task } from '@/shared/api';
-import { formatInTz, inTz, startOfDayInTz } from '@/shared/lib/dates';
+import { endOfDayInTz, formatInTz, inTz, startOfDayInTz } from '@/shared/lib/dates';
 
 /**
  * Pure grouping for the Today screen. Everything is decided in the user's
@@ -33,6 +33,26 @@ export function nextDayStart(start: Date, tz: string): Date {
 /** When the task is due for the user: the snooze, else the series time. */
 export function dueAt(task: Pick<Task, 'nextFireAt' | 'scheduledAt'>): Date | null {
   return task.nextFireAt ?? task.scheduledAt;
+}
+
+/** A date with no time, as long as it has not been snoozed to a real time. */
+export function isAllDay(task: Pick<Task, 'allDay' | 'snoozedUntil'>): boolean {
+  return task.allDay && task.snoozedUntil === null;
+}
+
+/**
+ * Late for the user: a timed reminder once its minute passed, an all-day one
+ * once its whole day is over (Remy pings it at 09:00 but does not nag until
+ * the next day). Never for todos.
+ */
+export function isLate(
+  task: Pick<Task, 'nextFireAt' | 'scheduledAt' | 'allDay' | 'snoozedUntil'>,
+  now: Date,
+  tz: string,
+): boolean {
+  const due = dueAt(task);
+  if (!due) return false;
+  return isAllDay(task) ? endOfDayInTz(due, tz).getTime() <= now.getTime() : due.getTime() < now.getTime();
 }
 
 /** Wall-clock minutes since midnight in `tz` (DST-safe: 09:30 is 570). */
@@ -107,7 +127,7 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
         id: task.id,
         task,
         at: due,
-        state: t < now.getTime() ? 'overdue' : 'later',
+        state: isLate(task, now, tz) ? 'overdue' : 'later',
         doneAt: null,
         occurrence: false,
       });
@@ -151,7 +171,12 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
     }
   }
 
-  items.sort((a, b) => a.at.getTime() - b.at.getTime());
+  // All-day items first, then by time.
+  items.sort(
+    (a, b) =>
+      Number(isAllDay(b.task) && !b.occurrence) - Number(isAllDay(a.task) && !a.occurrence) ||
+      a.at.getTime() - b.at.getTime(),
+  );
   earlier.sort(byDue);
   tomorrow.sort(byDue);
   const later = items.filter((i) => i.state === 'later');

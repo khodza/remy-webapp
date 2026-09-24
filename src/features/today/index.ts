@@ -4,6 +4,8 @@ export {
   dayKey,
   dayStart,
   dueAt,
+  isAllDay,
+  isLate,
   minuteOfDay,
   sameTimeOnDay,
   shiftWeek,

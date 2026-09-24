@@ -4,7 +4,7 @@ import { TaskRow } from '@/features/reminders';
 import type { Category, Task } from '@/shared/api';
 import { formatDayShort, formatInTz, formatTime, spanLabel } from '@/shared/lib/dates';
 import { Group, SectionHeader } from '@/shared/ui';
-import { dueAt, type DayModel } from '../lib/day';
+import { dueAt, isAllDay, type DayModel } from '../lib/day';
 
 interface RowContext {
   tz: string;
@@ -35,8 +35,10 @@ function renderRow(
   options: RowOptions = {},
 ) {
   const { tz, now } = ctx;
+  const allDay = isAllDay(task) && !options.occurrence;
   let timeSub: string | undefined;
-  if (at && tone === 'overdue') timeSub = options.withDay ? formatTime(at, tz) : spanLabel(at, now);
+  if (allDay) timeSub = options.withDay ? 'all day' : undefined;
+  else if (at && tone === 'overdue') timeSub = options.withDay ? formatTime(at, tz) : spanLabel(at, now);
   else if (at && options.isNext) timeSub = `in ${spanLabel(at, now)}`;
   return (
     <TaskRow
@@ -44,7 +46,7 @@ function renderRow(
       task={task}
       tz={tz}
       tone={tone}
-      time={at ? (options.withDay ? formatInTz(at, tz, 'EEE d') : formatTime(at, tz)) : '—'}
+      time={at ? (options.withDay ? formatInTz(at, tz, 'EEE d') : allDay ? 'All day' : formatTime(at, tz)) : '—'}
       timeSub={timeSub}
       category={task.categoryId ? ctx.categories.get(task.categoryId) : undefined}
       onOpen={() => ctx.onOpen(task)}

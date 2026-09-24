@@ -183,6 +183,7 @@ export function TodayPage() {
             emptyNote={emptyNote}
             onOpen={(item: DayItem) => open(item.task)}
             onComplete={(item: DayItem) => actions.complete(item.task)}
+            onToggle={(item: DayItem) => toggle(item.task, item.state === 'done', item.occurrence)}
             onSnooze={(item: DayItem) => actions.delay(item.task, 60)}
             onMove={(item: DayItem, minutes: number) =>
               actions.moveTo(item.task, new Date(item.at.getTime() + minutes * 60_000))

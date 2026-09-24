@@ -12,9 +12,17 @@ import {
   useTasks,
   WhenSheet,
 } from '@/features/reminders';
-import { dayKey, dueAt, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
+import { dayKey, dueAt, isAllDay, isLate, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import type { Task } from '@/shared/api';
-import { atTimeInTz, formatInTz, formatTime, inTz, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
+import {
+  atTimeInTz,
+  formatDayShort,
+  formatInTz,
+  formatTime,
+  inTz,
+  relativeToNow,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
 import { Button, Placeholder, Screen, SkeletonRows, toast } from '@/shared/ui';
@@ -39,11 +47,9 @@ export function CatchUpPage() {
   const overdue = useMemo(
     () =>
       (pending.data ?? [])
-        .filter(
-          (t) => t.status === 'pending' && !handled.includes(t.id) && (dueAt(t)?.getTime() ?? Infinity) < now.getTime(),
-        )
+        .filter((t) => t.status === 'pending' && !handled.includes(t.id) && isLate(t, now, tz))
         .sort((a, b) => (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0)),
-    [pending.data, handled, now],
+    [pending.data, handled, now, tz],
   );
   const card = overdue[0];
   const next = overdue[1];
@@ -125,7 +131,9 @@ export function CatchUpPage() {
         className="mx-3 rounded-2xl border border-rule bg-surface pb-3.5 pt-4 shadow-[0_10px_30px_rgb(16_24_40/0.10)] [animation:remy-toast-in_.2s_ease-out]"
       >
         <p className="tnum px-4 text-[11px] font-extrabold uppercase tracking-[0.06em] text-danger">
-          Overdue · {describeDue(due, tz, now)} · {relativeToNow(due, now).replace(' late', '')}
+          {isAllDay(card)
+            ? `Overdue · ${formatDayShort(due, tz)} · all day`
+            : `Overdue · ${describeDue(due, tz, now)} · ${relativeToNow(due, now).replace(' late', '')}`}
         </p>
         <h2 className="px-4 pt-1.5 text-[20px] font-extrabold leading-tight tracking-[-0.01em]">{card.description}</h2>
         {card.source.originalText && card.source.type !== 'miniapp' ? (

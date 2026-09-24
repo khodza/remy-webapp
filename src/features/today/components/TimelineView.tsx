@@ -1,9 +1,10 @@
 import { Flag } from 'lucide-react';
+import { TaskRow } from '@/features/reminders';
 import type { Category } from '@/shared/api';
 import { formatHour, formatTime, relativeToNow, useHour12 } from '@/shared/lib/dates';
 import { useHapticFeedback } from '@/shared/lib/telegram';
-import { cx } from '@/shared/ui';
-import { minuteOfDay, type DayItem, type DayModel } from '../lib/day';
+import { cx, Group } from '@/shared/ui';
+import { isAllDay, minuteOfDay, type DayItem, type DayModel } from '../lib/day';
 import { hourRange, layoutBlocks, snapMove } from '../lib/timeline';
 import { useBlockGesture } from './useBlockGesture';
 
@@ -19,12 +20,17 @@ interface TimelineViewProps {
   emptyNote: string | null;
   onOpen: (item: DayItem) => void;
   onComplete: (item: DayItem) => void;
+  /** The check on an all-day row (done or not; a done occurrence has nothing to reopen). */
+  onToggle: (item: DayItem) => void;
   onSnooze: (item: DayItem) => void;
   /** Dragged by this many minutes (snapped to 15). */
   onMove: (item: DayItem, minutes: number) => void;
 }
 
-/** Proportional hour grid: blocks pinned to their minute, past dimmed, a NOW line. */
+/**
+ * Proportional hour grid: blocks pinned to their minute, past dimmed, a NOW
+ * line. All-day tasks (a date, no time) sit in a strip above the grid.
+ */
 export function TimelineView({
   day,
   tz,
@@ -34,17 +40,20 @@ export function TimelineView({
   emptyNote,
   onOpen,
   onComplete,
+  onToggle,
   onSnooze,
   onMove,
 }: TimelineViewProps) {
   const hourColumn = useHour12() ? HOUR_COLUMN.h12 : HOUR_COLUMN.h24;
-  const minutes = day.items.map((item) => minuteOfDay(item.at, tz));
+  const wholeDay = day.items.filter((item) => isAllDay(item.task) && !item.occurrence);
+  const timed = day.items.filter((item) => !wholeDay.includes(item));
+  const minutes = timed.map((item) => minuteOfDay(item.at, tz));
   const nowMinute = day.isToday ? minuteOfDay(now, tz) : null;
   const [first, last] = hourRange(minutes, nowMinute);
   const height = (last - first) * hourPx + 8;
   const placed = new Map(
     layoutBlocks(
-      day.items.map((item, i) => ({ id: item.id, minute: minutes[i] ?? 0 })),
+      timed.map((item, i) => ({ id: item.id, minute: minutes[i] ?? 0 })),
       first,
       hourPx,
       { full: Math.max(44, Math.round(hourPx * 0.87)), min: 28, gap: 3 },
@@ -54,71 +63,89 @@ export function TimelineView({
   const pastHeight = day.isPast ? height : (nowTop ?? 0);
 
   return (
-    <div className="relative mx-3 overflow-hidden rounded-2xl border border-rule bg-surface" style={{ height }}>
-      {pastHeight > 0 ? (
-        <div
-          className="absolute inset-x-0 top-0 bg-elapsed opacity-70"
-          style={{ height: pastHeight }}
-          aria-hidden="true"
-        />
+    <>
+      {wholeDay.length > 0 ? (
+        <Group className="mb-3" data-all-day>
+          {wholeDay.map((item) => (
+            <TaskRow
+              key={item.id}
+              task={item.task}
+              tz={tz}
+              tone={item.state}
+              time="All day"
+              category={item.task.categoryId ? categories.get(item.task.categoryId) : undefined}
+              onOpen={() => onOpen(item)}
+              onToggle={() => onToggle(item)}
+            />
+          ))}
+        </Group>
       ) : null}
-      {Array.from({ length: last - first }, (_, i) => (
-        <div
-          key={first + i}
-          className="tnum absolute inset-x-0 border-t border-rule pl-2.5 pt-0.5 text-[11px] font-extrabold text-muted first:border-t-0"
-          style={{ top: i * hourPx }}
-          aria-hidden="true"
-        >
-          {/* The NOW pill takes the label's place when it sits on it. */}
-          {nowTop !== null && Math.abs(nowTop - i * hourPx - 8) < 14 ? null : formatHour(first + i)}
-        </div>
-      ))}
-
-      {day.items.map((item) => {
-        const block = placed.get(item.id);
-        if (!block) return null;
-        return (
-          <Block
-            key={item.id}
-            item={item}
-            tz={tz}
-            now={now}
-            category={item.task.categoryId ? categories.get(item.task.categoryId) : undefined}
-            compact={block.height < 44}
-            style={{
-              top: block.top + 2,
-              height: block.height,
-              left: `calc(${hourColumn}px + (100% - ${hourColumn + 8}px) * ${block.column / block.columns})`,
-              width: `calc((100% - ${hourColumn + 8}px) / ${block.columns} - 4px)`,
-            }}
-            narrow={block.columns > 1}
-            onOpen={() => onOpen(item)}
-            onComplete={() => onComplete(item)}
-            onSnooze={() => onSnooze(item)}
-            onMove={(minutes) => onMove(item, minutes)}
-            hourPx={hourPx}
+      <div className="relative mx-3 overflow-hidden rounded-2xl border border-rule bg-surface" style={{ height }}>
+        {pastHeight > 0 ? (
+          <div
+            className="absolute inset-x-0 top-0 bg-elapsed opacity-70"
+            style={{ height: pastHeight }}
+            aria-hidden="true"
           />
-        );
-      })}
+        ) : null}
+        {Array.from({ length: last - first }, (_, i) => (
+          <div
+            key={first + i}
+            className="tnum absolute inset-x-0 border-t border-rule pl-2.5 pt-0.5 text-[11px] font-extrabold text-muted first:border-t-0"
+            style={{ top: i * hourPx }}
+            aria-hidden="true"
+          >
+            {/* The NOW pill takes the label's place when it sits on it. */}
+            {nowTop !== null && Math.abs(nowTop - i * hourPx - 8) < 14 ? null : formatHour(first + i)}
+          </div>
+        ))}
 
-      {nowTop !== null ? (
-        // Under the blocks (z-3); its time pill sits in the hour column, which blocks never cover.
-        <div
-          className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now"
-          style={{ top: nowTop }}
-          data-now
-        >
-          <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">
-            {formatTime(now, tz)}
-          </span>
-          {emptyNote ? (
-            <p className="absolute right-3 top-3 text-[13px] font-bold text-muted" style={{ left: hourColumn + 8 }}>
-              {emptyNote}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
+        {timed.map((item) => {
+          const block = placed.get(item.id);
+          if (!block) return null;
+          return (
+            <Block
+              key={item.id}
+              item={item}
+              tz={tz}
+              now={now}
+              category={item.task.categoryId ? categories.get(item.task.categoryId) : undefined}
+              compact={block.height < 44}
+              style={{
+                top: block.top + 2,
+                height: block.height,
+                left: `calc(${hourColumn}px + (100% - ${hourColumn + 8}px) * ${block.column / block.columns})`,
+                width: `calc((100% - ${hourColumn + 8}px) / ${block.columns} - 4px)`,
+              }}
+              narrow={block.columns > 1}
+              onOpen={() => onOpen(item)}
+              onComplete={() => onComplete(item)}
+              onSnooze={() => onSnooze(item)}
+              onMove={(minutes) => onMove(item, minutes)}
+              hourPx={hourPx}
+            />
+          );
+        })}
+
+        {nowTop !== null ? (
+          // Under the blocks (z-3); its time pill sits in the hour column, which blocks never cover.
+          <div
+            className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now"
+            style={{ top: nowTop }}
+            data-now
+          >
+            <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">
+              {formatTime(now, tz)}
+            </span>
+            {emptyNote ? (
+              <p className="absolute right-3 top-3 text-[13px] font-bold text-muted" style={{ left: hourColumn + 8 }}>
+                {emptyNote}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </>
   );
 }
 
