@@ -5,7 +5,7 @@
  * any console error.
  *
  *   pnpm smoke                 # uses your installed Chrome
- *   CHROME_PATH=/path pnpm smoke
+ *   CHROME_PATH=/path pnpm smoke   # any Chromium binary (CI, a Playwright download)
  *   SMOKE_SHOTS=1 pnpm smoke   # also saves a screenshot per step
  */
 import { mkdirSync } from 'node:fs';
@@ -28,6 +28,12 @@ const browser = await chromium.launch(
 // The mock user lives in Tashkent; the fixtures are built in the browser's zone.
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Tashkent' });
 const page = await context.newPage();
+// The webfont comes from Google; a runner without that network (or behind a
+// TLS-inspecting proxy) would log a console error on every fresh load. The
+// flows do not need it, so serve an empty stylesheet instead.
+await context.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) =>
+  route.fulfill({ status: 200, contentType: 'text/css', body: '' }),
+);
 
 const errors = [];
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
