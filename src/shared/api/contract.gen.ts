@@ -1,7 +1,7 @@
 // GENERATED FILE — DO NOT EDIT.
 // Source: remy/src/contract/remy-contract.ts (backend repo).
 // Regenerate from the backend repo with: npm run contract:sync
-// contract-sha256: 8be3399fc20d9beab8e3bd336897886be2c3a8d54d45fe0a7e22fbd37c7e3829
+// contract-sha256: d930afde8cb38b21b843f9e06d8d8afc8cd6f6ce96938acd8d71fe88946c6902
 
 /**
  * Remy HTTP contract — the single source of truth for every request and
@@ -18,7 +18,7 @@
  */
 import { z } from 'zod';
 
-export const CONTRACT_VERSION = '2.3.0';
+export const CONTRACT_VERSION = '2.4.0';
 
 // ---------------------------------------------------------------- enums ---
 
@@ -90,11 +90,27 @@ function buildRecurrence<D extends z.ZodType>(date: D) {
     lastDayOfMonth: z.boolean().optional(),
     /** The series ends after this instant; the last Done completes the task. */
     until: date.optional(),
+    /**
+     * "× N times": the series has N occurrences in all, counted from its
+     * first one (done and skipped ones both count). With `until` too,
+     * whichever ends it first wins. Changing the time re-anchors the series,
+     * which starts the count again.
+     */
+    count: z.number().int().min(1).max(1000).optional(),
   });
 }
 
-/** Recurrence as sent in requests and on the wire (until is an ISO string). */
-export const Recurrence = buildRecurrence(IsoInstant);
+/**
+ * Recurrence as sent in requests and on the wire (until is an ISO string).
+ * Requests may set intervalDays only on every_n_days.
+ */
+export const Recurrence = buildRecurrence(IsoInstant).refine(
+  (r) => r.intervalDays === undefined || r.type === 'every_n_days',
+  {
+    message: 'intervalDays is only allowed with type every_n_days',
+    path: ['intervalDays'],
+  },
+);
 export type RecurrenceInput = z.infer<typeof Recurrence>;
 
 export const TaskSource = z.object({
@@ -120,8 +136,16 @@ function buildResponses<D extends z.ZodType>(date: D) {
     kind: TaskKind,
     /** Current occurrence (series time when recurring). Null for todos. */
     scheduledAt: date.nullable(),
-    /** IANA zone the task was created in. */
+    /** IANA zone the task was created in (recurrence runs in it; show times in the profile zone). */
     timezone: z.string(),
+    /**
+     * A date with no time. scheduledAt is then 09:00 on that date in the
+     * task's zone (when Remy pings it); show the date only. Overdue only
+     * once the whole day is over. Always false for todos.
+     */
+    allDay: z.boolean(),
+    /** Named list ("shopping"), lower case and normalised; null if none. */
+    list: z.string().nullable(),
     /** Set when only the current occurrence of a recurring task was delayed. */
     snoozedUntil: date.nullable(),
     /** When the task is due for the user: snoozedUntil ?? scheduledAt. Null for todos. (A "remind me before" heads-up fires earlier; that time is internal.) */
@@ -136,12 +160,35 @@ function buildResponses<D extends z.ZodType>(date: D) {
     completedAt: date.nullable(),
     /** How many occurrences of a recurring task were marked done. */
     completionsCount: z.number().int().nonnegative(),
+    /**
+     * Recent Done taps on a repeating task, newest first: those of the last
+     * 30 days, at most 50 (completionsCount counts them all). `occurrenceAt`
+     * is the occurrence that was done, so a done occurrence can stay on its
+     * day in Today and Week. Empty for one-offs (see completedAt).
+     */
+    completions: z.array(z.object({ at: date, occurrenceAt: date })),
     /** How many times it was snoozed or delayed, ever. */
     snoozeCount: z.number().int().nonnegative(),
     /** pending && nextFireAt < now. Always false for todos. */
     isOverdue: z.boolean(),
     createdAt: date,
     updatedAt: date,
+  });
+
+  /** A task read from text, before it is saved (POST /ai/parse, /ai/parse-list). */
+  const TaskDraft = z.object({
+    description: z.string(),
+    notes: z.string().nullable(),
+    /** Null = no time given → a todo in the Inbox. */
+    scheduledAt: date.nullable(),
+    /** A date with no time (false for todos). */
+    allDay: z.boolean(),
+    recurrence: RecurrenceOut.nullable(),
+    priority: Priority,
+    categoryId: z.string().nullable(),
+    leadMinutes: z.number().int().positive().nullable(),
+    /** Named list, normalised; null if none. */
+    list: z.string().nullable(),
   });
 
   const User = z.object({
@@ -155,29 +202,26 @@ function buildResponses<D extends z.ZodType>(date: D) {
 
   return {
     Task,
+    TaskDraft,
+    /**
+     * POST /tasks/:id/complete — the task after Done. `alreadyDone` is true
+     * when nothing changed: a one-off that was already completed, or a
+     * repeating task whose series already sits in the future (a second tap).
+     */
+    CompleteResult: Task.extend({ alreadyDone: z.boolean() }),
     TaskList: z.object({ tasks: z.array(Task) }),
     User,
     AuthResult: z.object({ token: z.string(), expiresAt: date, user: User }),
-    ParsedTask: z.object({
-      description: z.string(),
-      scheduledAt: date,
-      recurrence: RecurrenceOut.nullable(),
-    }),
+    /**
+     * POST /ai/parse — what the text holds, for review; nothing is saved.
+     * The fields are the first task (a TaskDraft); `drafts` lists every task
+     * the text held (usually one, first included). scheduledAt null = no
+     * time → Inbox todo. A text that holds no new task (chat, garbage, a
+     * time that already passed) is a 422 whose message says why.
+     */
+    ParsedTask: TaskDraft.extend({ drafts: z.array(TaskDraft).min(1) }),
     /** POST /ai/parse-list — one reviewable draft per task in the list. */
-    ImportDrafts: z.object({
-      tasks: z.array(
-        z.object({
-          description: z.string(),
-          notes: z.string().nullable(),
-          /** Null = no time given → a todo in the Inbox. */
-          scheduledAt: date.nullable(),
-          recurrence: RecurrenceOut.nullable(),
-          priority: Priority,
-          categoryId: z.string().nullable(),
-          leadMinutes: z.number().int().positive().nullable(),
-        }),
-      ),
-    }),
+    ImportDrafts: z.object({ tasks: z.array(TaskDraft) }),
   };
 }
 
@@ -188,9 +232,13 @@ export const client = buildResponses(z.coerce.date());
 
 export type Task = z.infer<typeof client.Task>;
 export type TaskWire = z.infer<typeof wire.Task>;
+export type CompleteResult = z.infer<typeof client.CompleteResult>;
+export type CompleteResultWire = z.infer<typeof wire.CompleteResult>;
 export type User = z.infer<typeof client.User>;
 export type AuthResult = z.infer<typeof client.AuthResult>;
 export type ParsedTask = z.infer<typeof client.ParsedTask>;
+export type ParsedTaskWire = z.infer<typeof wire.ParsedTask>;
+export type TaskDraftWire = z.infer<typeof wire.TaskDraft>;
 export type ImportDrafts = z.infer<typeof client.ImportDrafts>;
 export type ImportDraftsWire = z.infer<typeof wire.ImportDrafts>;
 export type ImportDraft = ImportDrafts['tasks'][number];
@@ -199,6 +247,16 @@ export type Recurrence = NonNullable<Task['recurrence']>;
 
 export const DeleteResult = z.object({ success: z.boolean() });
 export type DeleteResult = z.infer<typeof DeleteResult>;
+
+/**
+ * A plain acknowledgement. POST /tasks/:id/show-source: the bot has replied
+ * in the chat to the message the task came from (`source.messageId`), so the
+ * user can tap the quote and jump to it. 404 when the task has no source
+ * message (Mini App, import: `source.messageId` is null), 409 when that
+ * message was deleted from the chat, 502 when Telegram refused the reply.
+ */
+export const OkResult = z.object({ success: z.boolean() });
+export type OkResult = z.infer<typeof OkResult>;
 
 export const ErrorBody = z.object({
   statusCode: z.number().int(),
@@ -260,6 +318,10 @@ export const Settings = z.object({
   }),
   /** A summary of the week, sent at the evening-review time on the last day of the week. */
   weeklyWrap: z.object({ enabled: z.boolean() }),
+  /** Also send the morning brief as a spoken voice message (TTS). Default off. */
+  voiceBrief: z.boolean(),
+  /** Keep a live "Today" agenda message pinned in the chat. Default off. */
+  pinnedAgenda: z.boolean(),
 });
 export type Settings = z.infer<typeof Settings>;
 
@@ -277,6 +339,8 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   escalation: { enabled: true, stepsMinutes: [30, 120] },
   weeklyWrap: { enabled: true },
+  voiceBrief: false,
+  pinnedAgenda: false,
 };
 
 /** Any subset; nested objects may be partial too. */
@@ -290,6 +354,8 @@ export const UpdateSettingsRequest = z
     quietHours: Settings.shape.quietHours.partial().strict(),
     escalation: Settings.shape.escalation.partial().strict(),
     weeklyWrap: Settings.shape.weeklyWrap.partial().strict(),
+    voiceBrief: z.boolean(),
+    pinnedAgenda: z.boolean(),
   })
   .partial()
   .strict();
@@ -300,8 +366,19 @@ export type UpdateSettingsRequest = z.infer<typeof UpdateSettingsRequest>;
 const Description = z.string().trim().min(1).max(4000);
 const Notes = z.string().max(4000);
 const LeadMinutes = z.number().int().min(1).max(10080);
+/**
+ * A named list. The server normalises it (trim, lower case, drops "my" /
+ * "the" and a trailing "list": "My Shopping List" → "shopping"); an empty
+ * result means no list.
+ */
+const ListName = z.string().trim().max(40);
 
-/** POST /tasks — natural language; the server parses it. */
+/**
+ * POST /tasks — natural language; the server reads it like POST /ai/parse
+ * and saves every task it holds, answering the first. Not a task (chat,
+ * garbage, a time that already passed) → 422, nothing saved. POST
+ * /tasks/voice behaves the same on the transcript.
+ */
 export const CreateTaskFromTextRequest = z
   .object({ text: Description })
   .strict();
@@ -320,6 +397,13 @@ export const CreateTaskStructuredRequest = z
     priority: Priority.optional(),
     categoryId: ObjectIdString.nullable().optional(),
     leadMinutes: LeadMinutes.nullable().optional(),
+    /**
+     * A date with no time: send any instant on that date (local midnight is
+     * fine); the server stores 09:00 on it in the user's zone. Needs
+     * scheduledAt.
+     */
+    allDay: z.boolean().optional(),
+    list: ListName.nullable().optional(),
     /** What the user typed, kept as the task's source text. */
     originalText: z.string().max(4000).optional(),
   })
@@ -327,6 +411,10 @@ export const CreateTaskStructuredRequest = z
   .refine((v) => !(v.recurrence && !v.scheduledAt), {
     message: 'A recurring task needs a scheduledAt',
     path: ['recurrence'],
+  })
+  .refine((v) => !(v.allDay && !v.scheduledAt), {
+    message: 'An all-day task needs a scheduledAt (its date)',
+    path: ['allDay'],
   });
 export type CreateTaskStructuredRequest = z.infer<
   typeof CreateTaskStructuredRequest
@@ -343,6 +431,13 @@ export const UpdateTaskRequest = z
     priority: Priority,
     categoryId: ObjectIdString.nullable(),
     leadMinutes: LeadMinutes.nullable(),
+    /**
+     * true: keep only the date (the time becomes 09:00 local on it); false:
+     * a normal timed reminder again. Clearing scheduledAt clears it.
+     */
+    allDay: z.boolean(),
+    /** null takes the task off its list. */
+    list: ListName.nullable(),
   })
   .partial()
   .strict();
@@ -363,8 +458,17 @@ export const ListTasksQuery = z
     view: TaskView.optional(),
     /** Only used by view=all (or no view). */
     includeCompleted: z.enum(['true', 'false']).optional(),
-    /** Caps view=done; default 50, max 200. */
+    /** Caps view=done and q; default 50, max 200. */
     limit: z.coerce.number().int().min(1).max(200).optional(),
+    /** Only tasks on this named list (normalised like ListName). Combines with any view and q. */
+    list: z.string().trim().min(1).max(40).optional(),
+    /**
+     * Search: every word must appear (case-insensitive) in the title, notes
+     * or list name. Searches pending and completed tasks (never deleted),
+     * server-side; `view` and `includeCompleted` are ignored. Pending first
+     * (ordered like view=all), then completed newest first, capped by limit.
+     */
+    q: z.string().trim().min(1).max(200).optional(),
   })
   .strict();
 export type ListTasksQuery = z.infer<typeof ListTasksQuery>;
@@ -384,6 +488,16 @@ export const ImportTasksRequest = z
   .strict();
 export type ImportTasksRequest = z.infer<typeof ImportTasksRequest>;
 
+/** GET /lists — every named list that holds a pending or completed task. */
+export const ListSummary = z.object({
+  name: z.string(),
+  pending: z.number().int().nonnegative(),
+  completed: z.number().int().nonnegative(),
+});
+export type ListSummary = z.infer<typeof ListSummary>;
+export const ListSummaries = z.object({ lists: z.array(ListSummary) });
+export type ListSummaries = z.infer<typeof ListSummaries>;
+
 // ------------------------------------------------------------------- data ---
 
 /**
@@ -400,7 +514,13 @@ export const CalendarFeed = z.object({
 });
 export type CalendarFeed = z.infer<typeof CalendarFeed>;
 
-export const ExportFormat = z.enum(['csv', 'json']);
+/**
+ * csv: a spreadsheet of every task; json: the full record (settings,
+ * categories, tasks); ics: a calendar file of the pending reminders (the
+ * same events as the feed, as a one-off file). CSV times and the JSON
+ * `dueLocal` are written in the user's profile zone (decision 8.7).
+ */
+export const ExportFormat = z.enum(['csv', 'json', 'ics']);
 export type ExportFormat = z.infer<typeof ExportFormat>;
 
 /** POST /export — the bot sends the file to the user's chat. */
@@ -409,10 +529,48 @@ export type ExportRequest = z.infer<typeof ExportRequest>;
 
 export const ExportResult = z.object({
   filename: z.string(),
-  /** Tasks in the file (pending and done). */
+  /** Tasks in the file: pending and done for csv/json, pending reminders for ics. */
   tasks: z.number().int().nonnegative(),
 });
 export type ExportResult = z.infer<typeof ExportResult>;
+
+/**
+ * DELETE /data — "Delete all my data": every task (for good), categories,
+ * conversation memory, the calendar feed link, and settings back to the
+ * defaults. The account (Telegram id, name, zone) stays. The body must
+ * carry the confirmation literally.
+ */
+export const DeleteAllDataRequest = z
+  .object({ confirm: z.literal('DELETE') })
+  .strict();
+export type DeleteAllDataRequest = z.infer<typeof DeleteAllDataRequest>;
+
+export const DeleteAllDataResult = z.object({
+  success: z.boolean(),
+  /** Tasks removed (pending, done and soft-deleted). */
+  deletedTasks: z.number().int().nonnegative(),
+});
+export type DeleteAllDataResult = z.infer<typeof DeleteAllDataResult>;
+
+/**
+ * POST /client-errors — a Mini App error for the server log (204, no body).
+ * Rate-limited; bodies over 16 KB are refused (413).
+ */
+export const ClientErrorReport = z
+  .object({
+    message: z.string().trim().min(1).max(1000),
+    /** window.onerror, an unhandled promise, a render error boundary, a failed API call. */
+    kind: z.enum(['error', 'unhandledrejection', 'render', 'api']).optional(),
+    stack: z.string().max(8000).optional(),
+    /** The app route, e.g. "/task/64b…" (no query secrets, please). */
+    url: z.string().max(2000).optional(),
+    userAgent: z.string().max(500).optional(),
+    appVersion: z.string().max(64).optional(),
+    /** When it happened on the device. */
+    at: IsoInstant.optional(),
+  })
+  .strict();
+export type ClientErrorReport = z.infer<typeof ClientErrorReport>;
 
 export const UpdateTimezoneRequest = z
   .object({ timezone: z.string().trim().min(1).max(100) })
@@ -428,6 +586,8 @@ export type UpdateTimezoneRequest = z.infer<typeof UpdateTimezoneRequest>;
 export const endpoints = {
   health: { method: 'GET', path: '/health', auth: 'none' },
   authTelegram: { method: 'POST', path: '/auth/telegram', auth: 'tma' },
+  /** A still-valid JWT → a fresh AuthResult; sessions end 7 days after the initData exchange. */
+  authRefresh: { method: 'POST', path: '/auth/refresh', auth: 'jwt' },
   me: { method: 'GET', path: '/user/me', auth: 'jwt' },
   updateTimezone: { method: 'PATCH', path: '/user/timezone', auth: 'jwt' },
   getSettings: { method: 'GET', path: '/settings', auth: 'jwt' },
@@ -437,6 +597,7 @@ export const endpoints = {
   updateCategory: { method: 'PATCH', path: '/categories/:id', auth: 'jwt' },
   deleteCategory: { method: 'DELETE', path: '/categories/:id', auth: 'jwt' },
   listTasks: { method: 'GET', path: '/tasks', auth: 'jwt' },
+  listLists: { method: 'GET', path: '/lists', auth: 'jwt' },
   getTask: { method: 'GET', path: '/tasks/:id', auth: 'jwt' },
   createTaskFromText: { method: 'POST', path: '/tasks', auth: 'jwt' },
   createTaskStructured: {
@@ -448,9 +609,17 @@ export const endpoints = {
   updateTask: { method: 'PATCH', path: '/tasks/:id', auth: 'jwt' },
   completeTask: { method: 'POST', path: '/tasks/:id/complete', auth: 'jwt' },
   reopenTask: { method: 'POST', path: '/tasks/:id/reopen', auth: 'jwt' },
+  /** Repeating tasks only: move on to the next occurrence without Done. */
+  skipOccurrence: { method: 'POST', path: '/tasks/:id/skip', auth: 'jwt' },
   delayTask: { method: 'POST', path: '/tasks/:id/delay', auth: 'jwt' },
   snoozeTask: { method: 'POST', path: '/tasks/:id/snooze', auth: 'jwt' },
   deleteTask: { method: 'DELETE', path: '/tasks/:id', auth: 'jwt' },
+  /** The bot replies to the task's source message in the chat (OkResult, 200). */
+  showTaskSource: {
+    method: 'POST',
+    path: '/tasks/:id/show-source',
+    auth: 'jwt',
+  },
   parseText: { method: 'POST', path: '/ai/parse', auth: 'jwt' },
   parseList: { method: 'POST', path: '/ai/parse-list', auth: 'jwt' },
   importTasks: { method: 'POST', path: '/tasks/import', auth: 'jwt' },
@@ -464,5 +633,7 @@ export const endpoints = {
   /** The subscription itself: the secret in the path is the only auth. */
   calendarIcs: { method: 'GET', path: '/calendar/:token.ics', auth: 'none' },
   exportData: { method: 'POST', path: '/export', auth: 'jwt' },
+  deleteAllData: { method: 'DELETE', path: '/data', auth: 'jwt' },
+  reportClientError: { method: 'POST', path: '/client-errors', auth: 'jwt' },
 } as const;
 export type EndpointName = keyof typeof endpoints;

@@ -21,6 +21,38 @@ interface RequestOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+  /** A failure of this request is not reported (the error report itself). */
+  silent?: boolean;
+}
+
+export interface ApiFailure {
+  method: string;
+  path: string;
+  error: ApiError;
+}
+
+type FailureListener = (failure: ApiFailure) => void;
+const failureListeners = new Set<FailureListener>();
+
+/**
+ * Called for every request that ends in a network error or a server error
+ * (5xx); client errors (4xx) are the caller's business. The diagnostics
+ * feature subscribes to send them to POST /client-errors.
+ */
+export function onApiFailure(listener: FailureListener): () => void {
+  failureListeners.add(listener);
+  return () => failureListeners.delete(listener);
+}
+
+function notifyFailure(method: string, path: string, error: ApiError): void {
+  if (error.status !== 0 && error.status < 500) return;
+  for (const listener of failureListeners) {
+    try {
+      listener({ method, path, error });
+    } catch {
+      // a broken listener must not break the request's own error path
+    }
+  }
 }
 
 export function buildUrl(path: string, query?: RequestOptions['query']): string {
@@ -38,15 +70,23 @@ export function buildUrl(path: string, query?: RequestOptions['query']): string 
 }
 
 export async function apiRequest<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+  try {
+    return await send<T>(method, path, options);
+  } catch (err) {
+    if (err instanceof ApiError && !options.silent) notifyFailure(method, path, err);
+    throw err;
+  }
+}
+
+async function send<T>(method: string, path: string, options: RequestOptions): Promise<T> {
   const token = await useAuthStore.getState().authenticate();
   const response = await tryFetch(method, path, options, token);
 
   if (response.status === 401) {
-    // Token invalid/expired — re-exchange once and retry. If another request
-    // already replaced the token while this one was in flight, reuse it.
-    const store = useAuthStore.getState();
-    if (store.token === token) store.clear();
-    const fresh = await useAuthStore.getState().authenticate();
+    // The token was rejected: refresh it once, else re-exchange initData,
+    // then retry once. If another request already replaced the token while
+    // this one was in flight, that one is reused.
+    const fresh = await useAuthStore.getState().recover(token);
     const retry = await tryFetch(method, path, options, fresh);
     return parseResponse<T>(retry);
   }

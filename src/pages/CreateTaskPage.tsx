@@ -91,7 +91,8 @@ export function CreateTaskPage() {
     priority: 'normal',
   };
   const draft: Draft = { ...fromText, ...manual };
-  const alternative = !('scheduledAt' in manual) && parsed ? ambiguousTime(trimmed, parsed.scheduledAt, tz) : null;
+  const alternative =
+    !('scheduledAt' in manual) && parsed?.scheduledAt ? ambiguousTime(trimmed, parsed.scheduledAt, tz) : null;
   const inPast = draft.scheduledAt !== null && draft.scheduledAt.getTime() <= now.getTime();
   const category = list.find((c) => c.id === draft.categoryId);
   const set = (patch: Partial<Draft>) => setManual((m) => ({ ...m, ...patch }));

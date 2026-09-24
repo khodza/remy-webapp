@@ -29,9 +29,8 @@ async function fetchWithRetry(token: string, form: FormData): Promise<Response> 
   let response = await safeFetch(url, token, form);
   if (response.status !== 401) return response;
 
-  // Token expired — re-exchange initData once, then retry.
-  useAuthStore.getState().clear();
-  const fresh = await useAuthStore.getState().authenticate();
+  // Token rejected — refresh it once, else re-exchange initData, then retry.
+  const fresh = await useAuthStore.getState().recover(token);
   response = await safeFetch(url, fresh, form);
   return response;
 }

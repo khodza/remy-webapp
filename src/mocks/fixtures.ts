@@ -20,6 +20,10 @@ export interface MockTask {
   notes: string | null;
   /** null = todo (Inbox). */
   scheduledAt: Date | null;
+  /** A date with no time: scheduledAt is 09:00 on it. */
+  allDay: boolean;
+  /** Named list, normalised ("shopping"). */
+  list: string | null;
   status: TaskStatus;
   recurrence: Recurrence | null;
   /** IANA zone the task was created in. */
@@ -37,6 +41,8 @@ export interface MockTask {
   };
   completedAt: Date | null;
   completionsCount: number;
+  /** Done taps on a repeating task, newest first. */
+  completions: Array<{ at: Date; occurrenceAt: Date }>;
   /** Times snoozed or delayed, ever. */
   snoozeCount: number;
   createdAt: Date;
@@ -114,7 +120,17 @@ export function buildSettings(): Settings {
 type MakeOpts = Partial<
   Pick<
     MockTask,
-    'status' | 'recurrence' | 'notes' | 'priority' | 'categoryId' | 'leadMinutes' | 'completionsCount' | 'snoozeCount'
+    | 'status'
+    | 'recurrence'
+    | 'notes'
+    | 'priority'
+    | 'categoryId'
+    | 'leadMinutes'
+    | 'completionsCount'
+    | 'completions'
+    | 'snoozeCount'
+    | 'allDay'
+    | 'list'
   >
 > & {
   ageDays?: number;
@@ -129,6 +145,8 @@ export function makeTask(description: string, scheduledAt: Date | null, opts: Ma
     description,
     notes: opts.notes ?? null,
     scheduledAt,
+    allDay: opts.allDay ?? false,
+    list: opts.list ?? null,
     status,
     recurrence: opts.recurrence ?? null,
     timezone: MOCK_TIMEZONE,
@@ -144,18 +162,43 @@ export function makeTask(description: string, scheduledAt: Date | null, opts: Ma
       ...opts.source,
     },
     completedAt: status === 'completed' ? (scheduledAt ?? created) : null,
-    completionsCount: opts.completionsCount ?? 0,
+    completionsCount: opts.completionsCount ?? opts.completions?.length ?? 0,
+    completions: opts.completions ?? [],
     snoozeCount: opts.snoozeCount ?? 0,
     createdAt: created,
     updatedAt: created,
   };
 }
 
-/** Realistic day: 2 overdue, 3 later today, 2 done, 2 tomorrow, 1 monthly, 2 todos. */
+/**
+ * Realistic day: 2 overdue, 3 later today, 2 done, a repeating task done
+ * today (its series already on tomorrow), an all-day task, 2 tomorrow, 1
+ * monthly, todos with and without a list.
+ */
 export function buildFixtures(now = new Date()): MockTask[] {
   const today = startOfDay(now);
   const tomorrow = addDays(today, 1);
   return [
+    // Gap 1: ticked this morning; the series moved on, the completion keeps it on Today.
+    makeTask('Vitamins', at(tomorrow, 8), {
+      recurrence: { type: 'daily' },
+      ageDays: 30,
+      categoryId: CATEGORY_IDS.health,
+      completionsCount: 12,
+      completions: [
+        { at: at(today, 8, 6), occurrenceAt: at(today, 8) },
+        { at: at(subDays(today, 1), 8, 2), occurrenceAt: at(subDays(today, 1), 8) },
+        { at: at(subDays(today, 2), 9, 40), occurrenceAt: at(subDays(today, 2), 8) },
+      ],
+      source: { type: 'text', originalText: 'vitamins every day at 8', messageId: 3990 },
+    }),
+    // A date with no time: pings at 09:00, shown as "All day", overdue only tomorrow.
+    makeTask('Sort out the visa papers', at(today, 9), {
+      allDay: true,
+      ageDays: 5,
+      priority: 'high',
+      notes: 'Passport photos, the bank statement, the invitation letter.',
+    }),
     makeTask('Call the dentist to move the appointment', subHours(now, 3), {
       ageDays: 2,
       priority: 'high',
@@ -172,10 +215,12 @@ export function buildFixtures(now = new Date()): MockTask[] {
       },
     }),
     makeTask('Pay the electricity bill', subMinutes(now, 77), {
-      recurrence: { type: 'monthly' },
+      // "× 12 times": the series ends after a year.
+      recurrence: { type: 'monthly', count: 12 },
       ageDays: 40,
       categoryId: CATEGORY_IDS.home,
-      completionsCount: 1,
+      completions: [{ at: subDays(now, 29), occurrenceAt: subDays(subMinutes(now, 77), 30) }],
+      source: { type: 'text', originalText: 'pay the electricity bill every month, 12 times', messageId: 3811 },
     }),
     makeTask('Send standup notes to Alisher', addMinutes(now, 43), {
       categoryId: CATEGORY_IDS.work,
@@ -219,6 +264,15 @@ export function buildFixtures(now = new Date()): MockTask[] {
       categoryId: CATEGORY_IDS.personal,
       source: { type: 'text', originalText: 'someday: buy new headphones' },
     }),
+    // A named list: the Inbox groups these under "Shopping".
+    makeTask('Milk', null, { ageDays: 1, list: 'shopping', categoryId: CATEGORY_IDS.errand }),
+    makeTask('Eggs', null, { ageDays: 1, list: 'shopping', categoryId: CATEGORY_IDS.errand }),
+    makeTask('Olive oil', null, {
+      ageDays: 0,
+      list: 'shopping',
+      source: { type: 'text', originalText: 'add olive oil to the shopping list', messageId: 4300 },
+    }),
+    makeTask('Fix the balcony door', null, { ageDays: 9, list: 'home projects', categoryId: CATEGORY_IDS.home }),
     makeTask('Book the Samarkand trip', null, {
       ageDays: 4,
       priority: 'low',

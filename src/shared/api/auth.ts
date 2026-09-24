@@ -44,3 +44,25 @@ export async function exchangeInitDataForJwt(): Promise<AuthResult> {
 
   return AuthResultSchema.parse(await response.json());
 }
+
+/**
+ * POST /auth/refresh: a still-valid JWT for a fresh one (the session itself
+ * ends 7 days after the initData exchange). Bypasses apiRequest so a
+ * refresh can never trigger the 401 → re-exchange path recursively.
+ */
+export async function refreshJwt(token: string): Promise<AuthResult> {
+  let response: Response;
+  try {
+    response = await fetch(buildUrl('/auth/refresh'), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Network error';
+    throw new ApiError(0, 'NETWORK_ERROR', message);
+  }
+  if (!response.ok) {
+    throw new ApiError(response.status, 'REFRESH_FAILED', response.statusText || 'Refresh failed');
+  }
+  return AuthResultSchema.parse(await response.json());
+}

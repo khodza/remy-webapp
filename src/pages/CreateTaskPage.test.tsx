@@ -5,7 +5,22 @@ import { deferred, mockApi, signIn } from '@/test/api';
 import { renderWithProviders } from '@/test/render';
 import { CreateTaskPage } from './CreateTaskPage';
 
-const parsed = (description: string, iso: string) => ({ description, scheduledAt: iso, recurrence: null });
+const draft = (description: string, iso: string | null) => ({
+  description,
+  notes: null,
+  scheduledAt: iso,
+  allDay: false,
+  recurrence: null,
+  priority: 'normal',
+  categoryId: null,
+  leadMinutes: null,
+  list: null,
+});
+/** The 2.4.0 shape: the first draft's fields on top, every draft in `drafts`. */
+const parsed = (description: string, iso: string | null) => ({
+  ...draft(description, iso),
+  drafts: [draft(description, iso)],
+});
 
 function type(text: string) {
   fireEvent.change(screen.getByRole('textbox', { name: /What should Remy/ }), { target: { value: text } });

@@ -1,5 +1,5 @@
-export { ApiError, buildUrl } from './client';
+export { ApiError, buildUrl, onApiFailure, type ApiFailure } from './client';
 export * from './endpoints';
 export * from './schemas';
-export { exchangeInitDataForJwt } from './auth';
+export { exchangeInitDataForJwt, refreshJwt } from './auth';
 export { createTaskFromVoice } from './voice';

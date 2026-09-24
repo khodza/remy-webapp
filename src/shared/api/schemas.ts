@@ -4,7 +4,7 @@
  * of the backend's `src/contract/remy-contract.ts` (see ./CLAUDE.md).
  * Responses are parsed with `client.*` (ISO strings coerced to Date).
  */
-import { client } from './contract.gen';
+import { client, type ImportDraft } from './contract.gen';
 
 export const TaskSchema = client.Task;
 export const TaskListSchema = client.TaskList;
@@ -12,6 +12,7 @@ export const UserSchema = client.User;
 export const AuthResultSchema = client.AuthResult;
 export const ParsedTaskSchema = client.ParsedTask;
 export const ImportDraftsSchema = client.ImportDrafts;
+export const CompleteResultSchema = client.CompleteResult;
 
 export {
   CONTRACT_VERSION,
@@ -40,15 +41,28 @@ export {
   ExportResult as ExportResultSchema,
   ImportTasksRequest as ImportTasksRequestSchema,
   ParseListRequest as ParseListRequestSchema,
+  OkResult as OkResultSchema,
+  ListSummaries as ListSummariesSchema,
+  DeleteAllDataRequest as DeleteAllDataRequestSchema,
+  DeleteAllDataResult as DeleteAllDataResultSchema,
+  ClientErrorReport as ClientErrorReportSchema,
   endpoints,
 } from './contract.gen';
+
+/** A task read from text, before it is saved (POST /ai/parse, /ai/parse-list). */
+export type TaskDraft = ImportDraft;
 
 export type {
   AuthResult,
   CalendarFeed,
+  ClientErrorReport,
+  CompleteResult,
+  DeleteAllDataResult,
   ExportFormat,
   ExportResult,
   ImportDraft,
+  ListSummary,
+  OkResult,
   Category,
   CreateCategoryRequest,
   CreateTaskStructuredRequest,

@@ -9,10 +9,12 @@ const draft = (description: string, scheduledAt: string | null) => ({
   description,
   notes: null,
   scheduledAt,
+  allDay: false,
   recurrence: null,
   priority: 'normal',
   categoryId: null,
   leadMinutes: null,
+  list: null,
 });
 
 describe('Import: past times', () => {
