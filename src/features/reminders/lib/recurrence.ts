@@ -57,13 +57,15 @@ export function recurrenceLabel(
       break;
     }
   }
+  if (recurrence.count !== undefined) label += ` × ${recurrence.count} times`;
   if (recurrence.until) label += ` until ${formatInTz(recurrence.until, tz, 'd MMM yyyy')}`;
   return label;
 }
 
 /**
  * True when the rule uses something the simple chips cannot express (it was
- * set in chat). The picker shows it read-only instead of flattening it.
+ * set in chat). The picker shows it read-only instead of flattening it. A
+ * count ("× N times") is not custom: the Repeat sheet edits it.
  */
 export function isCustomRecurrence(recurrence: Recurrence | null | undefined): boolean {
   if (!recurrence) return false;

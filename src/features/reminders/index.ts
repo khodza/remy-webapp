@@ -9,6 +9,7 @@ export {
   useCompleteTask,
   useReopenTask,
   useSkipOccurrence,
+  useShowTaskSource,
   useDelayTask,
   useSnoozeTask,
   useDeleteTask,

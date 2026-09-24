@@ -171,6 +171,11 @@ export function useCompleteTask() {
   });
 }
 
+/** The bot replies in the chat to the message the task came from (source.messageId). */
+export function useShowTaskSource() {
+  return useMutation({ mutationFn: (id: string) => api.showTaskSource(id) });
+}
+
 /** "Not this time": a repeating task moves on to its next occurrence without a Done. */
 export function useSkipOccurrence() {
   const qc = useQueryClient();

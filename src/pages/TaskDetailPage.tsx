@@ -5,6 +5,7 @@ import {
   CloudOff,
   Flag,
   Forward,
+  List,
   Mic,
   MessageSquareText,
   Repeat,
@@ -15,6 +16,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
+import { ListSheet, listTitle } from '@/features/lists';
 import {
   CategorySheet,
   describeDue,
@@ -26,6 +28,7 @@ import {
   RepeatSheet,
   SnoozeChips,
   useDeferredDelete,
+  useShowTaskSource,
   useTask,
   useTaskActions,
   useUpdateTask,
@@ -44,12 +47,12 @@ import {
   relativeToNow,
   useUserTimezone,
 } from '@/shared/lib/dates';
-import { useGoBack, useMainButton } from '@/shared/lib/telegram';
+import { useGoBack, useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useAutosave } from '@/shared/lib/useAutosave';
 import { useNow } from '@/shared/lib/useNow';
 import { AutoTextarea, Button, Empty, FieldRow, Group, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
 
-type SheetName = 'when' | 'lead' | 'repeat' | 'category' | 'priority' | null;
+type SheetName = 'when' | 'lead' | 'repeat' | 'category' | 'priority' | 'list' | null;
 
 export function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -243,6 +246,12 @@ function Detail({ task }: { task: Task }) {
           value={PRIORITY_LABEL[task.priority]}
           {...(done ? {} : { onClick: () => setSheet('priority') })}
         />
+        <FieldRow
+          icon={<List size={16} />}
+          label="List"
+          value={task.list ? listTitle(task.list) : 'None'}
+          {...(done ? {} : { onClick: () => setSheet('list') })}
+        />
       </Group>
 
       <SectionHeader label="Notes" />
@@ -265,6 +274,7 @@ function Detail({ task }: { task: Task }) {
         </>
       ) : null}
 
+      <Completions task={task} tz={tz} now={now} />
       <Source task={task} />
 
       <Group className="mt-5">
@@ -337,6 +347,62 @@ function Detail({ task }: { task: Task }) {
         value={task.priority}
         onPick={(priority) => save({ priority })}
       />
+      <ListSheet
+        open={sheet === 'list'}
+        onClose={close}
+        value={task.list}
+        onPick={(list) => save({ list }, list ? `On the ${listTitle(list)} list` : 'Taken off its list')}
+      />
+    </>
+  );
+}
+
+const HISTORY_PREVIEW = 5;
+
+/** Recent Done taps on a repeating task: the occurrence, and when it was ticked. */
+function Completions({ task, tz, now }: { task: Task; tz: string; now: Date }) {
+  const [all, setAll] = useState(false);
+  if (task.completions.length === 0) return null;
+  const rows = all ? task.completions : task.completions.slice(0, HISTORY_PREVIEW);
+  const hidden = task.completions.length - rows.length;
+  const older = task.completionsCount - task.completions.length;
+  return (
+    <>
+      <SectionHeader
+        label={`Done ${task.completionsCount === 1 ? 'once' : `${task.completionsCount} times`}`}
+        right={
+          hidden > 0 ? (
+            <button type="button" className="-my-2 min-h-11 px-1" onClick={() => setAll(true)}>
+              Show all {task.completions.length}
+            </button>
+          ) : undefined
+        }
+      />
+      <Group>
+        {rows.map((completion) => {
+          const sameDay = dayKey(completion.at, tz) === dayKey(completion.occurrenceAt, tz);
+          return (
+            <div
+              key={completion.at.toISOString()}
+              className="flex min-h-row items-center gap-3 py-row-y pl-3.5 pr-3.5 text-[13.5px] font-bold"
+            >
+              <span className="tnum min-w-0 flex-1 text-text">
+                {task.allDay
+                  ? formatDayShort(completion.occurrenceAt, tz)
+                  : describeDue(completion.occurrenceAt, tz, now)}
+              </span>
+              <span className="tnum shrink-0 text-ok">
+                done {sameDay ? formatTime(completion.at, tz) : formatDateTime(completion.at, tz)}
+              </span>
+            </div>
+          );
+        })}
+      </Group>
+      {older > 0 ? (
+        <p className="tnum px-4 pt-2 text-[12px] font-semibold text-faint">
+          The last 30 days; {older} more before that.
+        </p>
+      ) : null}
     </>
   );
 }
@@ -348,10 +414,26 @@ const SOURCE: Record<Task['source']['type'], { label: string; icon: ReactNode }>
   miniapp: { label: 'Added in the app', icon: null },
 };
 
-/** Where it came from: your words, the transcript, or the forwarded message. */
+/** What the server said when it could not reply to the source message. */
+function showSourceFailure(error: unknown): string {
+  const status = error instanceof ApiError ? error.status : 0;
+  if (status === 404) return 'The original message is no longer linked to this reminder.';
+  if (status === 409) return 'That message was deleted from the chat.';
+  if (status === 429) return 'Too many requests. Wait a minute and try again.';
+  if (status === 502) return "Telegram didn't accept the reply. Try again.";
+  return "Couldn't reach the chat. Try again.";
+}
+
+/**
+ * Where it came from: your words, the transcript, or the forwarded message.
+ * With a linked chat message, "Show in chat" makes the bot reply to it so
+ * the quote can be tapped there (POST /tasks/:id/show-source).
+ */
 function Source({ task }: { task: Task }) {
-  const { type, originalText, forwardedFrom } = task.source;
-  if (!originalText && !forwardedFrom) return null;
+  const { type, originalText, forwardedFrom, messageId } = task.source;
+  const show = useShowTaskSource();
+  const haptic = useHapticFeedback();
+  if (!originalText && !forwardedFrom && messageId === null) return null;
   const source = SOURCE[type];
   return (
     <>
@@ -369,6 +451,24 @@ function Source({ task }: { task: Task }) {
             </p>
           ) : null}
         </div>
+        {messageId !== null ? (
+          <FieldRow
+            icon={<MessageSquareText size={16} />}
+            label="Show source message"
+            hint="Remy replies to it in the chat"
+            onClick={() => {
+              if (show.isPending) return;
+              haptic.impact('light');
+              show.mutate(task.id, {
+                onSuccess: () => toast({ message: 'Sent to the chat. Tap the quote there to jump to it.' }),
+                onError: (error) => {
+                  haptic.notify('error');
+                  toast({ message: showSourceFailure(error), tone: 'danger' });
+                },
+              });
+            }}
+          />
+        ) : null}
       </Group>
     </>
   );

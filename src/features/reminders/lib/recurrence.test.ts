@@ -11,6 +11,8 @@ describe('recurrenceLabel', () => {
     [{ type: 'monthly', lastDayOfMonth: true }, 'Last day of every month'],
     [{ type: 'every_n_days', intervalDays: 3 }, 'Every 3 days'],
     [{ type: 'yearly', interval: 2 }, 'Every 2 years'],
+    [{ type: 'monthly', count: 12 }, 'Every month × 12 times'],
+    [{ type: 'weekly', byWeekday: [1], count: 4 }, 'Every Mon × 4 times'],
   ] as const)('%j → %s', (recurrence, label) => {
     expect(recurrenceLabel(recurrence as never, 'UTC')).toBe(label);
   });
@@ -30,5 +32,7 @@ describe('isCustomRecurrence', () => {
     expect(isCustomRecurrence({ type: 'daily' } as never)).toBe(false);
     expect(isCustomRecurrence({ type: 'weekly', byWeekday: [1] } as never)).toBe(true);
     expect(isCustomRecurrence({ type: 'monthly', interval: 3 } as never)).toBe(true);
+    // The Repeat sheet edits the count itself.
+    expect(isCustomRecurrence({ type: 'daily', count: 10 } as never)).toBe(false);
   });
 });
