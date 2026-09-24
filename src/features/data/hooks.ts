@@ -29,6 +29,21 @@ export function useExportData() {
   return useMutation({ mutationFn: (format: api.ExportFormat) => api.exportData(format) });
 }
 
+/**
+ * "Delete all my data": every task, the categories, conversation memory, the
+ * calendar link; settings back to the defaults (the account stays). Every
+ * cached query is reset afterwards, so the app shows an empty Today.
+ */
+export function useDeleteAllData() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deleteAllData(),
+    onSuccess: async () => {
+      await qc.resetQueries();
+    },
+  });
+}
+
 export function useParseList() {
   return useMutation({ mutationFn: (text: string) => api.parseList(text) });
 }

@@ -104,3 +104,54 @@ describe('Settings: compact rows', () => {
     expect(calls.some((c) => c.method === 'PATCH')).toBe(false);
   });
 });
+
+describe('Settings: contract 2.4.0', () => {
+  beforeEach(() => signIn());
+  afterEach(() => vi.unstubAllGlobals());
+
+  function api() {
+    let settings: Settings = { ...DEFAULT_SETTINGS };
+    return mockApi({
+      'GET /user/me': TEST_USER,
+      'GET /settings': () => settings,
+      'PATCH /settings': ({ body }) => {
+        settings = mergeSettings(settings, body as UpdateSettingsRequest);
+        return settings;
+      },
+      'GET /categories': { categories: [] },
+      'GET /calendar/feed': { enabled: false, path: null },
+      'DELETE /data': { success: true, deletedTasks: 14 },
+    });
+  }
+
+  it('saves the voice brief and pinned agenda toggles as their own fields', async () => {
+    const { calls } = api();
+    renderWithProviders(<SettingsPage />, { route: '/settings' });
+    fireEvent.click(await screen.findByRole('switch', { name: 'Voice brief' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(1));
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toEqual({ voiceBrief: true });
+    expect(screen.getByRole('switch', { name: 'Voice brief' }).getAttribute('aria-checked')).toBe('true');
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Pinned agenda in chat' }));
+    await waitFor(() => expect(calls.filter((c) => c.method === 'PATCH')).toHaveLength(2));
+    expect(calls.filter((c) => c.method === 'PATCH')[1]?.body).toEqual({ pinnedAgenda: true });
+  });
+
+  it('deletes all data only after DELETE is typed, and sends the confirmation word', async () => {
+    const { calls } = api();
+    renderWithProviders(<SettingsPage />, { route: '/settings' });
+    fireEvent.click(await screen.findByRole('button', { name: /Delete all data/ }));
+    const button = screen.getByRole('button', { name: 'Delete everything' });
+    expect(button.hasAttribute('disabled')).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Type DELETE to confirm'), { target: { value: 'delete' } });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    fireEvent.change(screen.getByLabelText('Type DELETE to confirm'), { target: { value: 'DELETE' } });
+    expect(button.hasAttribute('disabled')).toBe(false);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(calls.some((c) => c.method === 'DELETE' && c.path === '/data')).toBe(true));
+    expect(calls.find((c) => c.method === 'DELETE')?.body).toEqual({ confirm: 'DELETE' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});

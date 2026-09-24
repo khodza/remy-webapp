@@ -11,13 +11,16 @@ import {
   Moon,
   Newspaper,
   Rows3,
+  Pin,
   Sun,
   Tag,
+  Trash2,
+  Volume2,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
-import { useCalendarFeed, useExportData } from '@/features/data';
+import { DeleteAllDataSheet, useCalendarFeed, useExportData } from '@/features/data';
 import { useMe } from '@/features/profile';
 import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features/settings';
 import { useTodayView } from '@/features/today';
@@ -62,6 +65,7 @@ export function SettingsPage() {
   const [view, setView] = useTodayView();
   const [editing, setEditing] = useState<RhythmKey | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const feed = useCalendarFeed();
   const exportData = useExportData();
   const hour12 = useHour12();
@@ -134,6 +138,27 @@ export function SettingsPage() {
                   checked={s.weeklyWrap.enabled}
                   onChange={(enabled) => save({ weeklyWrap: { enabled } })}
                   label="Weekly wrap"
+                />
+              }
+            />
+            <FieldRow
+              icon={<Volume2 size={16} />}
+              label="Voice brief"
+              hint="The morning brief also read aloud, as a voice message"
+              trailing={
+                <Toggle checked={s.voiceBrief} onChange={(voiceBrief) => save({ voiceBrief })} label="Voice brief" />
+              }
+            />
+            <FieldRow
+              icon={<Pin size={16} />}
+              iconTone="warn"
+              label="Pinned agenda in chat"
+              hint="A live Today message, pinned and kept up to date"
+              trailing={
+                <Toggle
+                  checked={s.pinnedAgenda}
+                  onChange={(pinnedAgenda) => save({ pinnedAgenda })}
+                  label="Pinned agenda in chat"
                 />
               }
             />
@@ -261,7 +286,7 @@ export function SettingsPage() {
               iconTone="ok"
               label="Export"
               hint="A file in your chat"
-              value="CSV · JSON"
+              value="CSV · JSON · ICS"
               onClick={() => setExporting(true)}
             />
             <FieldRow
@@ -272,17 +297,36 @@ export function SettingsPage() {
               onClick={() => navigate('/settings/import')}
             />
           </Group>
+          <Group className="mt-4">
+            <FieldRow
+              icon={<Trash2 size={16} />}
+              iconTone="danger"
+              label="Delete all data"
+              hint="Every task, category and memory; settings back to defaults"
+              danger
+              onClick={() => setDeleting(true)}
+            />
+          </Group>
 
           <RhythmSheet editing={editing} settings={s} onClose={() => setEditing(null)} />
           <Sheet open={exporting} onClose={() => setExporting(false)} title="Export">
             <p className="pb-2 text-[13.5px] font-semibold text-muted">
-              Remy sends the file to your chat, where you can save or share it. Pending and done reminders.
+              Remy sends the file to your chat, where you can save or share it. Times are in your time zone.
             </p>
             <div className="-mx-1">
               {(
                 [
-                  { format: 'csv', label: 'Spreadsheet (CSV)', detail: 'Opens in Excel, Numbers, Google Sheets' },
-                  { format: 'json', label: 'Full record (JSON)', detail: 'Everything, for backups' },
+                  { format: 'csv', label: 'Spreadsheet (CSV)', detail: 'Pending and done · Excel, Numbers, Sheets' },
+                  {
+                    format: 'json',
+                    label: 'Full record (JSON)',
+                    detail: 'Settings, categories, every task · for backups',
+                  },
+                  {
+                    format: 'ics',
+                    label: 'Calendar file (.ics)',
+                    detail: 'Pending reminders · import into any calendar',
+                  },
                 ] as const
               ).map((option) => (
                 <SheetOption
@@ -293,7 +337,9 @@ export function SettingsPage() {
                     setExporting(false);
                     exportData.mutate(option.format, {
                       onSuccess: (result) =>
-                        toast({ message: `Sent ${result.filename} to your chat (${result.tasks} tasks)` }),
+                        toast({
+                          message: `Sent ${result.filename} to your chat (${result.tasks} ${option.format === 'ics' ? 'reminders' : 'tasks'})`,
+                        }),
                       onError: () => toast({ message: "Couldn't export. Try again.", tone: 'danger' }),
                     });
                   }}
@@ -301,6 +347,7 @@ export function SettingsPage() {
               ))}
             </div>
           </Sheet>
+          <DeleteAllDataSheet open={deleting} onClose={() => setDeleting(false)} />
         </>
       )}
 
