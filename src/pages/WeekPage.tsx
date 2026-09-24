@@ -4,7 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { useCategoryMap } from '@/features/categories';
 import { describeDue, TaskRow, useTaskActions, useTasks, useUpdateTask, WhenSheet } from '@/features/reminders';
 import { useSettings } from '@/features/settings';
-import { DayDropDock, dayKey, dueAt, LoadStrip, minuteOfDay, sameTimeOnDay, shiftWeek, useDayTicks, useRowDrag, weekDays } from '@/features/today';
+import {
+  DayDropDock,
+  dayKey,
+  dueAt,
+  LoadStrip,
+  minuteOfDay,
+  sameTimeOnDay,
+  shiftWeek,
+  useDayTicks,
+  useRowDrag,
+  weekDays,
+} from '@/features/today';
 import type { Task } from '@/shared/api';
 import { formatDateTime, formatHour, formatInTz, formatTime, useUserTimezone } from '@/shared/lib/dates';
 import { useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
@@ -35,7 +46,10 @@ export function WeekPage() {
 
   useMainButton({ text: 'New reminder', onClick: () => navigate('/create') });
 
-  const days = useMemo(() => weekDays(shiftWeek(todayKey, offset, tz), tz, weekStartsOn, now), [todayKey, offset, tz, weekStartsOn, now]);
+  const days = useMemo(
+    () => weekDays(shiftWeek(todayKey, offset, tz), tz, weekStartsOn, now),
+    [todayKey, offset, tz, weekStartsOn, now],
+  );
 
   const drag = useRowDrag<Task>({
     onStart: () => haptic.impact('medium'),
@@ -83,7 +97,11 @@ export function WeekPage() {
         </h1>
         <div className="flex items-center">
           {offset !== 0 ? (
-            <button type="button" onClick={() => setOffset(0)} className="min-h-11 px-2 text-[13px] font-extrabold text-accent">
+            <button
+              type="button"
+              onClick={() => setOffset(0)}
+              className="min-h-11 px-2 text-[13px] font-extrabold text-accent"
+            >
               This week
             </button>
           ) : null}
@@ -96,7 +114,10 @@ export function WeekPage() {
         </div>
       </header>
 
-      <SectionHeader label={`Load · ${formatHour(6)} → ${formatHour(24)}`} right={<span className="font-bold normal-case text-muted">tap a day</span>} />
+      <SectionHeader
+        label={`Load · ${formatHour(6)} → ${formatHour(24)}`}
+        right={<span className="font-bold normal-case text-muted">tap a day</span>}
+      />
       <Group>
         {days.map((day) => (
           <WeekRow
@@ -122,13 +143,27 @@ export function WeekPage() {
             const category = task.categoryId ? categories.get(task.categoryId) : undefined;
             return (
               <div key={task.id} className="flex min-h-row items-center gap-2 py-row-y pl-3.5 pr-2">
-                <button type="button" onClick={() => navigate(`/tasks/${task.id}`)} className="min-w-0 flex-1 text-left">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  className="min-w-0 flex-1 text-left"
+                >
                   <span className="block truncate text-[14.5px] font-extrabold">{task.description}</span>
                   <span className="block truncate text-[11.5px] font-bold text-muted">
-                    {[`added ${formatInTz(task.createdAt, tz, 'EEE d MMM')}`, category?.name, task.source.type === 'forward' ? 'forwarded' : null].filter(Boolean).join(' · ')}
+                    {[
+                      `added ${formatInTz(task.createdAt, tz, 'EEE d MMM')}`,
+                      category?.name,
+                      task.source.type === 'forward' ? 'forwarded' : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </span>
                 </button>
-                <button type="button" onClick={() => setScheduling(task)} className="min-h-11 shrink-0 rounded-xl px-3 text-[13px] font-extrabold text-accent active:bg-accent-soft">
+                <button
+                  type="button"
+                  onClick={() => setScheduling(task)}
+                  className="min-h-11 shrink-0 rounded-xl px-3 text-[13px] font-extrabold text-accent active:bg-accent-soft"
+                >
                   Schedule
                 </button>
               </div>
@@ -136,16 +171,28 @@ export function WeekPage() {
           })}
         </Group>
       ) : (
-        <Empty icon={<Inbox size={20} />} title="Inbox is empty" body="Things without a date land here. Tell the bot “someday: buy new headphones”." />
+        <Empty
+          icon={<Inbox size={20} />}
+          title="Inbox is empty"
+          body="Things without a date land here. Tell the bot “someday: buy new headphones”."
+        />
       )}
 
       {days.map((day) => {
         const tasks = byDay.get(day.key);
         if (!tasks?.length) return null;
         return (
-          <section key={day.key} {...(day.key >= todayKey ? { 'data-drop-day': day.key } : {})} className={cx('rounded-2xl transition', dragged?.over === day.key && 'bg-accent-soft')}>
+          <section
+            key={day.key}
+            {...(day.key >= todayKey ? { 'data-drop-day': day.key } : {})}
+            className={cx('rounded-2xl transition', dragged?.over === day.key && 'bg-accent-soft')}
+          >
             <SectionHeader
-              label={day.key === todayKey ? `Today · ${formatInTz(day.start, tz, 'EEE d')}` : formatInTz(day.start, tz, 'EEE d MMM')}
+              label={
+                day.key === todayKey
+                  ? `Today · ${formatInTz(day.start, tz, 'EEE d')}`
+                  : formatInTz(day.start, tz, 'EEE d MMM')
+              }
               right={<span className="tnum text-muted">{tasks.length}</span>}
             />
             <Group>
@@ -178,7 +225,9 @@ export function WeekPage() {
       })}
 
       {days.some((day) => byDay.get(day.key)?.length) ? (
-        <p className="px-4 pt-3 text-[12.5px] font-semibold text-muted">Hold a reminder and drag it onto another day to move it there at the same time.</p>
+        <p className="px-4 pt-3 text-[12.5px] font-semibold text-muted">
+          Hold a reminder and drag it onto another day to move it there at the same time.
+        </p>
       ) : null}
 
       {dragged && draggedDue ? (
@@ -196,7 +245,9 @@ export function WeekPage() {
             from={dayKey(draggedDue, tz)}
             over={dragged.over}
             closed={(key) => key < todayKey}
-            hint={dropAt ? `Move to ${formatDateTime(dropAt, tz)}` : `Drop on a day · keeps ${formatTime(draggedDue, tz)}`}
+            hint={
+              dropAt ? `Move to ${formatDateTime(dropAt, tz)}` : `Drop on a day · keeps ${formatTime(draggedDue, tz)}`
+            }
           />
         </>
       ) : null}
@@ -239,13 +290,30 @@ interface WeekRowProps {
 function WeekRow({ dropKey, over, start, isToday, count, tz, now, onOpen }: WeekRowProps) {
   const ticks = useDayTicks(start, tz, now);
   return (
-    <button type="button" onClick={onOpen} {...(dropKey ? { 'data-drop-day': dropKey } : {})} className={cx('flex min-h-field w-full items-center gap-3 px-3.5 text-left active:bg-past', over && 'bg-accent-soft')}>
+    <button
+      type="button"
+      onClick={onOpen}
+      {...(dropKey ? { 'data-drop-day': dropKey } : {})}
+      className={cx(
+        'flex min-h-field w-full items-center gap-3 px-3.5 text-left active:bg-past',
+        over && 'bg-accent-soft',
+      )}
+    >
       <span className="w-11 shrink-0 leading-tight">
         <span className="block text-[14px] font-extrabold">{formatInTz(start, tz, 'EEE')}</span>
-        <span className={cx('tnum block text-[10.5px] font-extrabold', isToday ? 'text-accent' : 'text-muted')}>{isToday ? 'TODAY' : formatInTz(start, tz, 'd')}</span>
+        <span className={cx('tnum block text-[10.5px] font-extrabold', isToday ? 'text-accent' : 'text-muted')}>
+          {isToday ? 'TODAY' : formatInTz(start, tz, 'd')}
+        </span>
       </span>
-      <LoadStrip compact ticks={ticks} nowMinute={isToday ? minuteOfDay(now, tz) : null} label={formatInTz(start, tz, 'EEEE d MMMM')} />
-      <span className={cx('tnum w-5 shrink-0 text-right text-[14px] font-extrabold', count === 0 && 'text-faint')}>{count}</span>
+      <LoadStrip
+        compact
+        ticks={ticks}
+        nowMinute={isToday ? minuteOfDay(now, tz) : null}
+        label={formatInTz(start, tz, 'EEEE d MMMM')}
+      />
+      <span className={cx('tnum w-5 shrink-0 text-right text-[14px] font-extrabold', count === 0 && 'text-faint')}>
+        {count}
+      </span>
     </button>
   );
 }

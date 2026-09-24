@@ -24,11 +24,15 @@ describe('Import: past times', () => {
     const future = new Date(Date.now() + 86_400_000).toISOString();
     const { calls } = mockApi({
       'GET /categories': { categories: [] },
-      'POST /ai/parse-list': { tasks: [draft('Call the bank', past), draft('Dentist', future), draft('Buy milk', null)] },
+      'POST /ai/parse-list': {
+        tasks: [draft('Call the bank', past), draft('Dentist', future), draft('Buy milk', null)],
+      },
     });
     renderWithProviders(<ImportPage />, { route: '/settings/import' });
 
-    fireEvent.change(screen.getByRole('textbox', { name: 'Your list' }), { target: { value: 'call the bank at 9\ndentist tomorrow\nbuy milk' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Your list' }), {
+      target: { value: 'call the bank at 9\ndentist tomorrow\nbuy milk' },
+    });
     await act(async () => useMainButtonStore.getState().onClick?.());
     await screen.findByText(/^3 found/);
 

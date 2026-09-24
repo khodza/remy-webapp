@@ -16,7 +16,10 @@ interface Options extends Omit<RenderOptions, 'wrapper'> {
 }
 
 /** Render inside the providers screens expect: React Query and a router. */
-export function renderWithProviders(ui: ReactElement, { client = testQueryClient(), route = '/', ...options }: Options = {}) {
+export function renderWithProviders(
+  ui: ReactElement,
+  { client = testQueryClient(), route = '/', ...options }: Options = {},
+) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

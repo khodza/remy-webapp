@@ -24,7 +24,9 @@ export function DayDropDock({ days, tz, from, over, closed, hint }: DayDropDockP
   return createPortal(
     <div
       className="pointer-events-none fixed inset-x-0 z-30 px-3 [animation:remy-toast-in_.16s_ease-out]"
-      style={{ bottom: 'calc(var(--tg-viewport-safe-area-inset-bottom, 0px) + var(--dev-main-button-space, 0px) + 12px)' }}
+      style={{
+        bottom: 'calc(var(--tg-viewport-safe-area-inset-bottom, 0px) + var(--dev-main-button-space, 0px) + 12px)',
+      }}
       aria-live="polite"
     >
       <div className="pointer-events-auto rounded-2xl border border-rule bg-surface p-2 shadow-[0_10px_30px_rgb(16_24_40/0.18)]">
@@ -41,7 +43,11 @@ export function DayDropDock({ days, tz, from, over, closed, hint }: DayDropDockP
                 aria-label={formatInTz(day.start, tz, 'EEEE d MMMM')}
                 className={cx(
                   'flex min-h-14 flex-col items-center justify-center rounded-xl text-center leading-tight transition',
-                  over === day.key ? 'scale-105 bg-accent text-accent-fg' : target ? 'bg-accent-soft text-accent' : 'bg-past text-faint',
+                  over === day.key
+                    ? 'scale-105 bg-accent text-accent-fg'
+                    : target
+                      ? 'bg-accent-soft text-accent'
+                      : 'bg-past text-faint',
                 )}
               >
                 <span className="text-[11px] font-extrabold uppercase">{formatInTz(day.start, tz, 'EEE')}</span>

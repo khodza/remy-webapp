@@ -28,7 +28,10 @@ export interface PullState {
  *   (Telegram's swipe-to-close is off, see app/init.ts);
  * - a gesture another handler already cancelled is left alone.
  */
-export function usePullToRefresh(ref: RefObject<HTMLElement | null>, onRefresh: (() => Promise<unknown>) | undefined): PullState {
+export function usePullToRefresh(
+  ref: RefObject<HTMLElement | null>,
+  onRefresh: (() => Promise<unknown>) | undefined,
+): PullState {
   const [state, setState] = useState<PullState>({ distance: 0, ready: false, refreshing: false });
   const haptic = useHapticFeedback();
   const latest = useRef({ onRefresh, haptic });

@@ -15,16 +15,13 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { hasError: false };
 
-  static getDerivedStateFromError: GetDerivedStateFromError<
-    ErrorBoundaryProps,
-    ErrorBoundaryState
-  > = (error) => ({ error, hasError: true });
+  static getDerivedStateFromError: GetDerivedStateFromError<ErrorBoundaryProps, ErrorBoundaryState> = (error) => ({
+    error,
+    hasError: true,
+  });
 
   override componentDidCatch(error: Error) {
     this.setState({ error, hasError: true });

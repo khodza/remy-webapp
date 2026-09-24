@@ -65,7 +65,11 @@ export function TimezonePage() {
         <span className="block text-[10.5px] font-bold text-muted">UTC{utcOffsetLabel(zone, now)}</span>
       </span>
       <span className="flex w-5 justify-center">
-        {update.isPending && update.variables === zone ? <Loader2 size={16} className="animate-spin text-accent" /> : zone === currentTz ? <Check size={16} className="text-accent" /> : null}
+        {update.isPending && update.variables === zone ? (
+          <Loader2 size={16} className="animate-spin text-accent" />
+        ) : zone === currentTz ? (
+          <Check size={16} className="text-accent" />
+        ) : null}
       </span>
     </button>
   );
@@ -73,7 +77,9 @@ export function TimezonePage() {
   return (
     <Screen>
       <h1 className="px-4 pb-1 pt-3 text-[21px] font-extrabold tracking-[-0.02em]">Time zone</h1>
-      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">Remy uses it to understand “tomorrow at 6” and to show every time in your hours.</p>
+      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">
+        Remy uses it to understand “tomorrow at 6” and to show every time in your hours.
+      </p>
 
       <Group>
         {row(
@@ -103,10 +109,16 @@ export function TimezonePage() {
 
       <SectionHeader label={query ? `${zones.length} matches` : 'All zones'} />
       <Group>
-        {visible.length === 0 ? <p className="px-3.5 py-4 text-[13.5px] font-semibold text-muted">No zone matches “{query}”.</p> : null}
+        {visible.length === 0 ? (
+          <p className="px-3.5 py-4 text-[13.5px] font-semibold text-muted">No zone matches “{query}”.</p>
+        ) : null}
         {visible.map((zone) => row(zone, zoneCity(zone), zoneRegion(zone) ?? ''))}
       </Group>
-      {zones.length > MAX_ROWS ? <p className="px-4 pt-2 text-[12px] font-semibold text-muted">Showing {MAX_ROWS} of {zones.length}. Keep typing to narrow it down.</p> : null}
+      {zones.length > MAX_ROWS ? (
+        <p className="px-4 pt-2 text-[12px] font-semibold text-muted">
+          Showing {MAX_ROWS} of {zones.length}. Keep typing to narrow it down.
+        </p>
+      ) : null}
     </Screen>
   );
 }

@@ -16,9 +16,23 @@ interface Form {
 }
 
 const blank: Form = { name: '', emoji: '📌', color: COLORS[0] ?? '#5B5BD6', keywords: '' };
-const toForm = (c: Category): Form => ({ name: c.name, emoji: c.emoji, color: c.color, keywords: c.keywords.join(', ') });
+const toForm = (c: Category): Form => ({
+  name: c.name,
+  emoji: c.emoji,
+  color: c.color,
+  keywords: c.keywords.join(', '),
+});
 const keywordList = (text: string) =>
-  [...new Set(text.split(',').map((k) => k.trim().toLowerCase()).filter(Boolean))].slice(0, 20).map((k) => k.slice(0, 32));
+  [
+    ...new Set(
+      text
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ]
+    .slice(0, 20)
+    .map((k) => k.slice(0, 32));
 
 /** Names, emoji and colours for categories, plus the words that suggest them. */
 export function CategoriesPage() {
@@ -33,19 +47,28 @@ export function CategoriesPage() {
     setForm(target === 'new' ? blank : toForm(target));
     setEditing(target);
   };
-  const failed = (err: unknown) => toast({ message: err instanceof ApiError ? err.message : "Couldn't save. Try again.", tone: 'danger' });
+  const failed = (err: unknown) =>
+    toast({ message: err instanceof ApiError ? err.message : "Couldn't save. Try again.", tone: 'danger' });
 
   const submit = () => {
-    const body = { name: form.name.trim().slice(0, 24), emoji: form.emoji.trim() || '📌', color: form.color, keywords: keywordList(form.keywords) };
+    const body = {
+      name: form.name.trim().slice(0, 24),
+      emoji: form.emoji.trim() || '📌',
+      color: form.color,
+      keywords: keywordList(form.keywords),
+    };
     if (!body.name) return;
     if (editing === 'new') create.mutate(body, { onSuccess: () => setEditing(null), onError: failed });
-    else if (editing) update.mutate({ id: editing.id, patch: body }, { onSuccess: () => setEditing(null), onError: failed });
+    else if (editing)
+      update.mutate({ id: editing.id, patch: body }, { onSuccess: () => setEditing(null), onError: failed });
   };
 
   return (
     <Screen>
       <h1 className="px-4 pb-1 pt-3 text-[21px] font-extrabold tracking-[-0.02em]">Categories</h1>
-      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">Remy suggests a category when your words match one of its keywords, or when you add #name.</p>
+      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">
+        Remy suggests a category when your words match one of its keywords, or when you add #name.
+      </p>
 
       {categories.isPending ? (
         <SkeletonRows count={4} />
@@ -54,8 +77,16 @@ export function CategoriesPage() {
       ) : (
         <Group>
           {(categories.data ?? []).map((category) => (
-            <button key={category.id} type="button" onClick={() => open(category)} className="flex min-h-14 w-full items-center gap-3 px-3.5 py-2 text-left active:bg-past">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[18px]" style={{ background: `color-mix(in oklab, ${category.color} 16%, transparent)` }}>
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => open(category)}
+              className="flex min-h-14 w-full items-center gap-3 px-3.5 py-2 text-left active:bg-past"
+            >
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[18px]"
+                style={{ background: `color-mix(in oklab, ${category.color} 16%, transparent)` }}
+              >
                 {category.emoji}
               </span>
               <span className="min-w-0 flex-1">
@@ -63,7 +94,9 @@ export function CategoriesPage() {
                   <i className="h-2 w-2 rounded-full" style={{ background: category.color }} />
                   {category.name}
                 </span>
-                <span className="block truncate text-[12px] font-semibold text-muted">{category.keywords.length ? category.keywords.join(', ') : 'No keywords'}</span>
+                <span className="block truncate text-[12px] font-semibold text-muted">
+                  {category.keywords.length ? category.keywords.join(', ') : 'No keywords'}
+                </span>
               </span>
             </button>
           ))}
@@ -71,7 +104,11 @@ export function CategoriesPage() {
       )}
 
       <Group className="mt-3">
-        <button type="button" onClick={() => open('new')} className="flex min-h-[52px] w-full items-center gap-2.5 px-3.5 text-left text-[14.5px] font-extrabold text-accent active:bg-past">
+        <button
+          type="button"
+          onClick={() => open('new')}
+          className="flex min-h-[52px] w-full items-center gap-2.5 px-3.5 text-left text-[14.5px] font-extrabold text-accent active:bg-past"
+        >
           <Plus size={18} /> New category
         </button>
       </Group>
@@ -89,7 +126,8 @@ export function CategoriesPage() {
                 onClick={() => {
                   const target = editing;
                   remove.mutate(target.id, {
-                    onSuccess: () => toast({ message: `Deleted ${target.name}. Its reminders keep going, uncategorised.` }),
+                    onSuccess: () =>
+                      toast({ message: `Deleted ${target.name}. Its reminders keep going, uncategorised.` }),
                     onError: failed,
                   });
                   setEditing(null);
@@ -98,7 +136,12 @@ export function CategoriesPage() {
                 Delete
               </Button>
             ) : null}
-            <Button variant="primary" block disabled={!form.name.trim() || create.isPending || update.isPending} onClick={submit}>
+            <Button
+              variant="primary"
+              block
+              disabled={!form.name.trim() || create.isPending || update.isPending}
+              onClick={submit}
+            >
               {editing === 'new' ? 'Add category' : 'Save'}
             </Button>
           </>
@@ -122,7 +165,10 @@ export function CategoriesPage() {
               type="button"
               aria-pressed={form.emoji === emoji}
               onClick={() => setForm({ ...form, emoji })}
-              className={cx('flex h-11 items-center justify-center rounded-xl text-[20px]', form.emoji === emoji ? 'bg-accent-soft ring-2 ring-accent' : 'bg-past')}
+              className={cx(
+                'flex h-11 items-center justify-center rounded-xl text-[20px]',
+                form.emoji === emoji ? 'bg-accent-soft ring-2 ring-accent' : 'bg-past',
+              )}
             >
               {emoji}
             </button>
@@ -140,7 +186,14 @@ export function CategoriesPage() {
               onClick={() => setForm({ ...form, color })}
               className="flex h-11 w-11 items-center justify-center"
             >
-              <span className={cx('h-8 w-8 rounded-full', form.color.toLowerCase() === color.toLowerCase() && 'ring-2 ring-text ring-offset-2 ring-offset-surface')} style={{ background: color }} />
+              <span
+                className={cx(
+                  'h-8 w-8 rounded-full',
+                  form.color.toLowerCase() === color.toLowerCase() &&
+                    'ring-2 ring-text ring-offset-2 ring-offset-surface',
+                )}
+                style={{ background: color }}
+              />
             </button>
           ))}
         </div>
@@ -153,7 +206,9 @@ export function CategoriesPage() {
             onChange={(event) => setForm({ ...form, keywords: event.target.value })}
             className="mt-1.5 min-h-12 w-full rounded-xl border border-rule bg-past px-3 text-[15px] font-semibold text-text outline-none placeholder:text-faint"
           />
-          <span className="mt-1 block text-[12px] font-semibold text-muted">Comma-separated. “dentist” makes “call the dentist” land here.</span>
+          <span className="mt-1 block text-[12px] font-semibold text-muted">
+            Comma-separated. “dentist” makes “call the dentist” land here.
+          </span>
         </label>
       </Sheet>
     </Screen>

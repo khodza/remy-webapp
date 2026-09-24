@@ -13,9 +13,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: (count, err) =>
-        !(err instanceof ApiError && NO_RETRY_STATUSES.has(err.status)) &&
-        count < 1,
+      retry: (count, err) => !(err instanceof ApiError && NO_RETRY_STATUSES.has(err.status)) && count < 1,
       // Coming back to the app (tab, webview or Telegram re-activating
       // it) refetches whatever is stale, so lists are never old news.
       refetchOnWindowFocus: true,

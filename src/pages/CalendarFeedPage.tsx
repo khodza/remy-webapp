@@ -47,7 +47,8 @@ export function CalendarFeedPage() {
     <Screen>
       <h1 className="px-4 pb-1 pt-3 text-[21px] font-extrabold tracking-[-0.02em]">Calendar feed</h1>
       <p className="px-4 pb-3 text-[13.5px] font-semibold text-muted">
-        See your reminders in Google or Apple Calendar next to everything else. Remy still does the reminding; the calendar only shows them.
+        See your reminders in Google or Apple Calendar next to everything else. Remy still does the reminding; the
+        calendar only shows them.
       </p>
 
       {feed.isPending ? (
@@ -65,7 +66,10 @@ export function CalendarFeedPage() {
                 onChange={(next) =>
                   next
                     ? enable.mutate(undefined, { onError: failed })
-                    : disable.mutate(undefined, { onSuccess: () => toast({ message: 'Feed off. The old link no longer works.' }), onError: failed })
+                    : disable.mutate(undefined, {
+                        onSuccess: () => toast({ message: 'Feed off. The old link no longer works.' }),
+                        onError: failed,
+                      })
                 }
               />
             }
@@ -91,17 +95,24 @@ export function CalendarFeedPage() {
               </Button>
             </div>
           </Group>
-          <p className="px-4 pt-2 text-[12.5px] font-semibold text-muted">Anyone with this link can see your reminders. If it leaks, get a new one below.</p>
+          <p className="px-4 pt-2 text-[12.5px] font-semibold text-muted">
+            Anyone with this link can see your reminders. If it leaks, get a new one below.
+          </p>
           {links.local ? (
             <p className="mx-4 mt-2 flex gap-2 rounded-xl bg-warn-soft px-3 py-2 text-[12.5px] font-bold text-warn">
               <TriangleAlert size={16} className="mt-px shrink-0" />
-              This link points at this computer, so Google and Apple can't reach it. It works once Remy runs on a public address.
+              This link points at this computer, so Google and Apple can't reach it. It works once Remy runs on a public
+              address.
             </p>
           ) : null}
 
           <SectionHeader label="Add it" />
           <Group>
-            <FieldRow label="Google Calendar" hint="Opens Google's “add by URL” page" onClick={() => open(links.google)} />
+            <FieldRow
+              label="Google Calendar"
+              hint="Opens Google's “add by URL” page"
+              onClick={() => open(links.google)}
+            />
             <FieldRow
               label="Apple Calendar"
               hint="Or: Settings → Calendar → Accounts → Add Subscribed Calendar"
@@ -111,11 +122,18 @@ export function CalendarFeedPage() {
             />
           </Group>
           <p className="px-4 pt-2 text-[12.5px] font-semibold text-muted">
-            Calendars fetch it on their own schedule: Apple about every 15 minutes, Google every few hours. New reminders show up then.
+            Calendars fetch it on their own schedule: Apple about every 15 minutes, Google every few hours. New
+            reminders show up then.
           </p>
 
           <Group className="mt-5">
-            <FieldRow icon={<RefreshCw size={16} />} iconTone="danger" label="Get a new link" danger onClick={() => setRenewing(true)} />
+            <FieldRow
+              icon={<RefreshCw size={16} />}
+              iconTone="danger"
+              label="Get a new link"
+              danger
+              onClick={() => setRenewing(true)}
+            />
           </Group>
         </>
       ) : null}
@@ -144,7 +162,8 @@ export function CalendarFeedPage() {
         }
       >
         <p className="text-[14px] font-semibold text-muted">
-          The current link stops working at once, and calendars subscribed to it stop updating. You'll need to add the new link to them again.
+          The current link stops working at once, and calendars subscribed to it stop updating. You'll need to add the
+          new link to them again.
         </p>
       </Sheet>
     </Screen>

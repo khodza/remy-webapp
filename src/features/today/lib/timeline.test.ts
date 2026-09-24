@@ -20,30 +20,51 @@ describe('layoutBlocks', () => {
   // 60 px per hour from 06:00; full blocks 52 px, one-line blocks 26 px.
   const SIZE = { full: 52, min: 26, gap: 4 };
   const place = (minutes: Array<[string, number]>) =>
-    Object.fromEntries(layoutBlocks(minutes.map(([id, minute]) => ({ id, minute })), 6, 60, SIZE).map((b) => [b.id, b]));
+    Object.fromEntries(
+      layoutBlocks(
+        minutes.map(([id, minute]) => ({ id, minute })),
+        6,
+        60,
+        SIZE,
+      ).map((b) => [b.id, b]),
+    );
 
   it('pins blocks to their minute at full height when there is room', () => {
-    const blocks = place([['a', 10 * 60], ['b', 13 * 60 + 30]]);
+    const blocks = place([
+      ['a', 10 * 60],
+      ['b', 13 * 60 + 30],
+    ]);
     expect(blocks.a).toMatchObject({ top: 240, height: 52, column: 0, columns: 1 });
     expect(blocks.b).toMatchObject({ top: 450, height: 52, column: 0, columns: 1 });
   });
 
   it('makes a block thinner when the next one is close, instead of columns', () => {
     // 41 minutes apart: 37 px of room, full width.
-    const blocks = place([['a', 17 * 60 + 19], ['b', 18 * 60]]);
+    const blocks = place([
+      ['a', 17 * 60 + 19],
+      ['b', 18 * 60],
+    ]);
     expect(blocks.a).toMatchObject({ height: 37, column: 0, columns: 1 });
     expect(blocks.b).toMatchObject({ height: 52, column: 0, columns: 1 });
   });
 
   it('puts blocks side by side only when they still collide', () => {
-    const blocks = place([['a', 600], ['b', 600], ['c', 615]]);
+    const blocks = place([
+      ['a', 600],
+      ['b', 600],
+      ['c', 615],
+    ]);
     expect([blocks.a?.column, blocks.b?.column, blocks.c?.column]).toEqual([0, 1, 2]);
     expect(blocks.c?.columns).toBe(3);
     expect(blocks.a?.height).toBe(26);
   });
 
   it('starts a fresh cluster after a gap', () => {
-    const blocks = place([['a', 600], ['b', 610], ['c', 900]]);
+    const blocks = place([
+      ['a', 600],
+      ['b', 610],
+      ['c', 900],
+    ]);
     expect(blocks.a?.columns).toBe(2);
     expect(blocks.c).toMatchObject({ column: 0, columns: 1 });
   });

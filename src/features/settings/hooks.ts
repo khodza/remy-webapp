@@ -15,19 +15,12 @@ export function useSettings() {
 }
 
 /** Same deep-merge the server applies: nested objects merge key by key. */
-export function mergeSettings(
-  current: Settings,
-  patch: UpdateSettingsRequest,
-): Settings {
+export function mergeSettings(current: Settings, patch: UpdateSettingsRequest): Settings {
   return {
     ...current,
     ...(patch.hour12 !== undefined ? { hour12: patch.hour12 } : {}),
-    ...(patch.weekStartsOn !== undefined
-      ? { weekStartsOn: patch.weekStartsOn }
-      : {}),
-    ...(patch.defaultView !== undefined
-      ? { defaultView: patch.defaultView }
-      : {}),
+    ...(patch.weekStartsOn !== undefined ? { weekStartsOn: patch.weekStartsOn } : {}),
+    ...(patch.defaultView !== undefined ? { defaultView: patch.defaultView } : {}),
     morningBrief: { ...current.morningBrief, ...patch.morningBrief },
     eveningReview: { ...current.eveningReview, ...patch.eveningReview },
     quietHours: { ...current.quietHours, ...patch.quietHours },

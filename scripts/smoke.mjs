@@ -48,11 +48,16 @@ async function check(name, fn) {
   try {
     await fn();
     if (errors.length) throw new Error(errors.splice(0).join('\n'));
-    if (SHOTS) await page.screenshot({ path: join(SHOTS, `${String(step).padStart(2, '0')}-${name.replace(/\W+/g, '-')}.png`) });
+    if (SHOTS)
+      await page.screenshot({ path: join(SHOTS, `${String(step).padStart(2, '0')}-${name.replace(/\W+/g, '-')}.png`) });
     console.log(`  ✓ ${name}`);
   } catch (error) {
     failed = true;
-    console.log(`  ✗ ${name}\n    ${String(error.message ?? error).split('\n').join('\n    ')}`);
+    console.log(
+      `  ✗ ${name}\n    ${String(error.message ?? error)
+        .split('\n')
+        .join('\n    ')}`,
+    );
     await page.screenshot({ path: join(tmpdir(), `remy-smoke-failed-${step}.png`) }).catch(() => {});
   }
 }
@@ -68,7 +73,11 @@ const expectText = async (locator, pattern, timeout = 5000) => {
   const until = Date.now() + timeout;
   let text = '';
   while (Date.now() < until) {
-    text = (await locator.first().textContent({ timeout }).catch(() => '')) ?? '';
+    text =
+      (await locator
+        .first()
+        .textContent({ timeout })
+        .catch(() => '')) ?? '';
     if (pattern.test(text)) return;
     await page.waitForTimeout(100);
   }
@@ -173,7 +182,10 @@ await check('Calendar feed turns on, shows a link, and a new link replaces it', 
   if (!/\/api\/v1\/calendar\/[A-Za-z0-9_-]{43}\.ics$/.test(first)) throw new Error(`odd link: ${first}`);
   await page.getByRole('button', { name: 'Get a new link' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Get a new link' }).click();
-  await page.waitForFunction((old) => document.querySelector('input[aria-label="Calendar link"]')?.value !== old, first);
+  await page.waitForFunction(
+    (old) => document.querySelector('input[aria-label="Calendar link"]')?.value !== old,
+    first,
+  );
 });
 
 await check('Export sends a file to the chat', async () => {
@@ -185,7 +197,9 @@ await check('Export sends a file to the chat', async () => {
 
 await check('Import reads a list, skips one line, and adds the rest', async () => {
   await open('/settings/import');
-  await page.getByRole('textbox', { name: 'Your list' }).fill('- buy milk\n- dentist tomorrow at 10\n- renew passport someday');
+  await page
+    .getByRole('textbox', { name: 'Your list' })
+    .fill('- buy milk\n- dentist tomorrow at 10\n- renew passport someday');
   await mainButton().click();
   await page.getByText(/^3 found · 3 to add/).waitFor();
   await page.getByRole('button', { name: /^Skip Renew passport/ }).click();
@@ -207,5 +221,9 @@ await check('Light theme renders Today, remembering the view', async () => {
 
 await browser.close();
 await server.close();
-console.log(failed ? '\nSmoke test FAILED (screenshots in the temp dir)' : `\nAll ${step} checks passed${SHOTS ? ` (screenshots in ${SHOTS})` : ''}`);
+console.log(
+  failed
+    ? '\nSmoke test FAILED (screenshots in the temp dir)'
+    : `\nAll ${step} checks passed${SHOTS ? ` (screenshots in ${SHOTS})` : ''}`,
+);
 process.exit(failed ? 1 : 0);

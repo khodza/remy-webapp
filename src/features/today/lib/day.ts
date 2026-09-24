@@ -177,7 +177,11 @@ export function buildWeek(
   now: Date,
   weekStartsOn: 0 | 1,
 ): WeekDay[] {
-  const days: WeekDay[] = weekDays(selected, tz, weekStartsOn, now).map((day) => ({ ...day, count: 0, overdue: false }));
+  const days: WeekDay[] = weekDays(selected, tz, weekStartsOn, now).map((day) => ({
+    ...day,
+    count: 0,
+    overdue: false,
+  }));
   const index = new Map(days.map((d, i) => [d.key, i]));
   const bump = (date: Date, overdue: boolean) => {
     const i = index.get(dayKey(date, tz));

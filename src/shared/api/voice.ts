@@ -24,10 +24,7 @@ export async function createTaskFromVoice(blob: Blob): Promise<Task> {
   return TaskSchema.parse(await response.json());
 }
 
-async function fetchWithRetry(
-  token: string,
-  form: FormData,
-): Promise<Response> {
+async function fetchWithRetry(token: string, form: FormData): Promise<Response> {
   const url = buildUrl('/tasks/voice');
   let response = await safeFetch(url, token, form);
   if (response.status !== 401) return response;
@@ -39,11 +36,7 @@ async function fetchWithRetry(
   return response;
 }
 
-async function safeFetch(
-  url: string,
-  bearer: string,
-  form: FormData,
-): Promise<Response> {
+async function safeFetch(url: string, bearer: string, form: FormData): Promise<Response> {
   try {
     return await fetch(url, {
       method: 'POST',

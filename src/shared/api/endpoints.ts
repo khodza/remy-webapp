@@ -57,9 +57,7 @@ export async function getMe(): Promise<User> {
 
 export async function updateTimezone(timezone: string): Promise<User> {
   const body = UpdateTimezoneRequestSchema.parse({ timezone });
-  return UserSchema.parse(
-    await apiRequest<unknown>('PATCH', '/user/timezone', { body }),
-  );
+  return UserSchema.parse(await apiRequest<unknown>('PATCH', '/user/timezone', { body }));
 }
 
 // -------------------------------------------------------------- settings ---
@@ -68,13 +66,9 @@ export async function getSettings(): Promise<Settings> {
   return SettingsSchema.parse(await apiRequest<unknown>('GET', '/settings'));
 }
 
-export async function updateSettings(
-  patch: UpdateSettingsRequest,
-): Promise<Settings> {
+export async function updateSettings(patch: UpdateSettingsRequest): Promise<Settings> {
   const body = UpdateSettingsRequestSchema.parse(patch);
-  return SettingsSchema.parse(
-    await apiRequest<unknown>('PATCH', '/settings', { body }),
-  );
+  return SettingsSchema.parse(await apiRequest<unknown>('PATCH', '/settings', { body }));
 }
 
 // ------------------------------------------------------------ categories ---
@@ -88,25 +82,16 @@ export async function createCategory(
   input: CreateCategoryRequest | Omit<CreateCategoryRequest, 'keywords'>,
 ): Promise<Category> {
   const body = CreateCategoryRequestSchema.parse(input);
-  return CategorySchema.parse(
-    await apiRequest<unknown>('POST', '/categories', { body }),
-  );
+  return CategorySchema.parse(await apiRequest<unknown>('POST', '/categories', { body }));
 }
 
-export async function updateCategory(
-  id: string,
-  patch: UpdateCategoryRequest,
-): Promise<Category> {
+export async function updateCategory(id: string, patch: UpdateCategoryRequest): Promise<Category> {
   const body = UpdateCategoryRequestSchema.parse(patch);
-  return CategorySchema.parse(
-    await apiRequest<unknown>('PATCH', `/categories/${id}`, { body }),
-  );
+  return CategorySchema.parse(await apiRequest<unknown>('PATCH', `/categories/${id}`, { body }));
 }
 
 export async function deleteCategory(id: string): Promise<DeleteResult> {
-  return DeleteResultSchema.parse(
-    await apiRequest<unknown>('DELETE', `/categories/${id}`),
-  );
+  return DeleteResultSchema.parse(await apiRequest<unknown>('DELETE', `/categories/${id}`));
 }
 
 // ----------------------------------------------------------------- tasks ---
@@ -159,20 +144,14 @@ export interface StructuredTaskInput {
 }
 
 /** Already-reviewed fields; nothing is parsed on the server. */
-export async function createTaskStructured(
-  input: StructuredTaskInput,
-): Promise<Task> {
+export async function createTaskStructured(input: StructuredTaskInput): Promise<Task> {
   const { scheduledAt, recurrence, ...rest } = input;
   const body = CreateTaskStructuredRequestSchema.parse({
     ...rest,
     ...(recurrence !== undefined ? { recurrence: recurrenceBody(recurrence) } : {}),
-    ...(scheduledAt !== undefined
-      ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null }
-      : {}),
+    ...(scheduledAt !== undefined ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null } : {}),
   });
-  return TaskSchema.parse(
-    await apiRequest<unknown>('POST', '/tasks/structured', { body }),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('POST', '/tasks/structured', { body }));
 }
 
 /** undefined leaves a field alone, null clears it. */
@@ -192,55 +171,38 @@ export async function updateTask(id: string, patch: TaskPatch): Promise<Task> {
   const body = UpdateTaskRequestSchema.parse({
     ...rest,
     ...(recurrence !== undefined ? { recurrence: recurrenceBody(recurrence) } : {}),
-    ...(scheduledAt !== undefined
-      ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null }
-      : {}),
+    ...(scheduledAt !== undefined ? { scheduledAt: scheduledAt ? scheduledAt.toISOString() : null } : {}),
   });
-  return TaskSchema.parse(
-    await apiRequest<unknown>('PATCH', `/tasks/${id}`, { body }),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('PATCH', `/tasks/${id}`, { body }));
 }
 
 export async function completeTask(id: string): Promise<Task> {
-  return TaskSchema.parse(
-    await apiRequest<unknown>('POST', `/tasks/${id}/complete`),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('POST', `/tasks/${id}/complete`));
 }
 
 export async function reopenTask(id: string): Promise<Task> {
-  return TaskSchema.parse(
-    await apiRequest<unknown>('POST', `/tasks/${id}/reopen`),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('POST', `/tasks/${id}/reopen`));
 }
 
 export async function delayTask(id: string, minutes: number): Promise<Task> {
   const body = DelayTaskRequestSchema.parse({ minutes });
-  return TaskSchema.parse(
-    await apiRequest<unknown>('POST', `/tasks/${id}/delay`, { body }),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('POST', `/tasks/${id}/delay`, { body }));
 }
 
 /** Absolute snooze ("Tonight 20:00"); `until` must be in the future. */
 export async function snoozeTask(id: string, until: Date): Promise<Task> {
   const body = SnoozeTaskRequestSchema.parse({ until: until.toISOString() });
-  return TaskSchema.parse(
-    await apiRequest<unknown>('POST', `/tasks/${id}/snooze`, { body }),
-  );
+  return TaskSchema.parse(await apiRequest<unknown>('POST', `/tasks/${id}/snooze`, { body }));
 }
 
 export async function deleteTask(id: string): Promise<DeleteResult> {
-  return DeleteResultSchema.parse(
-    await apiRequest<unknown>('DELETE', `/tasks/${id}`),
-  );
+  return DeleteResultSchema.parse(await apiRequest<unknown>('DELETE', `/tasks/${id}`));
 }
 
 // -------------------------------------------------------------------- ai ---
 
 /** `signal` cancels a parse the user has already typed past (F13). */
-export async function parseText(
-  text: string,
-  options: { signal?: AbortSignal } = {},
-): Promise<ParsedTask> {
+export async function parseText(text: string, options: { signal?: AbortSignal } = {}): Promise<ParsedTask> {
   const body = ParseTextRequestSchema.parse({ text });
   return ParsedTaskSchema.parse(
     await apiRequest<unknown>('POST', '/ai/parse', {

@@ -17,7 +17,11 @@ export function useDayTicks(date: Date | null, tz: string, now: Date, extra?: Ta
     const due = task.status === 'pending' ? dueAt(task) : null;
     if (!due || seen.has(task.id) || dayKey(due, tz) !== key) continue;
     seen.add(task.id);
-    ticks.push({ id: task.id, minute: minuteOfDay(due, tz), tone: due.getTime() < now.getTime() ? 'danger' : 'accent' });
+    ticks.push({
+      id: task.id,
+      minute: minuteOfDay(due, tz),
+      tone: due.getTime() < now.getTime() ? 'danger' : 'accent',
+    });
   }
   for (const task of done.data ?? []) {
     if (!task.completedAt || seen.has(task.id) || dayKey(task.completedAt, tz) !== key) continue;

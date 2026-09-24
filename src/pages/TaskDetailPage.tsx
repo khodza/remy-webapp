@@ -1,4 +1,16 @@
-import { Bell, CalendarClock, CircleAlert, CloudOff, Flag, Forward, Mic, MessageSquareText, Repeat, Tag, Trash2 } from 'lucide-react';
+import {
+  Bell,
+  CalendarClock,
+  CircleAlert,
+  CloudOff,
+  Flag,
+  Forward,
+  Mic,
+  MessageSquareText,
+  Repeat,
+  Tag,
+  Trash2,
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
@@ -42,7 +54,11 @@ export function TaskDetailPage() {
         </div>
       ) : task.error instanceof ApiError && task.error.status === 404 ? (
         <div className="pt-6">
-          <Empty icon={<CircleAlert size={20} />} title="Reminder not found" body="It may have been deleted in the chat." />
+          <Empty
+            icon={<CircleAlert size={20} />}
+            title="Reminder not found"
+            body="It may have been deleted in the chat."
+          />
         </div>
       ) : (
         // Offline or a server error is not "deleted": say so and offer a retry.
@@ -151,7 +167,11 @@ function Detail({ task }: { task: Task }) {
           ticks={ticks}
           highlight={task.id}
           nowMinute={dayKey(due, tz) === dayKey(now, tz) ? minuteOfDay(now, tz) : null}
-          label={dayKey(due, tz) === dayKey(now, tz) ? `${formatInTz(due, tz, 'EEE d')} · now ${formatTime(now, tz)}` : formatInTz(due, tz, 'EEE d MMM')}
+          label={
+            dayKey(due, tz) === dayKey(now, tz)
+              ? `${formatInTz(due, tz, 'EEE d')} · now ${formatTime(now, tz)}`
+              : formatInTz(due, tz, 'EEE d MMM')
+          }
         />
       ) : null}
 
@@ -164,7 +184,12 @@ function Detail({ task }: { task: Task }) {
           {...(done ? {} : { onClick: () => setSheet('when') })}
         />
         {task.scheduledAt ? (
-          <FieldRow icon={<Bell size={16} />} label="Remind" value={leadLabel(task.leadMinutes)} {...(done ? {} : { onClick: () => setSheet('lead') })} />
+          <FieldRow
+            icon={<Bell size={16} />}
+            label="Remind"
+            value={leadLabel(task.leadMinutes)}
+            {...(done ? {} : { onClick: () => setSheet('lead') })}
+          />
         ) : null}
         <FieldRow
           icon={<Repeat size={16} />}
@@ -243,8 +268,19 @@ function Detail({ task }: { task: Task }) {
         {...(task.recurrence ? { note: 'Changes every occurrence. To move just this one, use Snooze.' } : {})}
         onPick={(at) => save({ scheduledAt: at }, at ? `Moved to ${describeDue(at, tz, now)}` : 'Moved to the Inbox')}
       />
-      <LeadSheet open={sheet === 'lead'} onClose={close} value={task.leadMinutes} onPick={(leadMinutes) => save({ leadMinutes })} />
-      <RepeatSheet open={sheet === 'repeat'} onClose={close} value={task.recurrence} at={task.scheduledAt} onPick={(recurrence) => save({ recurrence })} />
+      <LeadSheet
+        open={sheet === 'lead'}
+        onClose={close}
+        value={task.leadMinutes}
+        onPick={(leadMinutes) => save({ leadMinutes })}
+      />
+      <RepeatSheet
+        open={sheet === 'repeat'}
+        onClose={close}
+        value={task.recurrence}
+        at={task.scheduledAt}
+        onPick={(recurrence) => save({ recurrence })}
+      />
       <CategorySheet
         open={sheet === 'category'}
         onClose={close}
@@ -253,7 +289,12 @@ function Detail({ task }: { task: Task }) {
         onPick={(categoryId) => save({ categoryId })}
         onManage={() => navigate('/settings/categories')}
       />
-      <PrioritySheet open={sheet === 'priority'} onClose={close} value={task.priority} onPick={(priority) => save({ priority })} />
+      <PrioritySheet
+        open={sheet === 'priority'}
+        onClose={close}
+        value={task.priority}
+        onPick={(priority) => save({ priority })}
+      />
     </>
   );
 }
@@ -280,7 +321,11 @@ function Source({ task }: { task: Task }) {
             {source.label}
             {forwardedFrom ? ` · ${forwardedFrom}` : ''}
           </p>
-          {originalText ? <p className="mt-1.5 border-l-2 border-rule pl-2.5 text-[14px] font-semibold leading-snug text-text">“{originalText}”</p> : null}
+          {originalText ? (
+            <p className="mt-1.5 border-l-2 border-rule pl-2.5 text-[14px] font-semibold leading-snug text-text">
+              “{originalText}”
+            </p>
+          ) : null}
         </div>
       </Group>
     </>
@@ -289,9 +334,12 @@ function Source({ task }: { task: Task }) {
 
 /** "created Mon 15 Sep 18:12 by voice · snoozed 5 times · done 2 times" */
 function history(task: Task, tz: string, now: Date): string {
-  const how = { text: 'in chat', voice: 'by voice', forward: 'from a forward', miniapp: 'in the app' }[task.source.type];
+  const how = { text: 'in chat', voice: 'by voice', forward: 'from a forward', miniapp: 'in the app' }[
+    task.source.type
+  ];
   const parts = [`created ${describeDue(task.createdAt, tz, now)} ${how}`];
   if (task.snoozeCount > 0) parts.push(`snoozed ${task.snoozeCount === 1 ? 'once' : `${task.snoozeCount} times`}`);
-  if (task.completionsCount > 0) parts.push(`done ${task.completionsCount === 1 ? 'once' : `${task.completionsCount} times`}`);
+  if (task.completionsCount > 0)
+    parts.push(`done ${task.completionsCount === 1 ? 'once' : `${task.completionsCount} times`}`);
   return parts.join(' · ');
 }

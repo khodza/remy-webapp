@@ -14,10 +14,7 @@ if (existsSync('.env.local')) loadEnvFile('.env.local');
 
 /** Falls back to the token saved by `ngrok config add-authtoken <token>`. */
 function authtokenFromCliConfig() {
-  const candidates = [
-    join(homedir(), '.config', 'ngrok', 'ngrok.yml'),
-    join(homedir(), '.ngrok2', 'ngrok.yml'),
-  ];
+  const candidates = [join(homedir(), '.config', 'ngrok', 'ngrok.yml'), join(homedir(), '.ngrok2', 'ngrok.yml')];
   for (const path of candidates) {
     if (!existsSync(path)) continue;
     const match = /^\s*authtoken:\s*["']?([^"'\s]+)/m.exec(readFileSync(path, 'utf8'));
@@ -43,9 +40,7 @@ const listener = await ngrok.forward({
 });
 
 console.log(`\nMini App URL: ${listener.url()}/`);
-console.log(
-  'This must match the URL in BotFather (Configure Mini App and Menu Button).\n',
-);
+console.log('This must match the URL in BotFather (Configure Mini App and Menu Button).\n');
 
 // The listener doesn't hold the event loop open by itself; concurrently -k
 // stops this process together with Vite.

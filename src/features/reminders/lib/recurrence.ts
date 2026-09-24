@@ -7,9 +7,7 @@ const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function orderedWeekdays(days: number[] | undefined): number[] {
   if (!days) return [];
   const order = (d: number) => (d === 0 ? 7 : d);
-  return [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort(
-    (a, b) => order(a) - order(b),
-  );
+  return [...new Set(days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => order(a) - order(b));
 }
 
 function listOf(names: string[]): string {

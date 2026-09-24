@@ -3,7 +3,15 @@ import { Check, PartyPopper } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategoryMap } from '@/features/categories';
-import { describeDue, SnoozeChips, useDeferredDelete, useSnoozeTask, useTaskActions, useTasks, WhenSheet } from '@/features/reminders';
+import {
+  describeDue,
+  SnoozeChips,
+  useDeferredDelete,
+  useSnoozeTask,
+  useTaskActions,
+  useTasks,
+  WhenSheet,
+} from '@/features/reminders';
 import { dayKey, dueAt, LoadStrip, minuteOfDay, useDayTicks } from '@/features/today';
 import type { Task } from '@/shared/api';
 import { atTimeInTz, formatInTz, formatTime, inTz, relativeToNow, useUserTimezone } from '@/shared/lib/dates';
@@ -31,7 +39,9 @@ export function CatchUpPage() {
   const overdue = useMemo(
     () =>
       (pending.data ?? [])
-        .filter((t) => t.status === 'pending' && !handled.includes(t.id) && (dueAt(t)?.getTime() ?? Infinity) < now.getTime())
+        .filter(
+          (t) => t.status === 'pending' && !handled.includes(t.id) && (dueAt(t)?.getTime() ?? Infinity) < now.getTime(),
+        )
         .sort((a, b) => (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0)),
     [pending.data, handled, now],
   );
@@ -64,7 +74,10 @@ export function CatchUpPage() {
 
   useMainButton(
     card
-      ? { text: overdue.length > 1 ? `Reschedule all ${overdue.length} to tomorrow` : 'Move to tomorrow', onClick: rescheduleAll }
+      ? {
+          text: overdue.length > 1 ? `Reschedule all ${overdue.length} to tomorrow` : 'Move to tomorrow',
+          onClick: rescheduleAll,
+        }
       : { text: 'Back to Today', onClick: () => navigate('/', { replace: true }) },
   );
 
@@ -81,7 +94,11 @@ export function CatchUpPage() {
   if (!card) {
     return (
       <Screen>
-        <Placeholder icon={<PartyPopper size={24} />} title="All caught up" body={handled.length ? `${handled.length} handled. Nothing overdue now.` : 'Nothing is overdue.'} />
+        <Placeholder
+          icon={<PartyPopper size={24} />}
+          title="All caught up"
+          body={handled.length ? `${handled.length} handled. Nothing overdue now.` : 'Nothing is overdue.'}
+        />
       </Screen>
     );
   }
@@ -103,7 +120,10 @@ export function CatchUpPage() {
         </span>
       </div>
 
-      <article key={card.id} className="mx-3 rounded-2xl border border-rule bg-surface pb-3.5 pt-4 shadow-[0_10px_30px_rgb(16_24_40/0.10)] [animation:remy-toast-in_.2s_ease-out]">
+      <article
+        key={card.id}
+        className="mx-3 rounded-2xl border border-rule bg-surface pb-3.5 pt-4 shadow-[0_10px_30px_rgb(16_24_40/0.10)] [animation:remy-toast-in_.2s_ease-out]"
+      >
         <p className="tnum px-4 text-[11px] font-extrabold uppercase tracking-[0.06em] text-danger">
           Overdue · {describeDue(due, tz, now)} · {relativeToNow(due, now).replace(' late', '')}
         </p>
@@ -113,9 +133,16 @@ export function CatchUpPage() {
             {card.source.forwardedFrom ? `From ${card.source.forwardedFrom}: ` : ''}“{card.source.originalText}”
           </p>
         ) : null}
-        {card.notes ? <p className="px-4 pt-2 text-[13.5px] font-semibold leading-snug text-text">{card.notes}</p> : null}
+        {card.notes ? (
+          <p className="px-4 pt-2 text-[13.5px] font-semibold leading-snug text-text">{card.notes}</p>
+        ) : null}
         <p className="px-4 pt-2 text-[12px] font-bold text-muted">
-          {[category?.name, card.priority === 'high' ? 'High priority' : null, card.snoozeCount > 0 ? `snoozed ${card.snoozeCount}×` : null, `added ${formatInTz(card.createdAt, tz, 'EEE d MMM')}`]
+          {[
+            category?.name,
+            card.priority === 'high' ? 'High priority' : null,
+            card.snoozeCount > 0 ? `snoozed ${card.snoozeCount}×` : null,
+            `added ${formatInTz(card.createdAt, tz, 'EEE d MMM')}`,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -155,8 +182,14 @@ export function CatchUpPage() {
       </article>
 
       <div className="flex items-center justify-between px-4 pt-3 text-[12.5px] font-bold text-muted">
-        <span className="min-w-0 truncate">{next ? `Next: ${next.description} · ${formatTime(dueAt(next) ?? now, tz)}` : 'Last one'}</span>
-        <button type="button" onClick={() => handle(card)} className="-my-3 min-h-11 shrink-0 pl-3 font-extrabold text-accent">
+        <span className="min-w-0 truncate">
+          {next ? `Next: ${next.description} · ${formatTime(dueAt(next) ?? now, tz)}` : 'Last one'}
+        </span>
+        <button
+          type="button"
+          onClick={() => handle(card)}
+          className="-my-3 min-h-11 shrink-0 pl-3 font-extrabold text-accent"
+        >
           Skip →
         </button>
       </div>

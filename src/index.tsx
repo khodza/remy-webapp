@@ -52,9 +52,6 @@ bootstrap().catch((error: unknown) => {
   // Silent fallback hid real bugs during tunnel testing — surface the error
   // to the console and to the fallback screen so we can diagnose.
   console.error('[remy-webapp] bootstrap failed:', error);
-  const message =
-    error instanceof Error
-      ? `${error.name}: ${error.message}`
-      : String(error);
+  const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   root.render(<EnvUnsupported error={message} />);
 });

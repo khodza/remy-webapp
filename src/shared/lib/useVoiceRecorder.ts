@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type RecorderStatus =
-  | 'idle'
-  | 'requesting-permission'
-  | 'recording'
-  | 'stopping'
-  | 'unsupported'
-  | 'denied'
-  | 'error';
+  'idle' | 'requesting-permission' | 'recording' | 'stopping' | 'unsupported' | 'denied' | 'error';
 
 export interface VoiceRecorder {
   status: RecorderStatus;
@@ -31,12 +25,7 @@ export interface VoiceRecorderOptions {
   onAutoStop?: (blob: Blob | null) => void;
 }
 
-const PREFERRED_MIME_TYPES = [
-  'audio/webm;codecs=opus',
-  'audio/webm',
-  'audio/mp4',
-  'audio/ogg;codecs=opus',
-];
+const PREFERRED_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
 
 function pickSupportedMimeType(): string | undefined {
   if (typeof MediaRecorder === 'undefined') return undefined;
@@ -45,9 +34,7 @@ function pickSupportedMimeType(): string | undefined {
 
 export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecorder {
   const [status, setStatusRaw] = useState<RecorderStatus>(() =>
-    typeof MediaRecorder === 'undefined' ||
-    typeof navigator === 'undefined' ||
-    !navigator.mediaDevices?.getUserMedia
+    typeof MediaRecorder === 'undefined' || typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia
       ? 'unsupported'
       : 'idle',
   );
@@ -154,9 +141,7 @@ export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecor
     const mimeType = pickSupportedMimeType();
     let recorder: MediaRecorder;
     try {
-      recorder = mimeType
-        ? new MediaRecorder(stream, { mimeType })
-        : new MediaRecorder(stream);
+      recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
     } catch (err) {
       stream.getTracks().forEach((track) => track.stop());
       setStatus('error');
@@ -172,10 +157,7 @@ export function useVoiceRecorder(options: VoiceRecorderOptions = {}): VoiceRecor
       const resolve = stopResolverRef.current;
       const discarded = discardRef.current;
       const type = recorder.mimeType || mimeType || 'audio/webm';
-      const blob =
-        !discarded && chunksRef.current.length > 0
-          ? new Blob(chunksRef.current, { type })
-          : null;
+      const blob = !discarded && chunksRef.current.length > 0 ? new Blob(chunksRef.current, { type }) : null;
       cleanup();
       setStatus('idle');
       setDurationMs(0);

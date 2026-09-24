@@ -28,7 +28,10 @@ if (!existsSync(generated)) fail(`${generated} is missing.`);
 
 const text = readFileSync(generated, 'utf8');
 // Banner = 4 comment lines + one blank line, then the verbatim source.
-const banner = /^\/\/ GENERATED FILE — DO NOT EDIT\.\n\/\/ Source: [^\n]*\n\/\/ Regenerate [^\n]*\n\/\/ contract-sha256: ([0-9a-f]{64})\n\n/.exec(text);
+const banner =
+  /^\/\/ GENERATED FILE — DO NOT EDIT\.\n\/\/ Source: [^\n]*\n\/\/ Regenerate [^\n]*\n\/\/ contract-sha256: ([0-9a-f]{64})\n\n/.exec(
+    text,
+  );
 if (!banner) fail('contract.gen.ts has no valid generated-file banner.');
 
 const body = text.slice(banner[0].length);
@@ -43,5 +46,7 @@ if (existsSync(backendSource)) {
   }
   console.log(`✓ contract.gen.ts matches the backend contract (${actual.slice(0, 12)})`);
 } else {
-  console.log(`✓ contract.gen.ts is intact (${actual.slice(0, 12)}); backend repo not found, skipped the freshness check`);
+  console.log(
+    `✓ contract.gen.ts is intact (${actual.slice(0, 12)}); backend repo not found, skipped the freshness check`,
+  );
 }

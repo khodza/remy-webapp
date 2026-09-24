@@ -22,7 +22,13 @@ interface RowOptions {
   isNext?: boolean;
 }
 
-function renderRow(ctx: RowContext, task: Task, tone: 'overdue' | 'later' | 'done', at: Date | null, options: RowOptions = {}) {
+function renderRow(
+  ctx: RowContext,
+  task: Task,
+  tone: 'overdue' | 'later' | 'done',
+  at: Date | null,
+  options: RowOptions = {},
+) {
   const { tz, now } = ctx;
   let timeSub: string | undefined;
   if (at && tone === 'overdue') timeSub = options.withDay ? formatTime(at, tz) : spanLabel(at, now);
@@ -65,7 +71,9 @@ export function OverdueSection({ day, earlierOnly = false, onCatchUp, ...ctx }: 
           </button>
         }
       />
-      <Group>{tasks.map((task) => renderRow(ctx, task, 'overdue', dueAt(task), { withDay: earlier.has(task.id) }))}</Group>
+      <Group>
+        {tasks.map((task) => renderRow(ctx, task, 'overdue', dueAt(task), { withDay: earlier.has(task.id) }))}
+      </Group>
     </>
   );
 }
@@ -103,7 +111,9 @@ export function ListView({ day, emptyNote, onCatchUp, onWeek, ...ctx }: ListView
       <>
         <SectionHeader label={`${formatDayShort(day.start, tz)} · ${open.length} open`} />
         {open.length > 0 ? (
-          <Group>{open.map((item) => renderRow(ctx, item.task, item.state === 'overdue' ? 'overdue' : 'later', item.at))}</Group>
+          <Group>
+            {open.map((item) => renderRow(ctx, item.task, item.state === 'overdue' ? 'overdue' : 'later', item.at))}
+          </Group>
         ) : (
           <p className="px-4 py-1 text-[13.5px] font-semibold text-muted">Nothing planned for this day.</p>
         )}
@@ -123,7 +133,11 @@ export function ListView({ day, emptyNote, onCatchUp, onWeek, ...ctx }: ListView
 
       <SectionHeader label={`Later today · ${day.later.length}`} />
       {day.later.length > 0 ? (
-        <Group>{day.later.map((item) => renderRow(ctx, item.task, 'later', item.at, { isNext: item.task.id === day.next?.id }))}</Group>
+        <Group>
+          {day.later.map((item) =>
+            renderRow(ctx, item.task, 'later', item.at, { isNext: item.task.id === day.next?.id }),
+          )}
+        </Group>
       ) : (
         <p className="px-4 pb-1 text-[13.5px] font-semibold text-muted">{emptyNote}</p>
       )}
@@ -146,7 +160,11 @@ export function ListView({ day, emptyNote, onCatchUp, onWeek, ...ctx }: ListView
 
       {day.inboxCount > 0 ? (
         <Group className="mt-4">
-          <button type="button" onClick={onWeek} className="flex min-h-field w-full items-center gap-2.5 px-3.5 text-left active:bg-past">
+          <button
+            type="button"
+            onClick={onWeek}
+            className="flex min-h-field w-full items-center gap-2.5 px-3.5 text-left active:bg-past"
+          >
             <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-accent-soft text-accent">
               <Inbox size={16} />
             </span>

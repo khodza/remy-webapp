@@ -9,7 +9,17 @@ const OPTIONS: Array<{ value: Priority; label: string; detail: string }> = [
 
 export const PRIORITY_LABEL: Record<Priority, string> = { low: 'Low', normal: 'Normal', high: 'High' };
 
-export function PrioritySheet({ open, onClose, value, onPick }: { open: boolean; onClose: () => void; value: Priority; onPick: (value: Priority) => void }) {
+export function PrioritySheet({
+  open,
+  onClose,
+  value,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  value: Priority;
+  onPick: (value: Priority) => void;
+}) {
   return (
     <Sheet open={open} onClose={onClose} title="Priority">
       <div className="-mx-1">

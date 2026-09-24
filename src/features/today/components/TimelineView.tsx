@@ -25,7 +25,18 @@ interface TimelineViewProps {
 }
 
 /** Proportional hour grid: blocks pinned to their minute, past dimmed, a NOW line. */
-export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOpen, onComplete, onSnooze, onMove }: TimelineViewProps) {
+export function TimelineView({
+  day,
+  tz,
+  now,
+  hourPx,
+  categories,
+  emptyNote,
+  onOpen,
+  onComplete,
+  onSnooze,
+  onMove,
+}: TimelineViewProps) {
   const hourColumn = useHour12() ? HOUR_COLUMN.h12 : HOUR_COLUMN.h24;
   const minutes = day.items.map((item) => minuteOfDay(item.at, tz));
   const nowMinute = day.isToday ? minuteOfDay(now, tz) : null;
@@ -44,7 +55,13 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
 
   return (
     <div className="relative mx-3 overflow-hidden rounded-2xl border border-rule bg-surface" style={{ height }}>
-      {pastHeight > 0 ? <div className="absolute inset-x-0 top-0 bg-elapsed opacity-70" style={{ height: pastHeight }} aria-hidden="true" /> : null}
+      {pastHeight > 0 ? (
+        <div
+          className="absolute inset-x-0 top-0 bg-elapsed opacity-70"
+          style={{ height: pastHeight }}
+          aria-hidden="true"
+        />
+      ) : null}
       {Array.from({ length: last - first }, (_, i) => (
         <div
           key={first + i}
@@ -86,9 +103,19 @@ export function TimelineView({ day, tz, now, hourPx, categories, emptyNote, onOp
 
       {nowTop !== null ? (
         // Under the blocks (z-3); its time pill sits in the hour column, which blocks never cover.
-        <div className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now" style={{ top: nowTop }} data-now>
-          <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">{formatTime(now, tz)}</span>
-          {emptyNote ? <p className="absolute right-3 top-3 text-[13px] font-bold text-muted" style={{ left: hourColumn + 8 }}>{emptyNote}</p> : null}
+        <div
+          className="pointer-events-none absolute inset-x-0 z-[2] border-t-2 border-now"
+          style={{ top: nowTop }}
+          data-now
+        >
+          <span className="tnum absolute -top-[10px] left-2 rounded-md bg-now px-1.5 py-0.5 text-[10px] font-extrabold text-on-status">
+            {formatTime(now, tz)}
+          </span>
+          {emptyNote ? (
+            <p className="absolute right-3 top-3 text-[13px] font-bold text-muted" style={{ left: hourColumn + 8 }}>
+              {emptyNote}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -114,7 +141,20 @@ interface BlockProps {
 const SWIPE_DONE = 72;
 
 /** A reminder on the grid. Tap opens it, swipe right marks it done, hold and drag moves it. */
-function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen, onComplete, onSnooze, onMove }: BlockProps) {
+function Block({
+  item,
+  tz,
+  now,
+  hourPx,
+  category,
+  style,
+  narrow,
+  compact,
+  onOpen,
+  onComplete,
+  onSnooze,
+  onMove,
+}: BlockProps) {
   const { task, state, at } = item;
   const haptic = useHapticFeedback();
   const baseMinute = minuteOfDay(at, tz);
@@ -176,7 +216,13 @@ function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen
       }}
     >
       {dx > 0 ? (
-        <span className={cx('absolute inset-y-0 left-0 flex items-center pl-2 text-[11px] font-extrabold', dx >= SWIPE_DONE ? 'text-ok' : 'text-muted')} style={{ transform: `translateX(-${dx}px)` }}>
+        <span
+          className={cx(
+            'absolute inset-y-0 left-0 flex items-center pl-2 text-[11px] font-extrabold',
+            dx >= SWIPE_DONE ? 'text-ok' : 'text-muted',
+          )}
+          style={{ transform: `translateX(-${dx}px)` }}
+        >
           ✓ Done
         </span>
       ) : null}
@@ -187,7 +233,9 @@ function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen
           compact ? 'min-w-0 flex-1' : !narrow && state === 'overdue' && 'pr-9',
         )}
       >
-        {task.priority === 'high' && state !== 'done' ? <Flag size={11} aria-label="High priority" className="mr-1 inline -translate-y-px fill-danger text-danger" /> : null}
+        {task.priority === 'high' && state !== 'done' ? (
+          <Flag size={11} aria-label="High priority" className="mr-1 inline -translate-y-px fill-danger text-danger" />
+        ) : null}
         {task.description}
       </p>
       <p
@@ -197,7 +245,11 @@ function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen
           compact ? cx('shrink-0', !narrow && state === 'overdue' && 'pr-10') : 'mt-0.5',
         )}
       >
-        {gesture.dragging ? `→ ${formatTime(new Date(at.getTime() + moveBy * 60_000), tz)}` : compact ? formatTime(at, tz) : meta}
+        {gesture.dragging
+          ? `→ ${formatTime(new Date(at.getTime() + moveBy * 60_000), tz)}`
+          : compact
+            ? formatTime(at, tz)
+            : meta}
       </p>
       {state === 'overdue' && !narrow && !gesture.dragging ? (
         <button
@@ -208,9 +260,14 @@ function Block({ item, tz, now, hourPx, category, style, narrow, compact, onOpen
             onSnooze();
           }}
           onPointerDown={(event) => event.stopPropagation()}
-          className={cx('absolute right-0 top-0 flex w-12 justify-end pr-2', compact ? 'h-full items-center' : 'h-11 items-start pt-1.5')}
+          className={cx(
+            'absolute right-0 top-0 flex w-12 justify-end pr-2',
+            compact ? 'h-full items-center' : 'h-11 items-start pt-1.5',
+          )}
         >
-          <span className="rounded-md border border-danger px-1.5 py-0.5 text-[11px] font-extrabold text-danger">+1h</span>
+          <span className="rounded-md border border-danger px-1.5 py-0.5 text-[11px] font-extrabold text-danger">
+            +1h
+          </span>
         </button>
       ) : null}
     </div>

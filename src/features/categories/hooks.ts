@@ -1,11 +1,7 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from '@/shared/api';
-import type {
-  Category,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-} from '@/shared/api';
+import type { Category, CreateCategoryRequest, UpdateCategoryRequest } from '@/shared/api';
 
 export const categoriesKey = ['categories'] as const;
 
@@ -26,14 +22,9 @@ export function useCategoryMap(): Map<string, Category> {
 export function useCreateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (
-      input: CreateCategoryRequest | Omit<CreateCategoryRequest, 'keywords'>,
-    ) => api.createCategory(input),
+    mutationFn: (input: CreateCategoryRequest | Omit<CreateCategoryRequest, 'keywords'>) => api.createCategory(input),
     onSuccess: (created) => {
-      qc.setQueryData<Category[]>(categoriesKey, (old) => [
-        ...(old ?? []),
-        created,
-      ]);
+      qc.setQueryData<Category[]>(categoriesKey, (old) => [...(old ?? []), created]);
       void qc.invalidateQueries({ queryKey: categoriesKey });
     },
   });
@@ -42,12 +33,9 @@ export function useCreateCategory() {
 export function useUpdateCategory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: UpdateCategoryRequest }) =>
-      api.updateCategory(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateCategoryRequest }) => api.updateCategory(id, patch),
     onSuccess: (updated) => {
-      qc.setQueryData<Category[]>(categoriesKey, (old) =>
-        (old ?? []).map((c) => (c.id === updated.id ? updated : c)),
-      );
+      qc.setQueryData<Category[]>(categoriesKey, (old) => (old ?? []).map((c) => (c.id === updated.id ? updated : c)));
     },
   });
 }
@@ -57,9 +45,7 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: (id: string) => api.deleteCategory(id),
     onSuccess: (_data, id) => {
-      qc.setQueryData<Category[]>(categoriesKey, (old) =>
-        (old ?? []).filter((c) => c.id !== id),
-      );
+      qc.setQueryData<Category[]>(categoriesKey, (old) => (old ?? []).filter((c) => c.id !== id));
       // Tasks that pointed at it now have categoryId: null on the server.
       void qc.invalidateQueries({ queryKey: ['tasks'] });
     },

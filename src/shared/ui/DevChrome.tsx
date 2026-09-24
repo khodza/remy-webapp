@@ -23,8 +23,15 @@ function DevHeader() {
   const back = useSyncExternalStore(subscribeBack, isBackVisible);
   return (
     // z-50: Telegram's header sits outside the webview, so sheets never cover it.
-    <div className="relative z-50 flex h-11 shrink-0 items-center justify-between border-b border-rule bg-bg px-1 text-[14px] font-bold text-muted" data-dev-chrome>
-      <button type="button" onClick={back ? triggerBack : undefined} className="flex h-11 min-w-20 items-center gap-0.5 px-2 text-accent">
+    <div
+      className="relative z-50 flex h-11 shrink-0 items-center justify-between border-b border-rule bg-bg px-1 text-[14px] font-bold text-muted"
+      data-dev-chrome
+    >
+      <button
+        type="button"
+        onClick={back ? triggerBack : undefined}
+        className="flex h-11 min-w-20 items-center gap-0.5 px-2 text-accent"
+      >
         {back ? (
           <>
             <ChevronLeft size={20} /> Back
@@ -34,7 +41,12 @@ function DevHeader() {
         )}
       </button>
       <span className="text-text">Remy</span>
-      <button type="button" aria-label="Settings" onClick={() => (window.location.hash = '#/settings')} className="flex h-11 min-w-20 items-center justify-end px-3">
+      <button
+        type="button"
+        aria-label="Settings"
+        onClick={() => (window.location.hash = '#/settings')}
+        className="flex h-11 min-w-20 items-center justify-end px-3"
+      >
         <MoreHorizontal size={20} />
       </button>
     </div>

@@ -141,7 +141,9 @@ export function TodayPage() {
           onShiftWeek={(weeks) => selectDay(shiftWeek(selected, weeks, tz))}
         />
 
-        {loaded ? <Summary day={day} now={now} onCatchUp={() => navigate('/catchup')} onToday={() => selectDay(todayKey)} /> : null}
+        {loaded ? (
+          <Summary day={day} now={now} onCatchUp={() => navigate('/catchup')} onToday={() => selectDay(todayKey)} />
+        ) : null}
       </div>
 
       {pending.isPending ? (
@@ -181,7 +183,9 @@ export function TodayPage() {
             onOpen={(item: DayItem) => open(item.task)}
             onComplete={(item: DayItem) => actions.complete(item.task)}
             onSnooze={(item: DayItem) => actions.delay(item.task, 60)}
-            onMove={(item: DayItem, minutes: number) => actions.moveTo(item.task, new Date(item.at.getTime() + minutes * 60_000))}
+            onMove={(item: DayItem, minutes: number) =>
+              actions.moveTo(item.task, new Date(item.at.getTime() + minutes * 60_000))
+            }
           />
           {!day.isToday && day.items.length === 0 ? (
             <p className="px-4 pt-3 text-center text-[13.5px] font-semibold text-muted">
@@ -207,8 +211,18 @@ export function TodayPage() {
 
       {loaded ? (
         <Group className="mt-6">
-          <FieldRow icon={<CalendarRange size={16} />} label="Week & Inbox" value={day.inboxCount ? `${day.inboxCount} undated` : undefined} onClick={() => navigate('/week')} />
-          <FieldRow icon={<Settings2 size={16} />} iconTone="warn" label="Settings" onClick={() => navigate('/settings')} />
+          <FieldRow
+            icon={<CalendarRange size={16} />}
+            label="Week & Inbox"
+            value={day.inboxCount ? `${day.inboxCount} undated` : undefined}
+            onClick={() => navigate('/week')}
+          />
+          <FieldRow
+            icon={<Settings2 size={16} />}
+            iconTone="warn"
+            label="Settings"
+            onClick={() => navigate('/settings')}
+          />
         </Group>
       ) : null}
     </Screen>
@@ -216,7 +230,17 @@ export function TodayPage() {
 }
 
 /** "2 overdue · 3 ahead · 2 done · next in 43 min" */
-function Summary({ day, now, onCatchUp, onToday }: { day: DayModel; now: Date; onCatchUp: () => void; onToday: () => void }) {
+function Summary({
+  day,
+  now,
+  onCatchUp,
+  onToday,
+}: {
+  day: DayModel;
+  now: Date;
+  onCatchUp: () => void;
+  onToday: () => void;
+}) {
   const overdue = day.earlier.length + day.overdue.length;
   const next = day.next?.nextFireAt ?? day.next?.scheduledAt ?? null;
   return (
@@ -226,7 +250,9 @@ function Summary({ day, now, onCatchUp, onToday }: { day: DayModel; now: Date; o
           {overdue} overdue
         </button>
       ) : null}
-      <span>{day.later.length} {day.isToday ? 'ahead' : 'planned'}</span>
+      <span>
+        {day.later.length} {day.isToday ? 'ahead' : 'planned'}
+      </span>
       {day.done.length > 0 ? <span className="text-ok">{day.done.length} done</span> : null}
       {next ? <span className="tnum ml-auto">next {relativeToNow(next, now)}</span> : null}
       {!day.isToday ? (

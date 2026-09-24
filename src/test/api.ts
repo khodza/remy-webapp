@@ -48,7 +48,8 @@ export function mockApi(routes: Record<string, Reply>) {
     };
     calls.push(call);
     const reply = routes[`${method} ${path}`];
-    if (reply === undefined) return new Response(JSON.stringify({ statusCode: 404, error: 'NOT_FOUND', message: path }), { status: 404 });
+    if (reply === undefined)
+      return new Response(JSON.stringify({ statusCode: 404, error: 'NOT_FOUND', message: path }), { status: 404 });
     const aborted = new Promise<never>((_, reject) => {
       call.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
     });

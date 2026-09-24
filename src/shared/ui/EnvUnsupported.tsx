@@ -44,9 +44,17 @@ export function EnvUnsupported({ error }: EnvUnsupportedProps) {
           }
         />
       ) : (
-        <Placeholder icon={<MessageCircle size={24} />} title="Open in Telegram" body="Remy runs inside Telegram. Open it from the Remy bot to continue." />
+        <Placeholder
+          icon={<MessageCircle size={24} />}
+          title="Open in Telegram"
+          body="Remy runs inside Telegram. Open it from the Remy bot to continue."
+        />
       )}
-      {showError && <pre className="mx-4 my-2 whitespace-pre-wrap break-words rounded-xl bg-danger-soft px-4 py-3 font-mono text-[11px] text-danger">{error}</pre>}
+      {showError && (
+        <pre className="mx-4 my-2 whitespace-pre-wrap break-words rounded-xl bg-danger-soft px-4 py-3 font-mono text-[11px] text-danger">
+          {error}
+        </pre>
+      )}
     </>
   );
 }

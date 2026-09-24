@@ -35,8 +35,16 @@ export function LoadStrip({ ticks, highlight, nowMinute = null, label, compact =
       <div className={cx('relative overflow-hidden rounded-lg bg-past', compact ? 'h-5' : 'h-7')}>
         {nowMinute !== null ? (
           <>
-            <div className="absolute inset-y-0 left-0 bg-rule/60" style={{ width: pct(nowMinute) }} aria-hidden="true" />
-            <div className="absolute inset-y-0 border-l-2 border-dashed border-now" style={{ left: pct(nowMinute) }} aria-hidden="true" />
+            <div
+              className="absolute inset-y-0 left-0 bg-rule/60"
+              style={{ width: pct(nowMinute) }}
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-y-0 border-l-2 border-dashed border-now"
+              style={{ left: pct(nowMinute) }}
+              aria-hidden="true"
+            />
           </>
         ) : null}
         {ticks.map((tick) => (
@@ -46,7 +54,11 @@ export function LoadStrip({ ticks, highlight, nowMinute = null, label, compact =
             className={cx(
               'absolute rounded-sm',
               TONES[tick.tone],
-              tick.id === highlight ? 'inset-y-1 w-2 -translate-x-1 ring-2 ring-surface' : compact ? 'inset-y-1 w-1.5 -translate-x-0.5' : 'inset-y-2 w-1 -translate-x-0.5 opacity-70',
+              tick.id === highlight
+                ? 'inset-y-1 w-2 -translate-x-1 ring-2 ring-surface'
+                : compact
+                  ? 'inset-y-1 w-1.5 -translate-x-0.5'
+                  : 'inset-y-2 w-1 -translate-x-0.5 opacity-70',
             )}
             style={{ left: pct(tick.minute) }}
           />

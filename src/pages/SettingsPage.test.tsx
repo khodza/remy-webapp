@@ -17,7 +17,11 @@ describe('Settings: time format', () => {
   let settings: Settings;
   beforeEach(() => {
     signIn();
-    settings = { ...DEFAULT_SETTINGS, morningBrief: { enabled: true, time: '08:00' }, quietHours: { ...DEFAULT_SETTINGS.quietHours, from: '23:00', to: '07:00' } };
+    settings = {
+      ...DEFAULT_SETTINGS,
+      morningBrief: { enabled: true, time: '08:00' },
+      quietHours: { ...DEFAULT_SETTINGS.quietHours, from: '23:00', to: '07:00' },
+    };
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -64,7 +68,9 @@ describe('Settings: time format', () => {
     settings = { ...settings, hour12: true };
     api();
     renderWithProviders(<WithClockSync />, { route: '/settings' });
-    await waitFor(() => expect(screen.getByRole('button', { name: /Evening review/ }).textContent).toContain('9:00 PM'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Evening review/ }).textContent).toContain('9:00 PM'),
+    );
     expect(screen.getByRole('radio', { name: '12 h' }).getAttribute('aria-checked')).toBe('true');
   });
 });

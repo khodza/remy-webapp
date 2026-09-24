@@ -35,7 +35,12 @@ export function TaskRow({ task, tz, tone, time, timeSub, category, onOpen, onTog
       </Pill>,
     );
   }
-  if (!done && task.snoozeCount >= 4) meta.push(<Pill key="s" tone="warn">snoozed ×{task.snoozeCount}</Pill>);
+  if (!done && task.snoozeCount >= 4)
+    meta.push(
+      <Pill key="s" tone="warn">
+        snoozed ×{task.snoozeCount}
+      </Pill>,
+    );
   if (task.source.type === 'forward') {
     meta.push(
       <Pill key="f">
@@ -55,12 +60,34 @@ export function TaskRow({ task, tz, tone, time, timeSub, category, onOpen, onTog
       className="grid min-h-row cursor-pointer grid-cols-[var(--time-col)_minmax(0,1fr)_auto] items-center gap-2.5 py-row-y pl-3.5 pr-3 transition active:bg-past"
     >
       <div className="tnum leading-tight">
-        <span className={cx('block whitespace-nowrap text-[13px] font-extrabold', tone === 'overdue' ? 'text-danger' : 'text-muted')}>{time}</span>
-        {timeSub ? <span className={cx('block text-[10px] font-bold', tone === 'overdue' ? 'text-danger' : 'text-accent')}>{timeSub}</span> : null}
+        <span
+          className={cx(
+            'block whitespace-nowrap text-[13px] font-extrabold',
+            tone === 'overdue' ? 'text-danger' : 'text-muted',
+          )}
+        >
+          {time}
+        </span>
+        {timeSub ? (
+          <span className={cx('block text-[10px] font-bold', tone === 'overdue' ? 'text-danger' : 'text-accent')}>
+            {timeSub}
+          </span>
+        ) : null}
       </div>
       <div className="min-w-0">
-        <p className={cx('line-clamp-2 text-[14.5px] font-extrabold leading-tight', done ? 'text-muted line-through' : 'text-text')}>
-          {task.priority === 'high' && !done ? <Flag size={12} aria-label="High priority" className="mr-1 inline -translate-y-px fill-danger text-danger" /> : null}
+        <p
+          className={cx(
+            'line-clamp-2 text-[14.5px] font-extrabold leading-tight',
+            done ? 'text-muted line-through' : 'text-text',
+          )}
+        >
+          {task.priority === 'high' && !done ? (
+            <Flag
+              size={12}
+              aria-label="High priority"
+              className="mr-1 inline -translate-y-px fill-danger text-danger"
+            />
+          ) : null}
           {task.description}
         </p>
         {meta.length > 0 && !done ? <div className="mt-1 flex min-w-0 flex-wrap gap-1">{meta}</div> : null}
@@ -76,10 +103,17 @@ export function TaskRow({ task, tz, tone, time, timeSub, category, onOpen, onTog
             aria-label="Snooze one hour"
             className="-my-2 flex min-h-11 min-w-11 items-center justify-center"
           >
-            <span className="rounded-md border border-danger px-1.5 py-0.5 text-[11px] font-extrabold text-danger">+1h</span>
+            <span className="rounded-md border border-danger px-1.5 py-0.5 text-[11px] font-extrabold text-danger">
+              +1h
+            </span>
           </button>
         ) : null}
-        <CheckCircle done={done} onToggle={onToggle} label={done ? 'Mark as not done' : 'Mark as done'} tone={tone === 'overdue' ? 'danger' : 'default'} />
+        <CheckCircle
+          done={done}
+          onToggle={onToggle}
+          label={done ? 'Mark as not done' : 'Mark as done'}
+          tone={tone === 'overdue' ? 'danger' : 'default'}
+        />
       </div>
     </div>
   );

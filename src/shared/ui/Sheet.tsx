@@ -44,7 +44,11 @@ export function Sheet({ open, onClose, title, footer, children }: PropsWithChild
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-40 flex flex-col justify-end">
-      <div className="absolute inset-0 bg-scrim [animation:remy-fade-in_.18s_ease-out]" onClick={onClose} aria-hidden="true" />
+      <div
+        className="absolute inset-0 bg-scrim [animation:remy-fade-in_.18s_ease-out]"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div
         ref={panel}
         role="dialog"
@@ -58,13 +62,20 @@ export function Sheet({ open, onClose, title, footer, children }: PropsWithChild
           <h2 id={titleId} className="text-[17px] font-extrabold tracking-tight text-text">
             {title}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-11 w-11 items-center justify-center rounded-xl text-muted active:bg-past">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-muted active:bg-past"
+          >
             <X size={20} />
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{children}</div>
         {footer ? (
-          <div className="flex gap-2 border-t border-rule px-4 pb-[calc(var(--tg-viewport-safe-area-inset-bottom,0px)+12px)] pt-3">{footer}</div>
+          <div className="flex gap-2 border-t border-rule px-4 pb-[calc(var(--tg-viewport-safe-area-inset-bottom,0px)+12px)] pt-3">
+            {footer}
+          </div>
         ) : (
           <div className="h-[var(--tg-viewport-safe-area-inset-bottom,0px)]" />
         )}

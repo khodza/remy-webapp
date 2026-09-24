@@ -27,14 +27,25 @@ interface FieldRowProps {
 export function FieldRow({ icon, iconTone = 'accent', label, value, trailing, onClick, danger, hint }: FieldRowProps) {
   const body = (
     <>
-      {icon ? <span className={cx('flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]', ICON_TONES[iconTone])}>{icon}</span> : null}
+      {icon ? (
+        <span
+          className={cx(
+            'flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]',
+            ICON_TONES[iconTone],
+          )}
+        >
+          {icon}
+        </span>
+      ) : null}
       <span className="min-w-0 flex-1">
         <span className={cx('block text-[14.5px] font-bold', danger ? 'text-danger' : 'text-text')}>{label}</span>
         {hint ? <span className="block text-[12px] font-semibold text-muted">{hint}</span> : null}
       </span>
       {trailing ?? (
         <>
-          {value !== undefined ? <span className="tnum max-w-[55%] truncate text-right text-[13.5px] font-bold text-muted">{value}</span> : null}
+          {value !== undefined ? (
+            <span className="tnum max-w-[55%] truncate text-right text-[13.5px] font-bold text-muted">{value}</span>
+          ) : null}
           {onClick ? <ChevronRight size={16} className="shrink-0 text-faint" /> : null}
         </>
       )}

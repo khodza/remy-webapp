@@ -19,7 +19,12 @@ export function CategorySheet({ open, onClose, categories, value, onPick, onMana
   return (
     <Sheet open={open} onClose={onClose} title="Category">
       <div className="-mx-1">
-        <SheetOption label="None" selected={value === null} onClick={() => pick(null)} icon={<span className="h-2.5 w-2.5 rounded-full border-2 border-faint" />} />
+        <SheetOption
+          label="None"
+          selected={value === null}
+          onClick={() => pick(null)}
+          icon={<span className="h-2.5 w-2.5 rounded-full border-2 border-faint" />}
+        />
         {categories.map((category) => (
           <SheetOption
             key={category.id}

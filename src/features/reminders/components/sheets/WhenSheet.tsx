@@ -1,6 +1,12 @@
 import { CalendarX2 } from 'lucide-react';
 import { useState } from 'react';
-import { formatDateTime, fromLocalInputValue, relativeToNow, toLocalInputValue, useUserTimezone } from '@/shared/lib/dates';
+import {
+  formatDateTime,
+  fromLocalInputValue,
+  relativeToNow,
+  toLocalInputValue,
+  useUserTimezone,
+} from '@/shared/lib/dates';
 import { Button, Sheet, SheetOption } from '@/shared/ui';
 import { quickTimes } from '../../lib/when';
 
@@ -18,7 +24,10 @@ interface WhenSheetProps {
 }
 
 function defaultInput(value: Date | null, now: Date, tz: string): string {
-  const base = value && value.getTime() > now.getTime() ? value : new Date(Math.ceil((now.getTime() + 3600_000) / 3600_000) * 3600_000);
+  const base =
+    value && value.getTime() > now.getTime()
+      ? value
+      : new Date(Math.ceil((now.getTime() + 3600_000) / 3600_000) * 3600_000);
   return toLocalInputValue(base, tz);
 }
 
@@ -53,14 +62,27 @@ export function WhenSheet({ open, onClose, title = 'When', value, now, onPick, a
     >
       <div className="-mx-1">
         {quickTimes(now, tz).map((quick) => (
-          <SheetOption key={quick.key} label={quick.label} detail={formatDateTime(quick.at, tz)} onClick={() => pick(quick.at)} />
+          <SheetOption
+            key={quick.key}
+            label={quick.label}
+            detail={formatDateTime(quick.at, tz)}
+            onClick={() => pick(quick.at)}
+          />
         ))}
         {allowClear ? (
-          <SheetOption label="No date" detail="Keep it in the Inbox" icon={<CalendarX2 size={17} className="text-muted" />} selected={value === null} onClick={() => pick(null)} />
+          <SheetOption
+            label="No date"
+            detail="Keep it in the Inbox"
+            icon={<CalendarX2 size={17} className="text-muted" />}
+            selected={value === null}
+            onClick={() => pick(null)}
+          />
         ) : null}
       </div>
 
-      <p className="mb-2 mt-4 text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">Pick a date and time</p>
+      <p className="mb-2 mt-4 text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">
+        Pick a date and time
+      </p>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
         <input
           type="date"

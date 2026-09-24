@@ -101,20 +101,14 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
             isRecording ? 'bg-danger text-on-status' : 'bg-accent-soft text-accent'
           }`}
         >
-          {isRecording ? (
-            <Square size={18} fill="currentColor" />
-          ) : (
-            <Mic size={20} />
-          )}
+          {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={20} />}
           {isRecording && (
             <span className="pointer-events-none absolute h-12 w-12 animate-ping rounded-full bg-danger opacity-40" />
           )}
         </button>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="text-[14.5px] font-bold text-text">
-            {statusLabel(recorder.status, create.isPending)}
-          </span>
+          <span className="text-[14.5px] font-bold text-text">{statusLabel(recorder.status, create.isPending)}</span>
           <span className="tnum text-[12.5px] font-semibold text-muted">
             {isRecording
               ? showCountdown
@@ -143,17 +137,12 @@ export function VoiceRecordButton({ onCreated, onError }: VoiceRecordButtonProps
         )}
       </div>
 
-      {notice && (
-        <p className="text-[12.5px] font-semibold text-muted">{notice}</p>
-      )}
+      {notice && <p className="text-[12.5px] font-semibold text-muted">{notice}</p>}
     </div>
   );
 }
 
-function statusLabel(
-  status: ReturnType<typeof useVoiceRecorder>['status'],
-  uploading: boolean,
-): string {
+function statusLabel(status: ReturnType<typeof useVoiceRecorder>['status'], uploading: boolean): string {
   if (uploading) return 'Creating reminder';
   switch (status) {
     case 'recording':
@@ -171,9 +160,7 @@ function statusLabel(
   }
 }
 
-function hint(
-  status: ReturnType<typeof useVoiceRecorder>['status'],
-): string {
+function hint(status: ReturnType<typeof useVoiceRecorder>['status']): string {
   if (status === 'denied') {
     return 'Allow the microphone in Telegram / browser settings, then tap again';
   }

@@ -12,7 +12,10 @@ import { Group, Screen, SectionHeader } from '@/shared/ui';
 const DONE_VARS = { view: 'done', limit: 100 } as const;
 
 function haystack(task: Task, category: Category | undefined): string {
-  return [task.description, task.notes, task.source.originalText, task.source.forwardedFrom, category?.name].filter(Boolean).join(' ').toLowerCase();
+  return [task.description, task.notes, task.source.originalText, task.source.forwardedFrom, category?.name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
 }
 
 /** Everything loaded (pending and recent done), searched on the phone. */
@@ -78,7 +81,12 @@ export function SearchPage() {
             className="min-w-0 flex-1 bg-transparent text-[16px] font-bold text-text outline-none placeholder:font-semibold placeholder:text-faint [&::-webkit-search-cancel-button]:hidden"
           />
           {query ? (
-            <button type="button" aria-label="Clear" onClick={() => setQuery('')} className="-mr-2 flex h-11 w-11 items-center justify-center text-muted">
+            <button
+              type="button"
+              aria-label="Clear"
+              onClick={() => setQuery('')}
+              className="-mr-2 flex h-11 w-11 items-center justify-center text-muted"
+            >
               <X size={17} />
             </button>
           ) : null}
@@ -86,7 +94,9 @@ export function SearchPage() {
       </div>
 
       {terms.length === 0 ? (
-        <p className="px-4 pt-2 text-[13.5px] font-semibold text-muted">Titles, notes, the words you said to the bot, forwarded-from names and categories.</p>
+        <p className="px-4 pt-2 text-[13.5px] font-semibold text-muted">
+          Titles, notes, the words you said to the bot, forwarded-from names and categories.
+        </p>
       ) : total === 0 ? (
         <p className="px-4 pt-2 text-[13.5px] font-semibold text-muted">Nothing matches “{query.trim()}”.</p>
       ) : (

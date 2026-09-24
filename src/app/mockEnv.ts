@@ -1,8 +1,4 @@
-import {
-  emitEvent,
-  isTMA,
-  mockTelegramEnv,
-} from '@telegram-apps/sdk-react';
+import { emitEvent, isTMA, mockTelegramEnv } from '@telegram-apps/sdk-react';
 
 /**
  * Outside Telegram (a plain browser in dev), fake the environment the SDK
@@ -53,8 +49,7 @@ export async function mockTelegramEnvIfNeeded(): Promise<void> {
     const noInsets = { left: 0, top: 0, bottom: 0, right: 0 } as const;
     // Must match OWNER_TELEGRAM_ID on the backend when using its dev bypass
     // (DEV_ALLOW_MOCK_INITDATA=true), which accepts hash=dev-mock-hash.
-    const mockUserId =
-      Number(import.meta.env.VITE_MOCK_TG_USER_ID) || 123456789;
+    const mockUserId = Number(import.meta.env.VITE_MOCK_TG_USER_ID) || 123456789;
 
     mockTelegramEnv({
       onEvent(event) {

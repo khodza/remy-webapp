@@ -4,11 +4,7 @@ import mkcert from 'vite-plugin-mkcert';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-    process.env.HTTPS ? mkcert() : undefined,
-  ],
+  plugins: [react(), tailwindcss(), process.env.HTTPS ? mkcert() : undefined],
   resolve: {
     tsconfigPaths: true,
   },
@@ -28,14 +24,7 @@ export default defineConfig({
     // trycloudflare.com one each run. ngrok now gives free accounts a
     // *.ngrok-free.dev domain (older ones got *.ngrok-free.app); paid plans
     // use *.ngrok.app / *.ngrok.dev. Add other providers here if you switch.
-    allowedHosts: [
-      '.trycloudflare.com',
-      '.ngrok-free.dev',
-      '.ngrok-free.app',
-      '.ngrok.app',
-      '.ngrok.dev',
-      '.ngrok.io',
-    ],
+    allowedHosts: ['.trycloudflare.com', '.ngrok-free.dev', '.ngrok-free.app', '.ngrok.app', '.ngrok.dev', '.ngrok.io'],
     // Vite enables this under coding agents. Its client then calls ws.send()
     // before the HMR socket is open, so every console.error/warn throws until
     // it connects — instant on localhost, but over a slow tunnel it broke app

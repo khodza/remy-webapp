@@ -28,20 +28,20 @@ export function useTaskActions() {
     const done = completeMutation.mutateAsync(task.id);
     if (task.recurrence) {
       // A repeating task moves to its next time; there is nothing to reopen.
-      done.then(
-        (updated) => {
-          const next = updated.status === 'pending' ? (updated.nextFireAt ?? updated.scheduledAt) : null;
-          toast({ message: next ? `Done. Next: ${formatWhen(next, tz)}` : 'Done. That was the last one.' });
-        },
-        failed('mark it done'),
-      );
+      done.then((updated) => {
+        const next = updated.status === 'pending' ? (updated.nextFireAt ?? updated.scheduledAt) : null;
+        toast({ message: next ? `Done. Next: ${formatWhen(next, tz)}` : 'Done. That was the last one.' });
+      }, failed('mark it done'));
       return;
     }
     done.catch(failed('mark it done'));
     toast({
       message: `Done: ${task.description}`,
       // Undo waits for Done to land, or the reopen would arrive first.
-      action: { label: 'Undo', onClick: () => void done.then(() => reopenMutation.mutate(task.id)).catch(() => undefined) },
+      action: {
+        label: 'Undo',
+        onClick: () => void done.then(() => reopenMutation.mutate(task.id)).catch(() => undefined),
+      },
     });
   };
 
@@ -99,7 +99,10 @@ export function useTaskActions() {
         onSuccess: () =>
           toast({
             message: `Moved to ${formatWhen(at, tz)}`,
-            action: { label: 'Undo', onClick: () => updateMutation.mutate({ id: task.id, patch: { scheduledAt: previous } }) },
+            action: {
+              label: 'Undo',
+              onClick: () => updateMutation.mutate({ id: task.id, patch: { scheduledAt: previous } }),
+            },
           }),
         onError: failed('move it'),
       },

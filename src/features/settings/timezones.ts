@@ -24,10 +24,7 @@ const FALLBACK_ZONES = [
 export function listTimezones(): string[] {
   let zones: string[];
   try {
-    zones =
-      typeof Intl.supportedValuesOf === 'function'
-        ? Intl.supportedValuesOf('timeZone')
-        : FALLBACK_ZONES;
+    zones = typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : FALLBACK_ZONES;
   } catch {
     zones = FALLBACK_ZONES;
   }

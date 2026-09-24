@@ -46,7 +46,12 @@ export function AuthGate({ children }: PropsWithChildren) {
       body={body}
       action={
         forbidden ? undefined : (
-          <Button variant="primary" onClick={() => void retry()} disabled={retrying} icon={<RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />}>
+          <Button
+            variant="primary"
+            onClick={() => void retry()}
+            disabled={retrying}
+            icon={<RefreshCw size={16} className={retrying ? 'animate-spin' : ''} />}
+          >
             {retrying ? 'Retrying…' : 'Try again'}
           </Button>
         )

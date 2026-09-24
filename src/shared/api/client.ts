@@ -23,10 +23,7 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export function buildUrl(
-  path: string,
-  query?: RequestOptions['query'],
-): string {
+export function buildUrl(path: string, query?: RequestOptions['query']): string {
   const base = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
   const pathPart = path.startsWith('/') ? path : `/${path}`;
   const url = `${base}${pathPart}`;
@@ -40,11 +37,7 @@ export function buildUrl(
   return qs ? `${url}?${qs}` : url;
 }
 
-export async function apiRequest<T>(
-  method: string,
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> {
+export async function apiRequest<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   const token = await useAuthStore.getState().authenticate();
   const response = await tryFetch(method, path, options, token);
 
@@ -61,12 +54,7 @@ export async function apiRequest<T>(
   return parseResponse<T>(response);
 }
 
-async function tryFetch(
-  method: string,
-  path: string,
-  options: RequestOptions,
-  bearerToken: string,
-): Promise<Response> {
+async function tryFetch(method: string, path: string, options: RequestOptions, bearerToken: string): Promise<Response> {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${bearerToken}`,
   };
@@ -86,8 +74,7 @@ async function tryFetch(
     // A cancelled request is not a network failure: let the AbortError
     // through so React Query treats it as a cancellation.
     if (options.signal?.aborted) throw err;
-    const message =
-      err instanceof Error ? err.message : 'Network error';
+    const message = err instanceof Error ? err.message : 'Network error';
     throw new ApiError(0, 'NETWORK_ERROR', message);
   }
 }
@@ -100,9 +87,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
     throw new ApiError(
       response.status,
       extractStringField(body, 'error') ?? 'ERROR',
-      extractStringField(body, 'message') ??
-        response.statusText ??
-        'Request failed',
+      extractStringField(body, 'message') ?? response.statusText ?? 'Request failed',
     );
   }
 

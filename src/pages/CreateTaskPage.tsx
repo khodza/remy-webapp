@@ -186,7 +186,11 @@ export function CreateTaskPage() {
           {draft.scheduledAt ? (
             <>
               <Token onClick={() => setSheet('when')}>{formatInTz(draft.scheduledAt, tz, 'EEE d MMM')}</Token>
-              <Token tone={alternative || inPast ? 'confirm' : 'accent'} onClick={() => (alternative ? set({ scheduledAt: draft.scheduledAt }) : setSheet('when'))} label={alternative ? 'Keep this time' : 'Change time'}>
+              <Token
+                tone={alternative || inPast ? 'confirm' : 'accent'}
+                onClick={() => (alternative ? set({ scheduledAt: draft.scheduledAt }) : setSheet('when'))}
+                label={alternative ? 'Keep this time' : 'Change time'}
+              >
                 {formatTime(draft.scheduledAt, tz)}
                 {alternative ? '?' : ''}
                 {inPast ? ' · passed' : ''}
@@ -224,18 +228,29 @@ export function CreateTaskPage() {
           ) : null}
         </div>
       ) : (
-        <p className="px-4 pt-3 text-[13.5px] font-semibold text-muted">Write it the way you'd say it. Remy picks out the day, time, repeat and category, and you can tap any of them to fix it.</p>
+        <p className="px-4 pt-3 text-[13.5px] font-semibold text-muted">
+          Write it the way you'd say it. Remy picks out the day, time, repeat and category, and you can tap any of them
+          to fix it.
+        </p>
       )}
 
       {trimmed && alternative ? (
-        <p className="px-4 pt-2 text-[12.5px] font-bold text-warn">“{trimmed.match(/\b(?:at\s+)?\d{1,2}(?::\d{2})?\b/i)?.[0] ?? 'That time'}” could be morning or evening. Tap the one you mean.</p>
+        <p className="px-4 pt-2 text-[12.5px] font-bold text-warn">
+          “{trimmed.match(/\b(?:at\s+)?\d{1,2}(?::\d{2})?\b/i)?.[0] ?? 'That time'}” could be morning or evening. Tap
+          the one you mean.
+        </p>
       ) : null}
-      {parseFailed ? <p className="px-4 pt-2 text-[12.5px] font-bold text-danger">Couldn't read a time from that. Set it below.</p> : null}
+      {parseFailed ? (
+        <p className="px-4 pt-2 text-[12.5px] font-bold text-danger">Couldn't read a time from that. Set it below.</p>
+      ) : null}
 
       {trimmed && draft.scheduledAt ? (
         <div className="pt-4">
           <LoadStrip
-            ticks={[...ticks, { id: 'draft', minute: minuteOfDay(draft.scheduledAt, tz), tone: inPast ? 'danger' : 'accent' }]}
+            ticks={[
+              ...ticks,
+              { id: 'draft', minute: minuteOfDay(draft.scheduledAt, tz), tone: inPast ? 'danger' : 'accent' },
+            ]}
             highlight="draft"
             nowMinute={dayKey(draft.scheduledAt, tz) === dayKey(now, tz) ? minuteOfDay(now, tz) : null}
             label={`${formatInTz(draft.scheduledAt, tz, 'EEE d')} · ${inPast ? 'already passed' : relativeToNow(draft.scheduledAt, now)}`}
@@ -268,7 +283,12 @@ export function CreateTaskPage() {
 
       <SectionHeader label={trimmed ? 'Or set manually' : 'Details'} />
       <Group>
-        <FieldRow icon={<CalendarClock size={16} />} label="When" value={draft.scheduledAt ? formatDateTime(draft.scheduledAt, tz) : 'No date'} onClick={() => setSheet('when')} />
+        <FieldRow
+          icon={<CalendarClock size={16} />}
+          label="When"
+          value={draft.scheduledAt ? formatDateTime(draft.scheduledAt, tz) : 'No date'}
+          onClick={() => setSheet('when')}
+        />
         <FieldRow
           icon={<Repeat size={16} />}
           iconTone="warn"
@@ -276,9 +296,28 @@ export function CreateTaskPage() {
           value={draft.scheduledAt ? (recurrenceLabel(draft.recurrence, tz) ?? 'Never') : 'Needs a date'}
           {...(draft.scheduledAt ? { onClick: () => setSheet('repeat') } : {})}
         />
-        <FieldRow icon={<Tag size={16} />} iconTone="ok" label="Category" value={category?.name ?? 'None'} onClick={() => setSheet('category')} />
-        {draft.scheduledAt ? <FieldRow icon={<Bell size={16} />} label="Remind" value={leadLabel(draft.leadMinutes)} onClick={() => setSheet('lead')} /> : null}
-        <FieldRow icon={<Flag size={16} />} iconTone="danger" label="Priority" value={PRIORITY_LABEL[draft.priority]} onClick={() => setSheet('priority')} />
+        <FieldRow
+          icon={<Tag size={16} />}
+          iconTone="ok"
+          label="Category"
+          value={category?.name ?? 'None'}
+          onClick={() => setSheet('category')}
+        />
+        {draft.scheduledAt ? (
+          <FieldRow
+            icon={<Bell size={16} />}
+            label="Remind"
+            value={leadLabel(draft.leadMinutes)}
+            onClick={() => setSheet('lead')}
+          />
+        ) : null}
+        <FieldRow
+          icon={<Flag size={16} />}
+          iconTone="danger"
+          label="Priority"
+          value={PRIORITY_LABEL[draft.priority]}
+          onClick={() => setSheet('priority')}
+        />
       </Group>
 
       <SectionHeader label="Voice" />
@@ -318,11 +357,40 @@ export function CreateTaskPage() {
           className="block w-full resize-none overflow-hidden rounded-xl border border-rule bg-past px-3 py-2.5 text-[16px] font-bold text-text outline-none"
         />
       </Sheet>
-      <WhenSheet open={sheet === 'when'} onClose={close} value={draft.scheduledAt} now={now} allowClear onPick={(scheduledAt) => set({ scheduledAt })} />
-      <RepeatSheet open={sheet === 'repeat'} onClose={close} value={draft.recurrence} at={draft.scheduledAt} onPick={(recurrence) => set({ recurrence })} />
-      <CategorySheet open={sheet === 'category'} onClose={close} categories={list} value={draft.categoryId} onPick={(categoryId) => set({ categoryId })} />
-      <LeadSheet open={sheet === 'lead'} onClose={close} value={draft.leadMinutes} onPick={(leadMinutes) => set({ leadMinutes })} />
-      <PrioritySheet open={sheet === 'priority'} onClose={close} value={draft.priority} onPick={(priority) => set({ priority })} />
+      <WhenSheet
+        open={sheet === 'when'}
+        onClose={close}
+        value={draft.scheduledAt}
+        now={now}
+        allowClear
+        onPick={(scheduledAt) => set({ scheduledAt })}
+      />
+      <RepeatSheet
+        open={sheet === 'repeat'}
+        onClose={close}
+        value={draft.recurrence}
+        at={draft.scheduledAt}
+        onPick={(recurrence) => set({ recurrence })}
+      />
+      <CategorySheet
+        open={sheet === 'category'}
+        onClose={close}
+        categories={list}
+        value={draft.categoryId}
+        onPick={(categoryId) => set({ categoryId })}
+      />
+      <LeadSheet
+        open={sheet === 'lead'}
+        onClose={close}
+        value={draft.leadMinutes}
+        onPick={(leadMinutes) => set({ leadMinutes })}
+      />
+      <PrioritySheet
+        open={sheet === 'priority'}
+        onClose={close}
+        value={draft.priority}
+        onPick={(priority) => set({ priority })}
+      />
     </Screen>
   );
 }

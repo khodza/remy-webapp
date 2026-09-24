@@ -61,6 +61,12 @@ describe('labels', () => {
   });
 
   it('names lead times', () => {
-    expect([null, 30, 120, 1440, 2880].map(leadLabel)).toEqual(['At the time', '30 min before', '2 h before', '1 day before', '2 days before']);
+    expect([null, 30, 120, 1440, 2880].map(leadLabel)).toEqual([
+      'At the time',
+      '30 min before',
+      '2 h before',
+      '1 day before',
+      '2 days before',
+    ]);
   });
 });

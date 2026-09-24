@@ -7,9 +7,11 @@ import { inTz } from '@/shared/lib/dates';
  * no confidence, so these rules decide what to show as "please confirm".
  */
 
-const DAYPART = /\b(am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|night|tonight|noon|midday|midnight|breakfast|lunch|dinner|утр|вечер|ночи|дня)\b/i;
+const DAYPART =
+  /\b(am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|night|tonight|noon|midday|midnight|breakfast|lunch|dinner|утр|вечер|ночи|дня)\b/i;
 // "at 5", "at 5:30", "5 o'clock"; not "5 min", "5 days", "17:00" or "5th".
-const BARE_HOUR = /\b(?:at\s+)?(1[0-2]|0?[1-9])(?::([0-5]\d))?(?:\s*o'?clock)?\b(?!\s*(?:[a-z]*(?:min|hour|day|week|month|year|h\b|st\b|nd\b|rd\b|th\b)|%|\/|-|\.\d))/gi;
+const BARE_HOUR =
+  /\b(?:at\s+)?(1[0-2]|0?[1-9])(?::([0-5]\d))?(?:\s*o'?clock)?\b(?!\s*(?:[a-z]*(?:min|hour|day|week|month|year|h\b|st\b|nd\b|rd\b|th\b)|%|\/|-|\.\d))/gi;
 
 /**
  * "call mom at 5": 05:00 or 17:00? Returns the other reading when the text
@@ -63,13 +65,32 @@ export function suggestCategory(text: string, categories: Category[]): string | 
 export function stripCategoryTags(title: string, categories: Category[]): string {
   const names = new Set(categories.map((c) => c.name.toLowerCase()));
   return title
-    .replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (all, lead: string, tag: string) => (names.has(tag.toLowerCase()) ? lead : all))
+    .replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (all, lead: string, tag: string) =>
+      names.has(tag.toLowerCase()) ? lead : all,
+    )
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
-const STOP = new Set(['the', 'a', 'an', 'to', 'at', 'on', 'in', 'for', 'and', 'my', 'me', 'of', 'with', 'remind', 'about']);
-const keyWords = (text: string) => new Set(words(text).filter((w) => !STOP.has(w) && !w.startsWith('#') && !/^\d+$/.test(w)));
+const STOP = new Set([
+  'the',
+  'a',
+  'an',
+  'to',
+  'at',
+  'on',
+  'in',
+  'for',
+  'and',
+  'my',
+  'me',
+  'of',
+  'with',
+  'remind',
+  'about',
+]);
+const keyWords = (text: string) =>
+  new Set(words(text).filter((w) => !STOP.has(w) && !w.startsWith('#') && !/^\d+$/.test(w)));
 
 /** Pending tasks whose title shares most of its words with `title`. */
 export function similarTasks(title: string, tasks: Task[], limit = 2): Task[] {

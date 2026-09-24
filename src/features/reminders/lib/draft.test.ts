@@ -44,7 +44,8 @@ describe('categories from the text', () => {
 });
 
 describe('similarTasks', () => {
-  const task = (id: string, description: string, status: Task['status'] = 'pending') => ({ id, description, status }) as Task;
+  const task = (id: string, description: string, status: Task['status'] = 'pending') =>
+    ({ id, description, status }) as Task;
   it('finds a likely duplicate by shared words', () => {
     const tasks = [task('1', 'Call mom'), task('2', 'Call the dentist'), task('3', 'Call mom', 'completed')];
     expect(similarTasks('call mom tomorrow', tasks).map((t) => t.id)).toEqual(['1']);

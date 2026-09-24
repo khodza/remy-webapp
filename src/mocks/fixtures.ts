@@ -10,15 +10,7 @@ import {
   subHours,
   subMinutes,
 } from 'date-fns';
-import type {
-  Category,
-  Priority,
-  Recurrence,
-  Settings,
-  SourceType,
-  TaskStatus,
-  User,
-} from '@/shared/api';
+import type { Category, Priority, Recurrence, Settings, SourceType, TaskStatus, User } from '@/shared/api';
 import { DEFAULT_SETTINGS } from '@/shared/api';
 
 /** In-memory task record as the backend would store it (dates as Date). */
@@ -54,14 +46,11 @@ export interface MockTask {
 export const MOCK_TIMEZONE = 'Asia/Tashkent';
 
 /** When the reminder fires — mirrors the backend's nextFireAt. Null for todos. */
-export function nextFireAt(
-  task: Pick<MockTask, 'scheduledAt' | 'snoozedUntil'>,
-): Date | null {
+export function nextFireAt(task: Pick<MockTask, 'scheduledAt' | 'snoozedUntil'>): Date | null {
   return task.snoozedUntil ?? task.scheduledAt;
 }
 
-const at = (base: Date, hour: number, minute = 0): Date =>
-  setSeconds(setMinutes(setHours(base, hour), minute), 0);
+const at = (base: Date, hour: number, minute = 0): Date => setSeconds(setMinutes(setHours(base, hour), minute), 0);
 
 let nextId = 1;
 export function newId(): string {
@@ -80,11 +69,41 @@ export const CATEGORY_IDS = {
 
 export function buildCategories(): Category[] {
   return [
-    { id: CATEGORY_IDS.work, name: 'Work', emoji: '💼', color: '#5B5BD6', keywords: ['standup', 'meeting', 'report', 'deadline', 'review'] },
-    { id: CATEGORY_IDS.home, name: 'Home', emoji: '🏠', color: '#12B76A', keywords: ['rent', 'bill', 'landlord', 'clean', 'repair'] },
-    { id: CATEGORY_IDS.health, name: 'Health', emoji: '🩺', color: '#F04438', keywords: ['dentist', 'doctor', 'vitamins', 'run', 'gym'] },
-    { id: CATEGORY_IDS.errand, name: 'Errand', emoji: '🛒', color: '#F79009', keywords: ['buy', 'pick up', 'groceries', 'dry cleaning'] },
-    { id: CATEGORY_IDS.personal, name: 'Personal', emoji: '🙂', color: '#0E9F9E', keywords: ['mom', 'dad', 'call', 'birthday', 'football'] },
+    {
+      id: CATEGORY_IDS.work,
+      name: 'Work',
+      emoji: '💼',
+      color: '#5B5BD6',
+      keywords: ['standup', 'meeting', 'report', 'deadline', 'review'],
+    },
+    {
+      id: CATEGORY_IDS.home,
+      name: 'Home',
+      emoji: '🏠',
+      color: '#12B76A',
+      keywords: ['rent', 'bill', 'landlord', 'clean', 'repair'],
+    },
+    {
+      id: CATEGORY_IDS.health,
+      name: 'Health',
+      emoji: '🩺',
+      color: '#F04438',
+      keywords: ['dentist', 'doctor', 'vitamins', 'run', 'gym'],
+    },
+    {
+      id: CATEGORY_IDS.errand,
+      name: 'Errand',
+      emoji: '🛒',
+      color: '#F79009',
+      keywords: ['buy', 'pick up', 'groceries', 'dry cleaning'],
+    },
+    {
+      id: CATEGORY_IDS.personal,
+      name: 'Personal',
+      emoji: '🙂',
+      color: '#0E9F9E',
+      keywords: ['mom', 'dad', 'call', 'birthday', 'football'],
+    },
   ];
 }
 
@@ -95,25 +114,14 @@ export function buildSettings(): Settings {
 type MakeOpts = Partial<
   Pick<
     MockTask,
-    | 'status'
-    | 'recurrence'
-    | 'notes'
-    | 'priority'
-    | 'categoryId'
-    | 'leadMinutes'
-    | 'completionsCount'
-    | 'snoozeCount'
+    'status' | 'recurrence' | 'notes' | 'priority' | 'categoryId' | 'leadMinutes' | 'completionsCount' | 'snoozeCount'
   >
 > & {
   ageDays?: number;
   source?: Partial<MockTask['source']>;
 };
 
-export function makeTask(
-  description: string,
-  scheduledAt: Date | null,
-  opts: MakeOpts = {},
-): MockTask {
+export function makeTask(description: string, scheduledAt: Date | null, opts: MakeOpts = {}): MockTask {
   const created = subDays(new Date(), opts.ageDays ?? 3);
   const status = opts.status ?? 'pending';
   return {

@@ -1,10 +1,4 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-  type QueryKey,
-} from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { create } from 'zustand';
 import * as api from '@/shared/api';
@@ -40,10 +34,7 @@ export function taskKey(id: string): QueryKey {
   return ['task', id];
 }
 
-export function useTasks(
-  vars: TasksQueryVars = {},
-  options: { enabled?: boolean } = {},
-) {
+export function useTasks(vars: TasksQueryVars = {}, options: { enabled?: boolean } = {}) {
   const hidden = usePendingDeletes((s) => s.ids);
   const select = useCallback(
     (tasks: Task[]) => (hidden.length === 0 ? tasks : tasks.filter((t) => !hidden.includes(t.id))),
@@ -58,10 +49,7 @@ export function useTasks(
 }
 
 /** Newest copy of a task from any cached list, plus when that list was fetched. */
-function findCachedTask(
-  qc: QueryClient,
-  id: string,
-): { task: Task; updatedAt: number } | undefined {
+function findCachedTask(qc: QueryClient, id: string): { task: Task; updatedAt: number } | undefined {
   let best: { task: Task; updatedAt: number } | undefined;
   for (const [key, list] of qc.getQueriesData<Task[]>({ queryKey: ['tasks'] })) {
     const task = list?.find((t) => t.id === id);
@@ -83,10 +71,7 @@ function snapshotLists(qc: QueryClient): Array<[QueryKey, Task[] | undefined]> {
   return qc.getQueriesData<Task[]>({ queryKey: ['tasks'] });
 }
 
-function restoreLists(
-  qc: QueryClient,
-  snapshot: Array<[QueryKey, Task[] | undefined]>,
-): void {
+function restoreLists(qc: QueryClient, snapshot: Array<[QueryKey, Task[] | undefined]>): void {
   for (const [key, list] of snapshot) qc.setQueryData<Task[]>(key, list);
 }
 
@@ -120,17 +105,14 @@ export function useTask(id: string | undefined) {
     },
     enabled: Boolean(id),
     staleTime: 30_000,
-    ...(cached
-      ? { initialData: cached.task, initialDataUpdatedAt: cached.updatedAt }
-      : {}),
+    ...(cached ? { initialData: cached.task, initialDataUpdatedAt: cached.updatedAt } : {}),
   });
 }
 
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: api.TaskPatch }) =>
-      api.updateTask(id, patch),
+    mutationFn: ({ id, patch }: { id: string; patch: api.TaskPatch }) => api.updateTask(id, patch),
     onSuccess: (updated) => {
       syncTask(qc, updated);
       invalidateTask(qc, updated.id);
@@ -150,8 +132,7 @@ export function useCreateTask() {
 export function useCreateTaskStructured() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: api.StructuredTaskInput) =>
-      api.createTaskStructured(input),
+    mutationFn: (input: api.StructuredTaskInput) => api.createTaskStructured(input),
     onSuccess: () => invalidateTask(qc),
   });
 }
@@ -177,9 +158,7 @@ export function useCompleteTask() {
       // optimistically struck through; the response settles the rest.
       patchLists(qc, (list) =>
         list.map((task) =>
-          task.id === id && !task.recurrence
-            ? { ...task, status: 'completed', isOverdue: false }
-            : task,
+          task.id === id && !task.recurrence ? { ...task, status: 'completed', isOverdue: false } : task,
         ),
       );
       return { prev };
@@ -206,8 +185,7 @@ export function useReopenTask() {
 export function useDelayTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, minutes }: { id: string; minutes: number }) =>
-      api.delayTask(id, minutes),
+    mutationFn: ({ id, minutes }: { id: string; minutes: number }) => api.delayTask(id, minutes),
     onSuccess: (updated) => {
       syncTask(qc, updated);
       invalidateTask(qc, updated.id);
@@ -219,8 +197,7 @@ export function useDelayTask() {
 export function useSnoozeTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, until }: { id: string; until: Date }) =>
-      api.snoozeTask(id, until),
+    mutationFn: ({ id, until }: { id: string; until: Date }) => api.snoozeTask(id, until),
     onSuccess: (updated) => {
       syncTask(qc, updated);
       invalidateTask(qc, updated.id);

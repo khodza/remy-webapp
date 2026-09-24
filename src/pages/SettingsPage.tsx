@@ -1,4 +1,19 @@
-import { BellOff, BellRing, CalendarDays, CalendarPlus, Clock, FileDown, Globe, LayoutList, ListPlus, Moon, Newspaper, Rows3, Sun, Tag } from 'lucide-react';
+import {
+  BellOff,
+  BellRing,
+  CalendarDays,
+  CalendarPlus,
+  Clock,
+  FileDown,
+  Globe,
+  LayoutList,
+  ListPlus,
+  Moon,
+  Newspaper,
+  Rows3,
+  Sun,
+  Tag,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
@@ -10,7 +25,20 @@ import { CONTRACT_VERSION, type Settings } from '@/shared/api';
 import { formatClock, formatTime, getDeviceTimezone, useHour12, useUserTimezone } from '@/shared/lib/dates';
 import { useDensity } from '@/shared/lib/density';
 import { useNow } from '@/shared/lib/useNow';
-import { Empty, FieldRow, Group, Screen, SectionHeader, Segmented, Sheet, SheetOption, SkeletonRows, TimeField, toast, Toggle } from '@/shared/ui';
+import {
+  Empty,
+  FieldRow,
+  Group,
+  Screen,
+  SectionHeader,
+  Segmented,
+  Sheet,
+  SheetOption,
+  SkeletonRows,
+  TimeField,
+  toast,
+  Toggle,
+} from '@/shared/ui';
 
 type RhythmKey = 'morningBrief' | 'eveningReview';
 
@@ -60,7 +88,12 @@ export function SettingsPage() {
               {me.data.lastName ? ` ${me.data.lastName}` : ''}
             </span>
             <span className="block truncate text-[12.5px] font-bold text-muted">
-              {[me.data.username ? `@${me.data.username}` : null, tz ? `${zoneCity(tz)}${detected ? ', detected' : ''}` : null].filter(Boolean).join(' · ')}
+              {[
+                me.data.username ? `@${me.data.username}` : null,
+                tz ? `${zoneCity(tz)}${detected ? ', detected' : ''}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </span>
           </span>
         </div>
@@ -68,20 +101,41 @@ export function SettingsPage() {
 
       {!s ? (
         <div className="pt-4">
-          {settings.isError ? <Empty title="Couldn't load your settings" body="Check the connection and reopen this screen." /> : <SkeletonRows count={5} />}
+          {settings.isError ? (
+            <Empty title="Couldn't load your settings" body="Check the connection and reopen this screen." />
+          ) : (
+            <SkeletonRows count={5} />
+          )}
         </div>
       ) : (
         <>
           <SectionHeader label="Messages from Remy" />
           <Group>
-            <FieldRow icon={<Sun size={16} />} iconTone="warn" label="Morning brief" value={s.morningBrief.enabled ? formatClock(s.morningBrief.time, hour12) : 'Off'} onClick={() => setEditing('morningBrief')} />
-            <FieldRow icon={<Moon size={16} />} label="Evening review" value={s.eveningReview.enabled ? formatClock(s.eveningReview.time, hour12) : 'Off'} onClick={() => setEditing('eveningReview')} />
+            <FieldRow
+              icon={<Sun size={16} />}
+              iconTone="warn"
+              label="Morning brief"
+              value={s.morningBrief.enabled ? formatClock(s.morningBrief.time, hour12) : 'Off'}
+              onClick={() => setEditing('morningBrief')}
+            />
+            <FieldRow
+              icon={<Moon size={16} />}
+              label="Evening review"
+              value={s.eveningReview.enabled ? formatClock(s.eveningReview.time, hour12) : 'Off'}
+              onClick={() => setEditing('eveningReview')}
+            />
             <FieldRow
               icon={<Newspaper size={16} />}
               iconTone="ok"
               label="Weekly wrap"
               hint={`${s.weekStartsOn === 1 ? 'Sunday' : 'Saturday'} at ${formatClock(s.eveningReview.time, hour12)}`}
-              trailing={<Toggle checked={s.weeklyWrap.enabled} onChange={(enabled) => save({ weeklyWrap: { enabled } })} label="Weekly wrap" />}
+              trailing={
+                <Toggle
+                  checked={s.weeklyWrap.enabled}
+                  onChange={(enabled) => save({ weeklyWrap: { enabled } })}
+                  label="Weekly wrap"
+                />
+              }
             />
           </Group>
 
@@ -91,21 +145,35 @@ export function SettingsPage() {
               icon={<BellOff size={16} />}
               iconTone="accent"
               label="Quiet hours"
-              value={s.quietHours.enabled ? `${formatClock(s.quietHours.from, hour12)} – ${formatClock(s.quietHours.to, hour12)}` : 'Off'}
+              value={
+                s.quietHours.enabled
+                  ? `${formatClock(s.quietHours.from, hour12)} – ${formatClock(s.quietHours.to, hour12)}`
+                  : 'Off'
+              }
               onClick={() => navigate('/settings/quiet')}
             />
             <FieldRow
               icon={<BellRing size={16} />}
               iconTone="danger"
               label="If ignored, nudge again"
-              value={s.escalation.enabled && s.escalation.stepsMinutes.length ? nudgeSummary(s.escalation.stepsMinutes) : 'Off'}
+              value={
+                s.escalation.enabled && s.escalation.stepsMinutes.length
+                  ? nudgeSummary(s.escalation.stepsMinutes)
+                  : 'Off'
+              }
               onClick={() => navigate('/settings/quiet')}
             />
           </Group>
 
           <SectionHeader label="Organisation" />
           <Group>
-            <FieldRow icon={<Tag size={16} />} iconTone="ok" label="Categories" value={categories.data ? String(categories.data.length) : undefined} onClick={() => navigate('/settings/categories')} />
+            <FieldRow
+              icon={<Tag size={16} />}
+              iconTone="ok"
+              label="Categories"
+              value={categories.data ? String(categories.data.length) : undefined}
+              onClick={() => navigate('/settings/categories')}
+            />
             <FieldRow
               icon={<LayoutList size={16} />}
               label="Today opens in"
@@ -126,13 +194,24 @@ export function SettingsPage() {
               iconTone="warn"
               label="Compact rows"
               hint="More on screen · this phone only"
-              trailing={<Toggle checked={density === 'compact'} onChange={(on) => setDensity(on ? 'compact' : 'comfortable')} label="Compact rows" />}
+              trailing={
+                <Toggle
+                  checked={density === 'compact'}
+                  onChange={(on) => setDensity(on ? 'compact' : 'comfortable')}
+                  label="Compact rows"
+                />
+              }
             />
           </Group>
 
           <SectionHeader label="Region" />
           <Group>
-            <FieldRow icon={<Globe size={16} />} label="Time zone" value={tz ? `${zoneCity(tz)}${detected ? ' · auto' : ''}` : 'Detecting…'} onClick={() => navigate('/settings/timezone')} />
+            <FieldRow
+              icon={<Globe size={16} />}
+              label="Time zone"
+              value={tz ? `${zoneCity(tz)}${detected ? ' · auto' : ''}` : 'Detecting…'}
+              onClick={() => navigate('/settings/timezone')}
+            />
             <FieldRow
               icon={<Clock size={16} />}
               iconTone="ok"
@@ -177,13 +256,28 @@ export function SettingsPage() {
               value={feed.data ? (feed.data.enabled ? 'On' : 'Off') : undefined}
               onClick={() => navigate('/settings/calendar')}
             />
-            <FieldRow icon={<FileDown size={16} />} iconTone="ok" label="Export" hint="A file in your chat" value="CSV · JSON" onClick={() => setExporting(true)} />
-            <FieldRow icon={<ListPlus size={16} />} iconTone="warn" label="Import a list" hint="Paste lines, check, add" onClick={() => navigate('/settings/import')} />
+            <FieldRow
+              icon={<FileDown size={16} />}
+              iconTone="ok"
+              label="Export"
+              hint="A file in your chat"
+              value="CSV · JSON"
+              onClick={() => setExporting(true)}
+            />
+            <FieldRow
+              icon={<ListPlus size={16} />}
+              iconTone="warn"
+              label="Import a list"
+              hint="Paste lines, check, add"
+              onClick={() => navigate('/settings/import')}
+            />
           </Group>
 
           <RhythmSheet editing={editing} settings={s} onClose={() => setEditing(null)} />
           <Sheet open={exporting} onClose={() => setExporting(false)} title="Export">
-            <p className="pb-2 text-[13.5px] font-semibold text-muted">Remy sends the file to your chat, where you can save or share it. Pending and done reminders.</p>
+            <p className="pb-2 text-[13.5px] font-semibold text-muted">
+              Remy sends the file to your chat, where you can save or share it. Pending and done reminders.
+            </p>
             <div className="-mx-1">
               {(
                 [
@@ -198,7 +292,8 @@ export function SettingsPage() {
                   onClick={() => {
                     setExporting(false);
                     exportData.mutate(option.format, {
-                      onSuccess: (result) => toast({ message: `Sent ${result.filename} to your chat (${result.tasks} tasks)` }),
+                      onSuccess: (result) =>
+                        toast({ message: `Sent ${result.filename} to your chat (${result.tasks} tasks)` }),
                       onError: () => toast({ message: "Couldn't export. Try again.", tone: 'danger' }),
                     });
                   }}
@@ -209,12 +304,22 @@ export function SettingsPage() {
         </>
       )}
 
-      <p className="tnum px-4 pt-6 text-center text-[11.5px] font-semibold text-faint">Remy · contract {CONTRACT_VERSION}</p>
+      <p className="tnum px-4 pt-6 text-center text-[11.5px] font-semibold text-faint">
+        Remy · contract {CONTRACT_VERSION}
+      </p>
     </Screen>
   );
 }
 
-function RhythmSheet({ editing, settings, onClose }: { editing: RhythmKey | null; settings: Settings; onClose: () => void }) {
+function RhythmSheet({
+  editing,
+  settings,
+  onClose,
+}: {
+  editing: RhythmKey | null;
+  settings: Settings;
+  onClose: () => void;
+}) {
   const save = useSaveSettings();
   const key = editing ?? 'morningBrief';
   const value = settings[key];
@@ -222,8 +327,27 @@ function RhythmSheet({ editing, settings, onClose }: { editing: RhythmKey | null
     <Sheet open={editing !== null} onClose={onClose} title={RHYTHM[key].title}>
       <p className="pb-3 text-[13.5px] font-semibold text-muted">{RHYTHM[key].body}</p>
       <Group className="mx-0">
-        <FieldRow label="Send it" trailing={<Toggle checked={value.enabled} onChange={(enabled) => save({ [key]: { enabled } })} label={RHYTHM[key].title} />} />
-        <FieldRow label="At" trailing={<TimeField value={value.time} disabled={!value.enabled} onChange={(time) => save({ [key]: { time } })} label={`${RHYTHM[key].title} time`} />} />
+        <FieldRow
+          label="Send it"
+          trailing={
+            <Toggle
+              checked={value.enabled}
+              onChange={(enabled) => save({ [key]: { enabled } })}
+              label={RHYTHM[key].title}
+            />
+          }
+        />
+        <FieldRow
+          label="At"
+          trailing={
+            <TimeField
+              value={value.time}
+              disabled={!value.enabled}
+              onChange={(time) => save({ [key]: { time } })}
+              label={`${RHYTHM[key].title} time`}
+            />
+          }
+        />
       </Group>
     </Sheet>
   );

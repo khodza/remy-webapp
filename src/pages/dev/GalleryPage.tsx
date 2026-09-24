@@ -38,7 +38,9 @@ export function GalleryPage() {
   return (
     <Screen>
       <h1 className="px-4 pb-1 pt-3 text-[22px] font-extrabold tracking-tight">Kit · light and dark</h1>
-      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">Each phone is the kit in its own theme. Open #/dev/gallery?panel for one at full size.</p>
+      <p className="px-4 pb-3 text-[13px] font-semibold text-muted">
+        Each phone is the kit in its own theme. Open #/dev/gallery?panel for one at full size.
+      </p>
       <div className="flex flex-wrap justify-center gap-4 px-3 pb-4">
         {(['light', 'dark'] as const).map((theme) => (
           <figure key={theme} className="m-0 flex flex-col items-center gap-1.5">
@@ -49,7 +51,9 @@ export function GalleryPage() {
               height={PHONE.height}
               className="max-w-full rounded-[28px] border border-rule bg-surface"
             />
-            <figcaption className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">{theme}</figcaption>
+            <figcaption className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-muted">
+              {theme}
+            </figcaption>
           </figure>
         ))}
       </div>
@@ -104,7 +108,9 @@ function KitPanel() {
         <div className="grid min-h-14 grid-cols-[44px_1fr_28px] items-center gap-2.5 px-3.5 py-2">
           <span className="tnum text-[13px] font-extrabold text-danger">09:00</span>
           <div className="min-w-0">
-            <p className={done ? 'text-[15px] font-bold text-muted line-through' : 'text-[15px] font-bold'}>Pay the electricity bill</p>
+            <p className={done ? 'text-[15px] font-bold text-muted line-through' : 'text-[15px] font-bold'}>
+              Pay the electricity bill
+            </p>
             <div className="mt-0.5 flex gap-1">
               <Pill tone="danger">5 h late</Pill>
               <Pill>
@@ -115,9 +121,32 @@ function KitPanel() {
           <CheckCircle done={done} onToggle={() => setDone(!done)} label="Mark as done" tone="danger" />
         </div>
         <FieldRow icon={<Clock size={16} />} label="When" value="Today · 14:47" onClick={() => setSheet(true)} />
-        <FieldRow icon={<Repeat size={16} />} iconTone="warn" label="Repeat" value={repeat === 'none' ? 'Never' : repeat} onClick={() => setSheet(true)} />
-        <FieldRow icon={<Bell size={16} />} iconTone="ok" label="Nudges" hint="Re-ping until you act" trailing={<Toggle checked={on} onChange={setOn} label="Nudges" />} />
-        <FieldRow icon={<Tag size={16} />} iconTone="danger" label="Delete" danger onClick={() => toast({ message: 'Deleted “Pay the bill”', action: { label: 'Undo', onClick: () => toast({ message: 'Restored' }) } })} />
+        <FieldRow
+          icon={<Repeat size={16} />}
+          iconTone="warn"
+          label="Repeat"
+          value={repeat === 'none' ? 'Never' : repeat}
+          onClick={() => setSheet(true)}
+        />
+        <FieldRow
+          icon={<Bell size={16} />}
+          iconTone="ok"
+          label="Nudges"
+          hint="Re-ping until you act"
+          trailing={<Toggle checked={on} onChange={setOn} label="Nudges" />}
+        />
+        <FieldRow
+          icon={<Tag size={16} />}
+          iconTone="danger"
+          label="Delete"
+          danger
+          onClick={() =>
+            toast({
+              message: 'Deleted “Pay the bill”',
+              action: { label: 'Undo', onClick: () => toast({ message: 'Restored' }) },
+            })
+          }
+        />
       </Group>
 
       <SectionHeader label="Fields" />
@@ -129,8 +158,16 @@ function KitPanel() {
           placeholder="AutoTextarea"
           className="block min-h-[64px] w-full resize-none overflow-hidden bg-transparent px-3.5 py-3 text-[15px] font-semibold text-text outline-none placeholder:text-faint"
         />
-        <FieldRow icon={<Clock size={16} />} label="TimeField" hint={`value ${time}`} trailing={<TimeField value={time} onChange={setTime} label="TimeField" />} />
-        <FieldRow label="TimeField, disabled" trailing={<TimeField value="22:00" onChange={() => undefined} label="Disabled TimeField" disabled />} />
+        <FieldRow
+          icon={<Clock size={16} />}
+          label="TimeField"
+          hint={`value ${time}`}
+          trailing={<TimeField value={time} onChange={setTime} label="TimeField" />}
+        />
+        <FieldRow
+          label="TimeField, disabled"
+          trailing={<TimeField value="22:00" onChange={() => undefined} label="Disabled TimeField" disabled />}
+        />
       </Group>
 
       <SectionHeader label="Snooze" />
@@ -153,7 +190,11 @@ function KitPanel() {
       <SkeletonRows count={2} />
 
       <SectionHeader label="Empty" />
-      <Empty icon={<Inbox size={20} />} title="Inbox is empty" body="Todos without a time land here. Say “buy milk” to the bot." />
+      <Empty
+        icon={<Inbox size={20} />}
+        title="Inbox is empty"
+        body="Todos without a time land here. Say “buy milk” to the bot."
+      />
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title="Repeat">
         {['none', 'Every day', 'Every weekday', 'Every week', 'Every month'].map((option) => (

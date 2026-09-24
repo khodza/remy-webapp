@@ -8,9 +8,7 @@
  * else is coloured.
  */
 @theme {
-  --font-sans:
-    'Manrope', -apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+  --font-sans: 'Manrope', -apple-system, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   --color-bg: #f6f7fb;
   --color-surface: #ffffff;
@@ -43,7 +41,6 @@
   --spacing-row-y: 0.5rem;
   --spacing-field: 52px;
   --spacing-field-y: 0.375rem;
-
 }
 
 :root {

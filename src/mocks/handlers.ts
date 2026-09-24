@@ -72,7 +72,9 @@ function nextOccurrence(recurrence: Recurrence, from: Date): Date {
     }
     case 'monthly': {
       const next = addMonths(from, n);
-      return recurrence.lastDayOfMonth ? setSeconds(setMinutes(setHours(lastDayOfMonth(next), from.getHours()), from.getMinutes()), 0) : next;
+      return recurrence.lastDayOfMonth
+        ? setSeconds(setMinutes(setHours(lastDayOfMonth(next), from.getHours()), from.getMinutes()), 0)
+        : next;
     }
     case 'yearly':
       return addYears(from, n);
@@ -102,7 +104,10 @@ function feedDto() {
 
 function randomToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 }
 
 function isOverdue(task: MockTask): boolean {
@@ -224,10 +229,7 @@ function fakeParse(text: string): {
 /** Same keyword matching idea as the backend's category suggestion. */
 function suggestCategory(text: string): string | null {
   const lower = text.toLowerCase();
-  return (
-    categories.find((c) => c.keywords.some((k) => lower.includes(k.toLowerCase())))
-      ?.id ?? null
-  );
+  return categories.find((c) => c.keywords.some((k) => lower.includes(k.toLowerCase())))?.id ?? null;
 }
 
 export const handlers = [
@@ -296,9 +298,7 @@ export const handlers = [
     if (!existing) return error(404, 'NOT_FOUND', 'Category not found');
     const parsed = UpdateCategoryRequestSchema.safeParse(await request.json());
     if (!parsed.success) return badRequest(parsed.error.issues[0]?.message ?? 'Invalid category');
-    const patch = Object.fromEntries(
-      Object.entries(parsed.data).filter(([, v]) => v !== undefined),
-    );
+    const patch = Object.fromEntries(Object.entries(parsed.data).filter(([, v]) => v !== undefined));
     const updated: Category = { ...existing, ...patch };
     categories = categories.map((c) => (c.id === id ? updated : c));
     return HttpResponse.json(CategorySchema.parse(updated));
@@ -333,11 +333,7 @@ export const handlers = [
           .filter((t) => {
             const fire = nextFireAt(t);
             if (t.status === 'pending') return fire !== null && fire.getTime() <= endToday;
-            return (
-              t.status === 'completed' &&
-              t.completedAt !== null &&
-              t.completedAt.getTime() >= startToday
-            );
+            return t.status === 'completed' && t.completedAt !== null && t.completedAt.getTime() >= startToday;
           })
           .sort(byFireAt);
         break;
@@ -357,16 +353,11 @@ export const handlers = [
       case 'done':
         list = alive
           .filter((t) => t.status === 'completed')
-          .sort(
-            (a, b) =>
-              (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0),
-          )
+          .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0))
           .slice(0, limit ?? 50);
         break;
       default:
-        list = alive
-          .filter((t) => includeCompleted === 'true' || t.status !== 'completed')
-          .sort(byFireAt);
+        list = alive.filter((t) => includeCompleted === 'true' || t.status !== 'completed').sort(byFireAt);
     }
     return HttpResponse.json(wire.TaskList.parse({ tasks: list.map(toDto) }));
   }),
@@ -441,8 +432,7 @@ export const handlers = [
     if (body.priority !== undefined) task.priority = body.priority;
     if (body.categoryId !== undefined) task.categoryId = body.categoryId;
     if (body.leadMinutes !== undefined) task.leadMinutes = body.leadMinutes;
-    if (body.recurrence !== undefined)
-      task.recurrence = body.recurrence ? recurrenceFromInput(body.recurrence) : null;
+    if (body.recurrence !== undefined) task.recurrence = body.recurrence ? recurrenceFromInput(body.recurrence) : null;
     if (body.scheduledAt !== undefined) {
       task.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
       task.snoozedUntil = null; // an explicit reschedule replaces any snooze
@@ -572,7 +562,14 @@ export const handlers = [
     if (!calendarToken || paramId(params['file']) !== `${calendarToken}.ics`) {
       return error(404, 'NOT_FOUND', 'Calendar not found');
     }
-    const body = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Remy//Mock//EN', 'X-WR-CALNAME:Remy (mock)', 'END:VCALENDAR', ''].join('\r\n');
+    const body = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Remy//Mock//EN',
+      'X-WR-CALNAME:Remy (mock)',
+      'END:VCALENDAR',
+      '',
+    ].join('\r\n');
     return new HttpResponse(body, { headers: { 'Content-Type': 'text/calendar; charset=utf-8' } });
   }),
 
@@ -598,15 +595,17 @@ export const handlers = [
       .slice(0, 50);
     // Like the real assistant: a line with a time gets one, others are todos.
     const drafts = lines.map((line) => {
-      const timed = /\b(today|tomorrow|tonight|at \d|every|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(line);
+      const timed =
+        /\b(today|tomorrow|tonight|at \d|every|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(line);
       const parsed = fakeParse(line);
       // Tags, "!" and day words are the assistant's to read, not the title's.
-      const title = parsed.description
-        .replace(/\s*#[\p{L}\d_-]+/gu, '')
-        .replace(/\s*!+/g, '')
-        .replace(/\b(every )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|someday)\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim() || parsed.description;
+      const title =
+        parsed.description
+          .replace(/\s*#[\p{L}\d_-]+/gu, '')
+          .replace(/\s*!+/g, '')
+          .replace(/\b(every )?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|someday)\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim() || parsed.description;
       return {
         description: title.charAt(0).toUpperCase() + title.slice(1),
         notes: null,

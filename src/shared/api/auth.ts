@@ -12,11 +12,7 @@ import { AuthResultSchema, type AuthResult } from './schemas';
 export async function exchangeInitDataForJwt(): Promise<AuthResult> {
   const initDataRaw = readRawInitData();
   if (!initDataRaw) {
-    throw new ApiError(
-      0,
-      'NO_INIT_DATA',
-      'Telegram initData unavailable — open this app from the Remy bot.',
-    );
+    throw new ApiError(0, 'NO_INIT_DATA', 'Telegram initData unavailable — open this app from the Remy bot.');
   }
 
   let response: Response;

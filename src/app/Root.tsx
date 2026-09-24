@@ -7,12 +7,7 @@ import { useClockFormatSync } from '@/features/settings';
 import { Button, Placeholder } from '@/shared/ui';
 
 function ErrorFallback({ error }: { error: unknown }) {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : JSON.stringify(error);
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : JSON.stringify(error);
 
   return (
     <Placeholder

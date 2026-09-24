@@ -22,7 +22,14 @@ interface Options {
 export function useBlockGesture({ enabled, onDragStart, onSwipe, onDrop }: Options) {
   const [offset, setOffset] = useState({ dx: 0, dy: 0 });
   const [mode, setMode] = useState<Mode>('idle');
-  const state = useRef<{ mode: Mode; x: number; y: number; timer: ReturnType<typeof setTimeout> | undefined; el: HTMLElement | null; id: number }>({
+  const state = useRef<{
+    mode: Mode;
+    x: number;
+    y: number;
+    timer: ReturnType<typeof setTimeout> | undefined;
+    el: HTMLElement | null;
+    id: number;
+  }>({
     mode: 'idle',
     x: 0,
     y: 0,

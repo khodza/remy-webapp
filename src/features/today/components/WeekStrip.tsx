@@ -52,7 +52,13 @@ export function WeekStrip({ days, selected, today, tz, onSelect, onShiftWeek }: 
             <span className="tnum">{formatInTz(day.start, tz, 'd')}</span>
             <span className="mt-1 flex h-1 gap-0.5" aria-hidden="true">
               {Array.from({ length: dots }, (_, i) => (
-                <i key={i} className={cx('h-1 w-1 rounded-full', on ? 'bg-accent-fg' : i === 0 && day.overdue ? 'bg-danger' : 'bg-faint')} />
+                <i
+                  key={i}
+                  className={cx(
+                    'h-1 w-1 rounded-full',
+                    on ? 'bg-accent-fg' : i === 0 && day.overdue ? 'bg-danger' : 'bg-faint',
+                  )}
+                />
               ))}
             </span>
           </button>

@@ -31,7 +31,11 @@ export function snoozeOptions(due: Date | null, now: Date, tz: string): SnoozeOp
   until('tonight', 'Tonight', atTimeInTz(now, tz, 20));
   // Before 05:00 "tomorrow morning" is really this morning.
   const earlyHours = inTz(now, tz).getHours() < 5;
-  until('morning', earlyHours ? 'Morning' : 'Tomorrow', atTimeInTz(earlyHours ? now : addDays(inTz(now, tz), 1), tz, 9));
+  until(
+    'morning',
+    earlyHours ? 'Morning' : 'Tomorrow',
+    atTimeInTz(earlyHours ? now : addDays(inTz(now, tz), 1), tz, 9),
+  );
   until('next-week', 'Next week', atTimeInTz(nextMonday(inTz(now, tz)), tz, 9));
   return options.slice(0, 4);
 }

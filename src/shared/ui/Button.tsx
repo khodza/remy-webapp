@@ -18,7 +18,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** In-page button. The page's main action uses Telegram's MainButton instead. */
-export function Button({ variant = 'secondary', icon, block, className, children, type = 'button', ...rest }: ButtonProps) {
+export function Button({
+  variant = 'secondary',
+  icon,
+  block,
+  className,
+  children,
+  type = 'button',
+  ...rest
+}: ButtonProps) {
   return (
     <button
       type={type}
@@ -37,13 +45,21 @@ export function Button({ variant = 'secondary', icon, block, className, children
 }
 
 /** Square icon-only button with a 44px hit area. */
-export function IconButton({ label, children, className, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+export function IconButton({
+  label,
+  children,
+  className,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className={cx('inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted transition active:bg-past', className)}
+      className={cx(
+        'inline-flex h-11 w-11 items-center justify-center rounded-xl text-muted transition active:bg-past',
+        className,
+      )}
       {...rest}
     >
       {children}
