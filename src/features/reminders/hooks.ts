@@ -1,9 +1,17 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { create } from 'zustand';
 import * as api from '@/shared/api';
 import type { Task, TaskView } from '@/shared/api';
 import { useHapticFeedback } from '@/shared/lib/telegram';
+import { useDebouncedValue } from '@/shared/lib/useDebouncedValue';
 import { toast } from '@/shared/ui';
 
 /**
@@ -34,18 +42,52 @@ export function taskKey(id: string): QueryKey {
   return ['task', id];
 }
 
-export function useTasks(vars: TasksQueryVars = {}, options: { enabled?: boolean } = {}) {
+/** Hides tasks inside their delete-Undo window from a list. */
+function useHideDeleted() {
   const hidden = usePendingDeletes((s) => s.ids);
-  const select = useCallback(
+  return useCallback(
     (tasks: Task[]) => (hidden.length === 0 ? tasks : tasks.filter((t) => !hidden.includes(t.id))),
     [hidden],
   );
+}
+
+export function useTasks(vars: TasksQueryVars = {}, options: { enabled?: boolean } = {}) {
+  const select = useHideDeleted();
   return useQuery({
     queryKey: tasksKey(vars),
     queryFn: () => api.listTasks(vars),
     enabled: options.enabled ?? true,
     select,
   });
+}
+
+/** Search settles this long after the last keystroke before it is sent. */
+export const SEARCH_DEBOUNCE_MS = 300;
+/** The most results a search shows (the server caps at 200). */
+export const SEARCH_LIMIT = 100;
+
+export function searchKey(q: string): QueryKey {
+  // Under ['tasks', …] so Done / snooze / delete patch and invalidate it like every list.
+  return ['tasks', { search: q }];
+}
+
+/**
+ * GET /tasks?q= (pending and completed, server-side): debounced, the
+ * previous result stays while the next loads, and a search the user typed
+ * past is cancelled through React Query's signal (same pattern as the parse
+ * preview). `debounced` is the text the shown results belong to.
+ */
+export function useSearchTasks(query: string) {
+  const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+  const select = useHideDeleted();
+  const result = useQuery({
+    queryKey: searchKey(debounced),
+    queryFn: ({ signal }) => api.listTasks({ q: debounced, limit: SEARCH_LIMIT }, { signal }),
+    enabled: debounced.length > 0,
+    placeholderData: keepPreviousData,
+    select,
+  });
+  return { ...result, debounced };
 }
 
 /** Newest copy of a task from any cached list, plus when that list was fetched. */

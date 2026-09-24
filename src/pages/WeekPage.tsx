@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategoryMap } from '@/features/categories';
+import { listTitle, useLists } from '@/features/lists';
 import { describeDue, TaskRow, useTaskActions, useTasks, useUpdateTask, WhenSheet } from '@/features/reminders';
 import { useSettings } from '@/features/settings';
 import {
@@ -23,7 +24,7 @@ import { formatDateTime, formatHour, formatInTz, formatTime, useUserTimezone } f
 import { useHapticFeedback, useMainButton } from '@/shared/lib/telegram';
 import { useNow } from '@/shared/lib/useNow';
 import { useRefreshScreen } from '@/shared/lib/useRefreshScreen';
-import { cx, Empty, Group, IconButton, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
+import { Chip, cx, Empty, Group, IconButton, Screen, SectionHeader, SkeletonRows, toast } from '@/shared/ui';
 
 /**
  * A calendar week (from the user's week start) of load at a glance, the
@@ -43,6 +44,9 @@ export function WeekPage() {
   const weekStartsOn = settings.data?.weekStartsOn ?? 1;
   const [offset, setOffset] = useState(0);
   const [scheduling, setScheduling] = useState<Task | null>(null);
+  /** Inbox filter: every list, or one list's name. */
+  const [listFilter, setListFilter] = useState<string | null>(null);
+  const lists = useLists();
   const todayKey = dayKey(now, tz);
   const refresh = useRefreshScreen();
 
@@ -87,6 +91,18 @@ export function WeekPage() {
     return map;
   }, [pending.data, tz]);
   const inbox = (pending.data ?? []).filter((t) => t.status === 'pending' && dueAt(t) === null);
+  // Todos grouped by list (unlisted first), from the loaded tasks; GET /lists
+  // gives the chips their counts, which include lists without an open todo.
+  const inboxGroups = useMemo(() => {
+    const groups = new Map<string | null, Task[]>();
+    for (const task of inbox) groups.set(task.list, [...(groups.get(task.list) ?? []), task]);
+    const names = [...groups.keys()].filter((n): n is string => n !== null).sort((a, b) => a.localeCompare(b));
+    return [null, ...names]
+      .filter((name) => listFilter === null || name === listFilter)
+      .map((name) => ({ name, tasks: groups.get(name) ?? [] }))
+      .filter((g) => g.tasks.length > 0);
+  }, [inbox, listFilter]);
+  const listChips = (lists.data ?? []).filter((l) => l.pending > 0);
   const first = days[0];
   const last = days[6];
 
@@ -141,46 +157,76 @@ export function WeekPage() {
       </Group>
 
       <SectionHeader label={`Inbox · no date`} right={<span className="tnum text-muted">{inbox.length}</span>} />
+      {listChips.length > 0 ? (
+        <div className="flex gap-1.5 overflow-x-auto px-3 pb-2 [scrollbar-width:none]" role="group" aria-label="Lists">
+          <Chip label="All" selected={listFilter === null} onClick={() => setListFilter(null)} className="px-3" />
+          {listChips.map((list) => (
+            <Chip
+              key={list.name}
+              label={`${listTitle(list.name)} · ${list.pending}`}
+              selected={listFilter === list.name}
+              onClick={() => setListFilter(listFilter === list.name ? null : list.name)}
+              className="whitespace-nowrap px-3"
+            />
+          ))}
+        </div>
+      ) : null}
       {pending.isPending ? (
         <SkeletonRows count={2} />
+      ) : inbox.length > 0 && inboxGroups.length > 0 ? (
+        inboxGroups.map((group) => (
+          <div key={group.name ?? ''} data-inbox-list={group.name ?? 'none'}>
+            {inboxGroups.length > 1 || group.name !== null ? (
+              <p className="flex items-baseline justify-between px-4 pb-1 pt-2 text-[12.5px] font-extrabold text-muted">
+                <span>{group.name === null ? 'No list' : listTitle(group.name)}</span>
+                <span className="tnum">{group.tasks.length}</span>
+              </p>
+            ) : null}
+            <Group>
+              {group.tasks.map((task) => {
+                const category = task.categoryId ? categories.get(task.categoryId) : undefined;
+                return (
+                  <div key={task.id} className="flex min-h-row items-center gap-2 py-row-y pl-3.5 pr-2">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate text-[14.5px] font-extrabold">{task.description}</span>
+                      <span className="block truncate text-[11.5px] font-bold text-muted">
+                        {[
+                          `added ${formatInTz(task.createdAt, tz, 'EEE d MMM')}`,
+                          category?.name,
+                          task.source.type === 'forward' ? 'forwarded' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScheduling(task)}
+                      className="min-h-11 shrink-0 rounded-xl px-3 text-[13px] font-extrabold text-accent active:bg-accent-soft"
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                );
+              })}
+            </Group>
+          </div>
+        ))
       ) : inbox.length > 0 ? (
-        <Group>
-          {inbox.map((task) => {
-            const category = task.categoryId ? categories.get(task.categoryId) : undefined;
-            return (
-              <div key={task.id} className="flex min-h-row items-center gap-2 py-row-y pl-3.5 pr-2">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/tasks/${task.id}`)}
-                  className="min-w-0 flex-1 text-left"
-                >
-                  <span className="block truncate text-[14.5px] font-extrabold">{task.description}</span>
-                  <span className="block truncate text-[11.5px] font-bold text-muted">
-                    {[
-                      `added ${formatInTz(task.createdAt, tz, 'EEE d MMM')}`,
-                      category?.name,
-                      task.source.type === 'forward' ? 'forwarded' : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScheduling(task)}
-                  className="min-h-11 shrink-0 rounded-xl px-3 text-[13px] font-extrabold text-accent active:bg-accent-soft"
-                >
-                  Schedule
-                </button>
-              </div>
-            );
-          })}
-        </Group>
+        <Empty
+          icon={<Inbox size={20} />}
+          title={`Nothing open on ${listFilter ? listTitle(listFilter) : 'this list'}`}
+          body="Every item on it is done. Pick another list, or All."
+        />
       ) : (
         <Empty
           icon={<Inbox size={20} />}
           title="Inbox is empty"
-          body="Things without a date land here. Tell the bot “someday: buy new headphones”."
+          body="Things without a date land here. Tell the bot “someday: buy new headphones” or “add eggs to the shopping list”."
         />
       )}
 
