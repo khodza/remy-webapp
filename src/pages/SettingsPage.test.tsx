@@ -38,6 +38,7 @@ describe('Settings: time format', () => {
       },
       'GET /categories': { categories: [] },
       'GET /calendar/feed': { enabled: false, path: null },
+      'GET /integrations/google/status': { configured: true, connected: false },
     });
   }
 
@@ -88,6 +89,7 @@ describe('Settings: compact rows', () => {
       'GET /settings': DEFAULT_SETTINGS,
       'GET /categories': { categories: [] },
       'GET /calendar/feed': { enabled: false, path: null },
+      'GET /integrations/google/status': { configured: true, connected: false },
     });
     renderWithProviders(<SettingsPage />, { route: '/settings' });
     const toggle = await screen.findByRole('switch', { name: 'Compact rows' });
@@ -120,6 +122,7 @@ describe('Settings: contract 2.4.0', () => {
       },
       'GET /categories': { categories: [] },
       'GET /calendar/feed': { enabled: false, path: null },
+      'GET /integrations/google/status': { configured: true, connected: false },
       'DELETE /data': { success: true, deletedTasks: 14 },
     });
   }

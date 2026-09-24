@@ -255,6 +255,24 @@ await check('Calendar feed turns on, shows a link, and a new link replaces it', 
   );
 });
 
+await check('Google Calendar picks a calendar, disconnects, and connects again by polling', async () => {
+  await open('/settings/google');
+  await page.getByText('Connected as').waitFor();
+  await page.getByRole('button', { name: 'Work' }).click();
+  await expectText(toast(), /^Work added to the brief/);
+  await page.getByRole('button', { name: 'Disconnect Google Calendar' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Disconnect' }).click();
+  await expectText(toast(), /^Google Calendar disconnected/);
+  await expectText(mainButton(), /Connect Google Calendar/);
+  // The mock's consent "finishes" 3 s after Connect; the page asks every 5 s.
+  await mainButton().click();
+  await page.getByText('Waiting for Google…').waitFor();
+  await expectText(toast(), /^Connected as remy\.dev@gmail\.com/, 12000);
+  await page.getByText('Connected as', { exact: true }).waitFor();
+  await open('/settings');
+  await expectText(page.getByRole('button', { name: /^Google Calendar/ }), /remy\.dev@gmail\.com/);
+});
+
 await check('Export sends a file to the chat, the calendar file too', async () => {
   await open('/settings');
   await page.getByRole('button', { name: /^Export/ }).click();

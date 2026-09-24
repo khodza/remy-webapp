@@ -31,6 +31,11 @@ import {
   DeleteAllDataRequestSchema,
   DeleteAllDataResultSchema,
   ClientErrorReportSchema,
+  GoogleConnectResultSchema,
+  GoogleStatusSchema,
+  SelectGoogleCalendarsRequestSchema,
+  type GoogleConnectResult,
+  type GoogleStatus,
   type ClientErrorReport,
   type CompleteResult,
   type DeleteAllDataResult,
@@ -317,4 +322,31 @@ export async function importTasks(tasks: StructuredTaskInput[]): Promise<Task[]>
     })),
   });
   return TaskListSchema.parse(await apiRequest<unknown>('POST', '/tasks/import', { body })).tasks;
+}
+
+// ---------------------------------------------------------- integrations ---
+
+/** Google Calendar: not configured on the server, configured, or connected (with the calendars). */
+export async function getGoogleStatus(): Promise<GoogleStatus> {
+  return GoogleStatusSchema.parse(await apiRequest<unknown>('GET', '/integrations/google/status'));
+}
+
+/** The consent URL to open in the system browser; 409 when the server has no Google client. */
+export async function connectGoogle(): Promise<GoogleConnectResult> {
+  return GoogleConnectResultSchema.parse(await apiRequest<unknown>('POST', '/integrations/google/connect'));
+}
+
+/** Revokes the grant at Google and forgets the account. */
+export async function disconnectGoogle(): Promise<void> {
+  await apiRequest<unknown>('DELETE', '/integrations/google');
+}
+
+/**
+ * Which calendars feed the brief (empty = the primary one). The server
+ * answers with the fresh status when it can; a caller refetches otherwise.
+ */
+export async function selectGoogleCalendars(calendarIds: string[]): Promise<GoogleStatus | null> {
+  const body = SelectGoogleCalendarsRequestSchema.parse({ calendarIds });
+  const result = GoogleStatusSchema.safeParse(await apiRequest<unknown>('PATCH', '/integrations/google', { body }));
+  return result.success ? result.data : null;
 }

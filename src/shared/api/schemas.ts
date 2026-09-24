@@ -46,6 +46,9 @@ export {
   DeleteAllDataRequest as DeleteAllDataRequestSchema,
   DeleteAllDataResult as DeleteAllDataResultSchema,
   ClientErrorReport as ClientErrorReportSchema,
+  GoogleStatus as GoogleStatusSchema,
+  GoogleConnectResult as GoogleConnectResultSchema,
+  SelectGoogleCalendarsRequest as SelectGoogleCalendarsRequestSchema,
   endpoints,
 } from './contract.gen';
 
@@ -60,6 +63,9 @@ export type {
   DeleteAllDataResult,
   ExportFormat,
   ExportResult,
+  GoogleCalendarInfo,
+  GoogleConnectResult,
+  GoogleStatus,
   ImportDraft,
   ListSummary,
   OkResult,

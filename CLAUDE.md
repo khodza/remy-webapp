@@ -231,6 +231,14 @@ right). Auth is never stored (rule 5).
   untick / change times → `tasks/import` (all or nothing); a ticked line
   whose time has passed ("Fix N past times") must be changed or unticked,
   like the When sheet.
+- **Google Calendar** (`features/integrations`): `/settings/google`, from
+  the "Google Calendar" row in Your data. Not configured → the env the
+  server needs; configured → MainButton "Connect Google Calendar" opens the
+  consent URL outside the webview (`openExternalLink`) and the status is
+  polled every 5 s for two minutes (`connectPollInterval`), next to an
+  "I've connected, refresh" row; connected → the account, the calendars with
+  ticks (one optimistic PATCH per tap), and Disconnect behind a sheet.
+  409 / 502 / 404 each get a sentence (`googleFailureMessage`).
 - Deep links: `?task=<id>`, `?screen=settings|catchup|week`, `startapp=`
   the same names or `task_<id>`.
 

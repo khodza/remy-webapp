@@ -1,21 +1,9 @@
-import { openLink } from '@telegram-apps/sdk-react';
 import { CalendarPlus, Copy, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { feedLinks, useCalendarFeed, useDisableCalendarFeed, useEnableCalendarFeed } from '@/features/data';
 import { buildUrl } from '@/shared/api';
-import { useHapticFeedback } from '@/shared/lib/telegram';
+import { openExternalLink, useHapticFeedback } from '@/shared/lib/telegram';
 import { Button, FieldRow, Group, Screen, SectionHeader, Sheet, SkeletonRows, toast, Toggle } from '@/shared/ui';
-
-/** Telegram opens http(s) links in the browser; anything else may be refused. */
-function open(url: string): boolean {
-  try {
-    if (openLink.isAvailable()) openLink(url);
-    else window.open(url, '_blank', 'noopener');
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** Reminders in Google / Apple Calendar through a private subscription link. */
 export function CalendarFeedPage() {
@@ -111,13 +99,13 @@ export function CalendarFeedPage() {
             <FieldRow
               label="Google Calendar"
               hint="Opens Google's “add by URL” page"
-              onClick={() => open(links.google)}
+              onClick={() => openExternalLink(links.google)}
             />
             <FieldRow
               label="Apple Calendar"
               hint="Or: Settings → Calendar → Accounts → Add Subscribed Calendar"
               onClick={() => {
-                if (!open(links.webcal)) void copy();
+                if (!openExternalLink(links.webcal)) void copy();
               }}
             />
           </Group>

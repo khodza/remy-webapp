@@ -25,11 +25,13 @@ import {
   DeleteAllDataRequestSchema,
   DeleteAllDataResultSchema,
   ExportRequestSchema,
+  GoogleStatusSchema,
   ImportTasksRequestSchema,
   ListSummariesSchema,
   ListTasksQuerySchema,
   ParseListRequestSchema,
   ParseTextRequestSchema,
+  SelectGoogleCalendarsRequestSchema,
   SettingsSchema,
   SnoozeTaskRequestSchema,
   UpdateCategoryRequestSchema,
@@ -41,7 +43,9 @@ import { mergeSettings } from '@/features/settings/hooks';
 import {
   buildCategories,
   buildFixtures,
+  buildGoogle,
   buildSettings,
+  GOOGLE_PRIMARY_ID,
   makeTask,
   mockUser,
   newId,
@@ -116,6 +120,10 @@ let settings: Settings = buildSettings();
 let categories: Category[] = buildCategories();
 /** Calendar feed secret; null = off. */
 let calendarToken: string | null = null;
+let google = buildGoogle();
+/** The consent "finishes" this long after Connect, as if the owner came back from the browser. */
+const GOOGLE_CONSENT_MS = 3_000;
+let googleConsent: ReturnType<typeof setTimeout> | undefined;
 /** Bumped by /auth/refresh so a refreshed token is visibly a new one. */
 let tokenSeq = 0;
 
@@ -147,6 +155,14 @@ function allDayInstant(date: Date): Date {
 
 function feedDto() {
   return { enabled: calendarToken !== null, path: calendarToken ? `/calendar/${calendarToken}.ics` : null };
+}
+
+function googleStatusDto() {
+  return GoogleStatusSchema.parse(
+    google.connected
+      ? { configured: true, connected: true, email: google.email, calendars: google.calendars }
+      : { configured: true, connected: false },
+  );
 }
 
 function randomToken(): string {
@@ -862,6 +878,46 @@ export const handlers = [
     const created = body.data.tasks.map(storeDraft);
     tasks = [...tasks, ...created];
     return HttpResponse.json({ tasks: created.map(toDto) }, { status: 201 });
+  }),
+
+  // -------------------------------------------------------- integrations ---
+  http.get(`${API}/integrations/google/status`, async () => {
+    await delay(LATENCY_MS);
+    return HttpResponse.json(googleStatusDto());
+  }),
+
+  http.post(`${API}/integrations/google/connect`, async () => {
+    await delay(LATENCY_MS);
+    // The consent screen lives in the system browser, which the mock cannot
+    // show: the account turns up connected a moment later, so the page's
+    // polling is what brings it in (as it does for real).
+    clearTimeout(googleConsent);
+    googleConsent = setTimeout(() => {
+      google.connected = true;
+    }, GOOGLE_CONSENT_MS);
+    return HttpResponse.json(
+      { url: 'https://accounts.google.com/o/oauth2/v2/auth?client_id=mock&scope=calendar.readonly&state=mock' },
+      { status: 201 },
+    );
+  }),
+
+  http.delete(`${API}/integrations/google`, async () => {
+    await delay(LATENCY_MS);
+    clearTimeout(googleConsent);
+    google = { ...buildGoogle(), connected: false };
+    return HttpResponse.json({ success: true });
+  }),
+
+  http.patch(`${API}/integrations/google`, async ({ request }) => {
+    await delay(LATENCY_MS);
+    const body = SelectGoogleCalendarsRequestSchema.safeParse(await request.json());
+    if (!body.success) return badRequest(body.error.issues[0]?.message ?? 'Invalid calendars');
+    if (!google.connected) return error(404, 'NOT_FOUND', 'No Google account is connected');
+    const unknown = body.data.calendarIds.find((id) => !google.calendars.some((c) => c.id === id));
+    if (unknown !== undefined) return badRequest(`Google does not list calendar ${unknown}`);
+    const ids = body.data.calendarIds.length ? body.data.calendarIds : [GOOGLE_PRIMARY_ID];
+    google.calendars = google.calendars.map((c) => ({ ...c, selected: ids.includes(c.id) }));
+    return HttpResponse.json(googleStatusDto());
   }),
 ];
 

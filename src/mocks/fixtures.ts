@@ -10,7 +10,16 @@ import {
   subHours,
   subMinutes,
 } from 'date-fns';
-import type { Category, Priority, Recurrence, Settings, SourceType, TaskStatus, User } from '@/shared/api';
+import type {
+  Category,
+  GoogleCalendarInfo,
+  Priority,
+  Recurrence,
+  Settings,
+  SourceType,
+  TaskStatus,
+  User,
+} from '@/shared/api';
 import { DEFAULT_SETTINGS } from '@/shared/api';
 
 /** In-memory task record as the backend would store it (dates as Date). */
@@ -290,3 +299,23 @@ export const mockUser: User = {
   username: 'remy_dev',
   timezone: MOCK_TIMEZONE,
 };
+
+/** The Google account behind /settings/google: connected, two calendars, the primary one picked. */
+export interface MockGoogle {
+  connected: boolean;
+  email: string;
+  calendars: GoogleCalendarInfo[];
+}
+
+export const GOOGLE_PRIMARY_ID = 'remy.dev@gmail.com';
+
+export function buildGoogle(): MockGoogle {
+  return {
+    connected: true,
+    email: GOOGLE_PRIMARY_ID,
+    calendars: [
+      { id: GOOGLE_PRIMARY_ID, summary: 'remy.dev@gmail.com', selected: true },
+      { id: 'work@group.calendar.google.com', summary: 'Work', selected: false },
+    ],
+  };
+}

@@ -79,6 +79,10 @@ response, the `endpoints` table, `DEFAULT_SETTINGS`, `CONTRACT_VERSION`).
 | POST | `/export` | `{ format: csv\|json\|ics }` | `ExportResult`; the bot sends the file to the chat | `exportData` |
 | DELETE | `/data` | `{ confirm: 'DELETE' }` (literal) | `{ success, deletedTasks }`; tasks, categories, lists, settings gone, the account stays | `deleteAllData` |
 | POST | `/client-errors` | `ClientErrorReport` | 204 | `reportClientError` (`silent`: its own failure is never re-reported) |
+| GET | `/integrations/google/status` | — | `GoogleStatus` (`configured`, `connected`, `email?`, `calendars?` with `selected`) | `getGoogleStatus` |
+| POST | `/integrations/google/connect` | — | `GoogleConnectResult` `{ url }` (consent URL, open outside the webview; signed `state`, 10 min); 409 not configured | `connectGoogle` |
+| PATCH | `/integrations/google` | `{ calendarIds }` (empty = primary only) | the fresh `GoogleStatus` when the server sends one (else `null`, refetch); 400 unknown id, 404 not connected, 502 Google | `selectGoogleCalendars` |
+| DELETE | `/integrations/google` | — | revokes the grant and forgets the account | `disconnectGoogle` |
 
 View semantics (`today` includes overdue + completed today, `inbox` = todos,
 `done` newest first, capped by `limit`) are documented on `TaskView` in the
@@ -145,6 +149,11 @@ lists with counts / a new name), `normaliseListName`, `listTitle`.
 `features/data`: `useCalendarFeed` & co, `useExportData`, `useParseList`,
 `useImportTasks`, `useDeleteAllData` (resets every query on success),
 `<DeleteAllDataSheet>`.
+`features/integrations`: `useGoogleStatus(pollUntil?)`, `useConnectGoogle(onConnected)`
+(POST, then polls the status every `CONNECT_POLL_MS` until connected or
+`CONNECT_POLL_WINDOW_MS` passed; `waiting`, `stopWaiting`),
+`useSelectGoogleCalendar` (one tick, optimistic, rolls back),
+`useDisconnectGoogle`, `googleFailureMessage(action, error)`.
 `features/diagnostics`: `installErrorReporting()` (once, in `index.tsx`),
 `reportRenderError` (ErrorBoundary), `createErrorReporter` (pure, tested).
 `features/settings`: `useSettings`, `useUpdateSettings` (optimistic, same
@@ -256,6 +265,11 @@ deep-merge as the server via `mergeSettings`).
   exists. `scrubSecrets` removes `tma …`, `Bearer …`, `hash=…` and initData
   from message, stack and url before sending; the request is `silent`, so a
   failing report never reports itself.
+- **Google Calendar** (`/integrations/google/*`, table above): the Mini App's
+  `/settings/google`. The consent flow runs in the system browser, so the
+  page cannot see it end: after `POST …/connect` it polls the status for two
+  minutes. The mock starts connected with two calendars; Disconnect then
+  Connect turns the account back on 3 s later, which the polling picks up.
 - The MSW mocks (`src/mocks/handlers.ts`) implement all of it: `q`/`list`
   filters, `/lists`, skip, show-source (404 without a message id, 409 for one
   fixture), `alreadyDone`, `completions`, a 422 for greetings, several drafts

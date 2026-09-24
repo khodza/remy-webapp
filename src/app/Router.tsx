@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes, useNavigate } from 'react-router-d
 import { CatchUpPage } from '@/pages/CatchUpPage';
 import { CalendarFeedPage } from '@/pages/CalendarFeedPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
+import { GoogleCalendarPage } from '@/pages/GoogleCalendarPage';
 import { ImportPage } from '@/pages/ImportPage';
 import { QuietHoursPage } from '@/pages/QuietHoursPage';
 import { CreateTaskPage } from '@/pages/CreateTaskPage';
@@ -45,6 +46,7 @@ export function Router() {
         <Route path="/settings/quiet" element={<QuietHoursPage />} />
         <Route path="/settings/categories" element={<CategoriesPage />} />
         <Route path="/settings/calendar" element={<CalendarFeedPage />} />
+        <Route path="/settings/google" element={<GoogleCalendarPage />} />
         <Route path="/settings/import" element={<ImportPage />} />
         {GalleryPage && (
           <Route

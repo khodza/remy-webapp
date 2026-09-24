@@ -9,3 +9,4 @@ export { useTelegramUser, type TelegramUser } from './useTelegramUser';
 export { useTheme, type Theme } from './useTheme';
 export { readRawInitData } from './useRawInitData';
 export { isMockEnv } from './mockFlag';
+export { openExternalLink } from './openExternalLink';

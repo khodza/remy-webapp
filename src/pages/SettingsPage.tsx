@@ -1,6 +1,7 @@
 import {
   BellOff,
   BellRing,
+  CalendarCheck,
   CalendarDays,
   CalendarPlus,
   Clock,
@@ -21,6 +22,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCategories } from '@/features/categories';
 import { DeleteAllDataSheet, useCalendarFeed, useExportData } from '@/features/data';
+import { useGoogleStatus } from '@/features/integrations';
 import { useMe } from '@/features/profile';
 import { nudgeSummary, useSaveSettings, useSettings, zoneCity } from '@/features/settings';
 import { useTodayView } from '@/features/today';
@@ -67,6 +69,7 @@ export function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const feed = useCalendarFeed();
+  const google = useGoogleStatus();
   const exportData = useExportData();
   const hour12 = useHour12();
   const [density, setDensity] = useDensity();
@@ -280,6 +283,22 @@ export function SettingsPage() {
               hint="Reminders in Google or Apple Calendar"
               value={feed.data ? (feed.data.enabled ? 'On' : 'Off') : undefined}
               onClick={() => navigate('/settings/calendar')}
+            />
+            <FieldRow
+              icon={<CalendarCheck size={16} />}
+              iconTone="accent"
+              label="Google Calendar"
+              hint="Your events in the morning brief"
+              value={
+                google.data
+                  ? !google.data.configured
+                    ? 'Not set up'
+                    : google.data.connected
+                      ? (google.data.email ?? 'On')
+                      : 'Off'
+                  : undefined
+              }
+              onClick={() => navigate('/settings/google')}
             />
             <FieldRow
               icon={<FileDown size={16} />}
