@@ -61,8 +61,14 @@ a deep-linked screen has no history (never `navigate(-1)` directly).
    `format`/`isToday`/`startOfDay`/`new Date(input)` on a raw Date in a
    component: use `formatInTz`, `isTodayInTz`, `toLocalInputValue` /
    `fromLocalInputValue`, `fireAt`, … with `useUserTimezone()` (profile zone,
-   else device zone). 24-hour clock everywhere. Reminders live or die on
-   timezone correctness.
+   else device zone). Times follow **the time format setting**
+   (`settings.hour12`, Settings → Region): format them with `formatTime`,
+   `formatDateTime`, `formatWhen`, `formatClock` (settings "HH:mm" strings)
+   or `formatHour` (grid marks), never a hard-coded `HH:mm` pattern. They
+   default to the stored preference (`shared/stores/clock.store`, fed by
+   `useClockFormatSync()`), and `useUserTimezone()` subscribes to it, so a
+   screen that formats a time re-renders when it changes. Reminders live or
+   die on timezone correctness.
 5. **No localStorage/cookies for auth.** The JWT is in-memory only (Zustand store,
    not persisted). Mini App webviews die on close anyway; this avoids exfil risk
    and simplifies logout.
@@ -81,12 +87,23 @@ pnpm preview:ngrok # Production build + ngrok tunnel — fastest way to test ins
 pnpm typecheck     # tsc --noEmit
 pnpm lint          # ESLint, --max-warnings 0
 pnpm contract:check  # contract.gen.ts untouched + in sync with ../remy
-pnpm test          # vitest: pure logic (dates, day/timeline layout, snooze/when, draft rules)
-pnpm check         # typecheck + lint + test + contract:check — run before finishing a task
-pnpm smoke         # mock-mode Vite + your Chrome: clicks through every screen (SMOKE_SHOTS=1 saves PNGs)
+pnpm test          # vitest: `unit` (*.test.ts, node: dates, day/timeline layout, snooze/when, draft rules)
+                   #         + `dom` (*.test.tsx, jsdom + Testing Library: hooks, rows, pages)
+pnpm format        # Prettier --write (single quotes, trailing commas, 120 columns; *.md left alone)
+pnpm format:check  # Prettier --check, what CI runs
+pnpm check         # typecheck + lint + test + contract:check + format:check — run before finishing a task
+pnpm smoke         # mock-mode Vite + your Chrome: clicks through every screen (SMOKE_SHOTS=1 saves PNGs,
+                   # CHROME_PATH=/path/to/chromium for another binary)
 pnpm build         # tsc --noEmit && vite build → dist/
 pnpm preview       # Serve the built bundle
 ```
+
+Formatting is Prettier (`.prettierrc`, `.editorconfig`); ESLint checks code,
+not style. `.github/workflows/ci.yml` runs install, typecheck, lint, test,
+contract:check and format:check on every push to `master` and every pull
+request, plus the smoke in a second job against the runner's Chrome
+(`playwright-core`, no browser download). pnpm comes from the
+`packageManager` field via corepack, so bump it there, not in the workflow.
 
 ## Dev modes (outside Telegram)
 
@@ -130,19 +147,33 @@ src/
 ├── pages/             # Route-level screens (dev/ = gallery, dev only)
 └── shared/
     ├── api/           # apiClient + generated contract (contract.gen.ts) + typed endpoint fns
-    ├── lib/           # dates, useNow, useAutosave, scrollMemory, telegram/ (back stack, main/settings buttons, theme, haptics, closing confirmation)
-    ├── stores/        # Zustand (in-memory auth)
+    ├── lib/           # dates, useNow, useAutosave, scrollMemory, density, usePullToRefresh, useVoiceRecorder,
+    │                  # telegram/ (back stack, main/settings buttons, theme, haptics, closing confirmation)
+    ├── stores/        # Zustand (in-memory auth, 12/24-hour clock preference)
     └── ui/            # The Time canvas kit
+test/                  # vitest setup, renderWithProviders, mockApi()/signIn(), fixtures, a fake MediaRecorder
 ```
 
 Pure logic lives in `features/*/lib/*.ts` with a `*.test.ts` next to it;
 components stay thin. Everything time-related takes `tz` and `now` as
-arguments so it is testable.
+arguments so it is testable. Components and hooks get a `*.test.tsx`
+(Testing Library, `renderWithProviders`, `mockApi()` for a mocked `fetch`,
+fake timers for debounces and recorder caps); whole flows are the smoke.
+Parsing for Create lives in `features/ai` (`useParsePreview`: 800 ms
+debounce, a superseded parse is aborted through React Query's signal).
+
+Per-device preferences (not synced to the account) live in `localStorage`
+and are applied as attributes on `<html>` at boot: `data-density="compact"`
+(Settings → Compact rows, `shared/lib/density`; row heights come from the
+`--spacing-row*` / `--spacing-field*` tokens and never go under 44 px) and
+`data-clock` (a copy of the account's time format so the first paint is
+right). Auth is never stored (rule 5).
 
 ## Current screens (Time canvas)
 
-- `/` **Today**: pinned header (month, Search, Timeline | List), week strip
-  with load dots, summary line. Timeline = hour grid with NOW line (tap
+- `/` **Today**: pinned header (greeting from the profile name and the hour
+  in the profile zone, month + date, Search, Timeline | List), week strip
+  with load dots, summary line, pull to refresh. Timeline = hour grid with NOW line (tap
   opens, swipe right = done, hold + drag = move, 15 min snap); List =
   Overdue / NOW / Later today / Done / Tomorrow / Inbox. `?day=yyyy-MM-dd`
   shows another day.
@@ -150,10 +181,16 @@ arguments so it is testable.
   chips; source; delete with Undo; MainButton Mark as done / Reopen.
 - `/catchup` **Catch-up**: one overdue card at a time; MainButton moves all to
   tomorrow.
+- `/settings/import` refuses a ticked line whose time has passed ("Fix N past
+  times") until it is changed or unticked, like the When sheet.
 - `/create` **Create**: sentence → tokens (amber when "at 5" is ambiguous),
   same sheets as Detail, "Looks similar", voice. Saves via `/tasks/structured`.
-- `/week` Week + Inbox (`/upcoming` redirects) · `/search` · `/settings`,
-  `/settings/quiet`, `/settings/categories`, `/settings/timezone`.
+- `/week` **Week + Inbox** (`/upcoming` redirects): the calendar week from
+  `settings.weekStartsOn`, previous / next / This week, hold a row and drag
+  it to another day (keeps the time of day, Undo toast), pull to refresh.
+- `/search` · `/settings` (Region: time zone, **Time format** 24 h | 12 h;
+  Organisation: Compact rows, a device preference), `/settings/quiet`,
+  `/settings/categories`, `/settings/timezone`.
 - **Your data** (`features/data`): `/settings/calendar` turns the private
   calendar feed on/off, shows the link (made absolute from the API base by
   `feedLinks`, warns when it points at localhost), opens Google's "add by
@@ -172,6 +209,7 @@ The app implements the **Time canvas** design from `../remy-plan/remy.html`
 sets `data-theme` from Telegram and paints Telegram's header and background
 with `--color-bg`. `docs/design/` is the older bundle, kept for reference only.
 
-UX rules the screens follow: every time has tabular figures and 24-hour
-format; nothing tappable is under 44 px; destructive actions show a toast
+UX rules the screens follow: every time has tabular figures and follows the
+time format setting; nothing tappable is under 44 px (a smaller control gets
+an invisible 44 px hit area, see `Segmented`, `Token`, the +1h pill); destructive actions show a toast
 with Undo; every sheet sends one field; empty states say what to do next.
