@@ -45,6 +45,17 @@ export function useTaskActions() {
     });
   };
 
+  /**
+   * The check on a done occurrence of a repeating task: the series has moved
+   * on and the server cannot take one Done back, so it only says when the
+   * next one is.
+   */
+  const doneOccurrence = (task: Task) => {
+    haptic.impact('light');
+    const next = task.status === 'pending' ? (task.nextFireAt ?? task.scheduledAt) : null;
+    toast({ message: next ? `Already done. Next: ${formatWhen(next, tz)}` : 'Already done. That was the last one.' });
+  };
+
   const reopen = (task: Task) => {
     haptic.impact('light');
     reopenMutation.mutate(task.id, { onError: failed('reopen it') });
@@ -109,5 +120,5 @@ export function useTaskActions() {
     );
   };
 
-  return { complete, reopen, delay, snoozeUntil, snooze, moveTo };
+  return { complete, doneOccurrence, reopen, delay, snoozeUntil, snooze, moveTo };
 }

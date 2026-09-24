@@ -11,7 +11,8 @@ interface RowContext {
   now: Date;
   categories: Map<string, Category>;
   onOpen: (task: Task) => void;
-  onToggle: (task: Task, done: boolean) => void;
+  /** `occurrence`: a done occurrence of a repeating task (nothing to reopen). */
+  onToggle: (task: Task, done: boolean, occurrence?: boolean) => void;
   onSnooze: (task: Task) => void;
 }
 
@@ -20,6 +21,10 @@ interface RowOptions {
   withDay?: boolean;
   /** "in 43 m" under the time. */
   isNext?: boolean;
+  /** React key when one task appears more than once on the day. */
+  key?: string;
+  /** A done occurrence of a repeating task. */
+  occurrence?: boolean;
 }
 
 function renderRow(
@@ -35,7 +40,7 @@ function renderRow(
   else if (at && options.isNext) timeSub = `in ${spanLabel(at, now)}`;
   return (
     <TaskRow
-      key={task.id}
+      key={options.key ?? task.id}
       task={task}
       tz={tz}
       tone={tone}
@@ -43,7 +48,7 @@ function renderRow(
       timeSub={timeSub}
       category={task.categoryId ? ctx.categories.get(task.categoryId) : undefined}
       onOpen={() => ctx.onOpen(task)}
-      onToggle={() => ctx.onToggle(task, tone === 'done')}
+      onToggle={() => ctx.onToggle(task, tone === 'done', options.occurrence)}
       {...(tone === 'overdue' ? { onSnooze: () => ctx.onSnooze(task) } : {})}
     />
   );
@@ -101,7 +106,13 @@ export function ListView({ day, emptyNote, onCatchUp, onWeek, ...ctx }: ListView
             </button>
           }
         />
-        {showDone ? <Group>{day.done.map((item) => renderRow(ctx, item.task, 'done', item.at))}</Group> : null}
+        {showDone ? (
+          <Group>
+            {day.done.map((item) =>
+              renderRow(ctx, item.task, 'done', item.at, { key: item.id, occurrence: item.occurrence }),
+            )}
+          </Group>
+        ) : null}
       </>
     ) : null;
 

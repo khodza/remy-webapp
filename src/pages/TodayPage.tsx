@@ -95,7 +95,8 @@ export function TodayPage() {
 
   const emptyNote = day.isToday && day.later.length === 0 ? nothingLeft(day, tz) : null;
   const open = (task: Task) => navigate(`/tasks/${task.id}`);
-  const toggle = (task: Task, done: boolean) => (done ? actions.reopen(task) : actions.complete(task));
+  const toggle = (task: Task, done: boolean, occurrence?: boolean) =>
+    occurrence ? actions.doneOccurrence(task) : done ? actions.reopen(task) : actions.complete(task);
 
   return (
     <Screen back={false} ref={screen} onRefresh={refresh}>

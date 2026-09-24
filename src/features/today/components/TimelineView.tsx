@@ -44,7 +44,7 @@ export function TimelineView({
   const height = (last - first) * hourPx + 8;
   const placed = new Map(
     layoutBlocks(
-      day.items.map((item, i) => ({ id: item.task.id, minute: minutes[i] ?? 0 })),
+      day.items.map((item, i) => ({ id: item.id, minute: minutes[i] ?? 0 })),
       first,
       hourPx,
       { full: Math.max(44, Math.round(hourPx * 0.87)), min: 28, gap: 3 },
@@ -75,11 +75,11 @@ export function TimelineView({
       ))}
 
       {day.items.map((item) => {
-        const block = placed.get(item.task.id);
+        const block = placed.get(item.id);
         if (!block) return null;
         return (
           <Block
-            key={item.task.id}
+            key={item.id}
             item={item}
             tz={tz}
             now={now}
@@ -175,8 +175,8 @@ function Block({
   const meta = [
     formatTime(at, tz),
     state === 'done'
-      ? task.completedAt
-        ? `done ${formatTime(task.completedAt, tz)}`
+      ? item.doneAt
+        ? `done ${formatTime(item.doneAt, tz)}`
         : 'done'
       : state === 'overdue'
         ? relativeToNow(at, now)

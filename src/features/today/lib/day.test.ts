@@ -100,6 +100,43 @@ describe('buildDay', () => {
     expect(settled.done).toHaveLength(1);
   });
 
+  it('keeps a done occurrence of a repeating task on its day, with the series already on tomorrow', () => {
+    // "Vitamins, every day 08:00": ticked at 08:06 today; the series moved on.
+    const vitamins = task(local(18, 8), {
+      recurrence: { type: 'daily' },
+      completions: [
+        { at: local(17, 8, 6), occurrenceAt: local(17, 8) },
+        { at: local(16, 8, 2), occurrenceAt: local(16, 8) },
+      ],
+    });
+    const day = buildDay([vitamins, ahead], [], '2026-09-17', TZ, NOW);
+    expect(day.done).toHaveLength(1);
+    const item = day.done[0]!;
+    expect(item.task.id).toBe(vitamins.id);
+    expect(item.id).toBe(`${vitamins.id}@${local(17, 8).getTime()}`);
+    expect(item.at.toISOString()).toBe(local(17, 8).toISOString());
+    expect(item.doneAt?.toISOString()).toBe(local(17, 8, 6).toISOString());
+    expect(item.occurrence).toBe(true);
+    // Tomorrow's occurrence is still pending, and the count moved.
+    expect(day.tomorrow.map((t) => t.id)).toEqual([vitamins.id]);
+    expect(day.later.map((i) => i.task.id)).toEqual([ahead.id]);
+    // Yesterday shows yesterday's, today's is not there.
+    const yesterdayView = buildDay([vitamins], [], '2026-09-16', TZ, NOW);
+    expect(yesterdayView.done.map((i) => i.at.toISOString())).toEqual([local(16, 8).toISOString()]);
+  });
+
+  it('does not show a finished series twice (its last completion is its done item)', () => {
+    const last = task(local(17, 8), {
+      recurrence: { type: 'daily', count: 3 },
+      status: 'completed',
+      completedAt: local(17, 8, 30),
+      completions: [{ at: local(17, 8, 30), occurrenceAt: local(17, 8) }],
+    });
+    const day = buildDay([], [last], '2026-09-17', TZ, NOW);
+    expect(day.done).toHaveLength(1);
+    expect(day.done[0]?.occurrence).toBe(false);
+  });
+
   it('uses the snooze time, not the series time', () => {
     const snoozed = task(local(17, 9), { snoozedUntil: local(17, 16), nextFireAt: local(17, 16) });
     const day = buildDay([snoozed], [], '2026-09-17', TZ, NOW);
@@ -129,6 +166,15 @@ describe('buildWeek', () => {
     expect(week.map((d) => d.count)).toEqual([0, 1, 0, 2, 0, 1, 0]);
     expect(week[3]?.overdue).toBe(true);
     expect(week[5]?.overdue).toBe(false);
+  });
+
+  it('counts a done occurrence of a repeating task on its planned day', () => {
+    const vitamins = task(local(18, 8), {
+      recurrence: { type: 'daily' },
+      completions: [{ at: local(17, 8, 6), occurrenceAt: local(17, 8) }],
+    });
+    const week = buildWeek([vitamins], [], '2026-09-17', TZ, NOW, 1);
+    expect(week.map((d) => d.count)).toEqual([0, 0, 0, 1, 1, 0, 0]);
   });
 
   it('starts on Sunday when asked', () => {

@@ -44,10 +44,20 @@ export function minuteOfDay(date: Date | number, tz: string): number {
 const byDue = (a: Task, b: Task) => (dueAt(a)?.getTime() ?? 0) - (dueAt(b)?.getTime() ?? 0);
 
 export interface DayItem {
+  /** Unique on the day: the task id, or `<id>@<occurrence>` for a done occurrence of a repeating task. */
+  id: string;
   task: Task;
   /** Where it sits on the day: due time, or completion time when done off-day. */
   at: Date;
   state: 'overdue' | 'later' | 'done';
+  /** When it was ticked (done items). */
+  doneAt: Date | null;
+  /**
+   * A done occurrence of a repeating task whose series has moved on
+   * (`task.completions`). There is nothing to reopen: the toast says when
+   * the next one is.
+   */
+  occurrence: boolean;
 }
 
 export interface DayModel {
@@ -92,8 +102,16 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
       continue;
     }
     const t = due.getTime();
-    if (inDay(t)) items.push({ task, at: due, state: t < now.getTime() ? 'overdue' : 'later' });
-    else if (isToday && t < start.getTime()) earlier.push(task);
+    if (inDay(t)) {
+      items.push({
+        id: task.id,
+        task,
+        at: due,
+        state: t < now.getTime() ? 'overdue' : 'later',
+        doneAt: null,
+        occurrence: false,
+      });
+    } else if (isToday && t < start.getTime()) earlier.push(task);
     else if (t >= end.getTime() && t < tomorrowEnd.getTime()) tomorrow.push(task);
   }
 
@@ -109,7 +127,28 @@ export function buildDay(pending: Task[], completed: Task[], selected: DayKey, t
     // A done block stays where it was planned when that was the same day.
     const planned = dueAt(task);
     const at = planned && inDay(planned.getTime()) ? planned : completedAt;
-    items.push({ task, at, state: 'done' });
+    items.push({ id: task.id, task, at, state: 'done', doneAt: completedAt, occurrence: false });
+  }
+
+  // Gap 1: Done on a repeating task advances the series instead of
+  // completing it, so the occurrence that was ticked stays on its day as a
+  // done item (the series' own done item covers a finished series).
+  const seen = new Set<string>();
+  for (const task of [...pending, ...completed]) {
+    if (seen.has(task.id)) continue;
+    seen.add(task.id);
+    for (const completion of task.completions) {
+      if (!inDay(completion.occurrenceAt.getTime())) continue;
+      if (task.completedAt && completion.at.getTime() === task.completedAt.getTime()) continue;
+      items.push({
+        id: `${task.id}@${completion.occurrenceAt.getTime()}`,
+        task,
+        at: completion.occurrenceAt,
+        state: 'done',
+        doneAt: completion.at,
+        occurrence: true,
+      });
+    }
   }
 
   items.sort((a, b) => a.at.getTime() - b.at.getTime());
@@ -196,6 +235,16 @@ export function buildWeek(
   }
   for (const task of completed) {
     if (task.status === 'completed' && task.completedAt) bump(task.completedAt, false);
+  }
+  // Done occurrences of repeating tasks count on the day they were planned.
+  const seen = new Set<string>();
+  for (const task of [...pending, ...completed]) {
+    if (seen.has(task.id)) continue;
+    seen.add(task.id);
+    for (const completion of task.completions) {
+      if (task.completedAt && completion.at.getTime() === task.completedAt.getTime()) continue;
+      bump(completion.occurrenceAt, false);
+    }
   }
   return days;
 }
