@@ -30,22 +30,22 @@ export function DeleteAllDataSheet({ open, onClose }: DeleteAllDataSheetProps) {
   }
   const confirmed = typed.trim() === DELETE_WORD;
 
-  const run = () => {
+  const run = async () => {
     if (!confirmed || remove.isPending) return;
     haptic.notify('warning');
-    remove.mutate(undefined, {
-      onSuccess: (result) => {
-        onClose();
-        toast({
-          message: `Deleted ${result.deletedTasks} ${result.deletedTasks === 1 ? 'task' : 'tasks'}. Remy starts fresh.`,
-        });
-        navigate('/', { replace: true });
-      },
-      onError: () => {
-        haptic.notify('error');
-        toast({ message: "Couldn't delete your data. Nothing was removed; try again.", tone: 'danger' });
-      },
-    });
+    try {
+      // mutateAsync, not mutate callbacks: the cache reset that follows can
+      // re-render the page around this sheet, and the outcome must still land.
+      const result = await remove.mutateAsync();
+      onClose();
+      toast({
+        message: `Deleted ${result.deletedTasks} ${result.deletedTasks === 1 ? 'task' : 'tasks'}. Remy starts fresh.`,
+      });
+      navigate('/', { replace: true });
+    } catch {
+      haptic.notify('error');
+      toast({ message: "Couldn't delete your data. Nothing was removed; try again.", tone: 'danger' });
+    }
   };
 
   return (
@@ -54,7 +54,7 @@ export function DeleteAllDataSheet({ open, onClose }: DeleteAllDataSheetProps) {
       onClose={onClose}
       title="Delete all data"
       footer={
-        <Button variant="danger" block disabled={!confirmed || remove.isPending} onClick={run}>
+        <Button variant="danger" block disabled={!confirmed || remove.isPending} onClick={() => void run()}>
           {remove.isPending ? 'Deleting…' : 'Delete everything'}
         </Button>
       }

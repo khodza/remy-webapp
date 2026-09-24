@@ -38,7 +38,11 @@ await context.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) =>
 const errors = [];
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 page.on('console', (message) => {
-  if (message.type() === 'error') errors.push(`console: ${message.text()}`);
+  // Chrome logs every non-2xx response; a 422 is the parser's designed
+  // answer to text that holds no reminder, not a broken flow.
+  if (message.type() === 'error' && !/Failed to load resource: .*\b422\b/.test(message.text())) {
+    errors.push(`console: ${message.text()}`);
+  }
 });
 
 let step = 0;
@@ -86,16 +90,24 @@ const expectText = async (locator, pattern, timeout = 5000) => {
 
 console.log(`Remy smoke test on ${base}`);
 
-await check('Today opens in Timeline with blocks and a NOW line', async () => {
+await check('Today opens in Timeline with blocks, a NOW line and the all-day strip', async () => {
   await open('/');
   await page.locator('[data-block]').first().waitFor();
   await page.locator('[data-now]').waitFor();
+  // A date with no time sits above the hour grid, not at 09:00 in it.
+  await page.locator('[data-all-day]').getByText('Sort out the visa papers').waitFor();
 });
 
-await check('List view groups the day', async () => {
+await check('List view groups the day; a repeating task done today stays in Done', async () => {
   await page.getByRole('radio', { name: 'List' }).click();
   await page.getByText(/^Later today · \d+/).waitFor();
   await page.getByText(/^Overdue · \d+/).waitFor();
+  // Gap 1: Vitamins was ticked this morning; its series is on tomorrow.
+  await page.getByText(/^Done · \d+/).waitFor();
+  const vitamins = page.locator('div[role=button]', { hasText: 'Vitamins' }).first();
+  await vitamins.waitFor();
+  await vitamins.getByRole('button', { name: 'Mark as not done' }).click();
+  await expectText(toast(), /^Already done\. Next: /);
 });
 
 await check('Done on a one-off, then Undo', async () => {
@@ -129,6 +141,26 @@ await check('Back returns to Today', async () => {
   if (!/#\/?$/.test(page.url())) throw new Error(`not on Today: ${page.url()}`);
 });
 
+await check('Detail of a repeating task: history, × N times, Show source message', async () => {
+  await page.locator('div[role=button]', { hasText: 'Vitamins' }).first().click();
+  await page.getByText(/^Done 12 times/).waitFor();
+  await page
+    .getByText(/done \d{1,2}:\d{2}/)
+    .first()
+    .waitFor();
+  await page.getByRole('button', { name: 'Show source message' }).click();
+  await expectText(toast(), /^Sent to the chat/);
+  // "× 12 times" is edited in the Repeat sheet.
+  await page.locator('[data-dev-chrome] button', { hasText: 'Back' }).click();
+  await page.locator('div[role=button]', { hasText: 'Pay the electricity bill' }).first().click();
+  await expectText(page.getByRole('button', { name: /^Repeat/ }), /Every month × 12 times/);
+  await page.getByRole('button', { name: /^Repeat/ }).click();
+  await page.getByRole('button', { name: 'More times' }).click();
+  await page.getByRole('button', { name: 'Set how many times' }).click();
+  await expectText(page.getByRole('button', { name: /^Repeat/ }), /× 13 times/);
+  await page.locator('[data-dev-chrome] button', { hasText: 'Back' }).click();
+});
+
 await check('Create turns a sentence into tokens and adds it', async () => {
   await open('/create');
   await page.getByRole('textbox', { name: /What should Remy/ }).fill('call mom tomorrow at 5 every week #personal');
@@ -138,6 +170,22 @@ await check('Create turns a sentence into tokens and adds it', async () => {
   await expectText(toast(), /^Added for Tomorrow 05:00/);
 });
 
+await check('Create: a sentence with two reminders becomes a list, added together', async () => {
+  await open('/create');
+  await page.getByRole('textbox', { name: /What should Remy/ }).fill('buy oat milk; call the bank tomorrow at 11');
+  await page.getByText(/^2 reminders · 2 to add/).waitFor({ timeout: 5000 });
+  await expectText(mainButton(), /Add 2 reminders/);
+  await mainButton().click();
+  await expectText(toast(), /^Added 2 reminders/);
+});
+
+await check('Create: small talk is refused with the reason, and can still be added', async () => {
+  await open('/create');
+  await page.getByRole('textbox', { name: /What should Remy/ }).fill('hello there');
+  await expectText(page.locator('[data-parse-rejected]'), /doesn't look like a reminder/);
+  await expectText(mainButton(), /Add to Inbox/);
+});
+
 await check('Catch-up handles a card', async () => {
   await open('/catchup');
   const first = await page.locator('article h2').textContent();
@@ -145,22 +193,41 @@ await check('Catch-up handles a card', async () => {
   await page.waitForFunction((title) => document.querySelector('article h2')?.textContent !== title, first);
 });
 
-await check('Week shows seven days and the Inbox', async () => {
+await check('Catch-up skips this occurrence of a repeating task', async () => {
+  // The electricity bill (monthly) is next in the stack.
+  await page.locator('article h2', { hasText: 'Pay the electricity bill' }).waitFor();
+  await page.getByRole('button', { name: 'Skip this time →' }).click();
+  await expectText(toast(), /^Skipped\. Next: /);
+});
+
+await check('Week shows seven days and the Inbox grouped by list', async () => {
   await open('/week');
   await page.getByText('Buy new headphones').waitFor();
   const rows = await page.locator('main button', { hasText: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/ }).count();
   if (rows < 7) throw new Error(`expected 7 day rows, got ${rows}`);
+  await page.locator('[data-inbox-list=shopping]').getByText('Olive oil').waitFor();
+  // The chip filters the Inbox to one list.
+  await page.getByRole('button', { name: /^Shopping · \d/ }).click();
+  await page.locator('[data-inbox-list=none]').waitFor({ state: 'detached' });
+  await page.locator('[data-inbox-list=shopping]').getByText('Milk', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'All', exact: true }).click();
+  await page.locator('[data-inbox-list=none]').waitFor();
 });
 
-await check('Search finds by words', async () => {
+await check('Search asks the server, open and done', async () => {
   await open('/search');
   await page.getByRole('searchbox', { name: 'Search reminders' }).fill('dent');
   await page.locator('main').getByText('Call the dentist to move the appointment').waitFor();
+  await page.getByRole('searchbox', { name: 'Search reminders' }).fill('landlord');
+  await page.getByText(/^Done · 1/).waitFor();
+  await page.locator('main').getByText('Reply to the landlord').waitFor();
 });
 
 await check('Settings and Quiet hours load', async () => {
   await open('/settings');
-  await page.getByText('Morning brief').waitFor();
+  await page.getByText('Morning brief', { exact: true }).waitFor();
+  await page.getByRole('switch', { name: 'Voice brief' }).waitFor();
+  await page.getByRole('switch', { name: 'Pinned agenda in chat' }).waitFor();
   await page.getByRole('button', { name: /^Quiet hours/ }).click();
   await page.getByText('Quiet hours & nudges').waitFor();
 });
@@ -188,11 +255,14 @@ await check('Calendar feed turns on, shows a link, and a new link replaces it', 
   );
 });
 
-await check('Export sends a file to the chat', async () => {
+await check('Export sends a file to the chat, the calendar file too', async () => {
   await open('/settings');
   await page.getByRole('button', { name: /^Export/ }).click();
   await page.getByRole('dialog').getByText('Spreadsheet (CSV)').click();
   await expectText(toast(), /^Sent remy-\d{4}-\d{2}-\d{2}\.csv to your chat/);
+  await page.getByRole('button', { name: /^Export/ }).click();
+  await page.getByRole('dialog').getByText('Calendar file (.ics)').click();
+  await expectText(toast(), /^Sent remy-\d{4}-\d{2}-\d{2}\.ics to your chat \(\d+ reminders\)/);
 });
 
 await check('Import reads a list, skips one line, and adds the rest', async () => {
@@ -217,6 +287,20 @@ await check('Light theme renders Today, remembering the view', async () => {
   await page.locator('[data-block]').first().waitFor();
   const theme = await page.evaluate(() => document.documentElement.dataset.theme);
   if (theme !== 'light') throw new Error(`data-theme is ${theme}`);
+});
+
+await check('Delete all data needs DELETE typed, then Today is empty', async () => {
+  await open('/settings');
+  await page.getByRole('button', { name: /^Delete all data/ }).click();
+  const button = page.getByRole('button', { name: 'Delete everything' });
+  if (!(await button.isDisabled())) throw new Error('Delete everything was enabled before DELETE was typed');
+  await page.getByLabel('Type DELETE to confirm').fill('DELETE');
+  await button.click();
+  await expectText(toast(), /^Deleted \d+ tasks\. Remy starts fresh\./);
+  if (!/#\/?$/.test(page.url())) throw new Error(`not back on Today: ${page.url()}`);
+  await page.getByText('Nothing left today.').waitFor();
+  const blocks = await page.locator('[data-block]').count();
+  if (blocks !== 0) throw new Error(`expected an empty Today, got ${blocks} blocks`);
 });
 
 await browser.close();

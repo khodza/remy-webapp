@@ -244,7 +244,7 @@ function byFireAt(a: MockTask, b: MockTask): number {
 }
 
 /** Small talk and the like: the real assistant answers 422 "not a task". */
-const NOT_A_TASK = /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|lol|test)\b[!. ]*$/i;
+const NOT_A_TASK = /^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|lol|test)\b(?:\s+\w+){0,2}[!.? ]*$/i;
 
 /** Words that mean the line names a time (else it is an Inbox todo). */
 const TIME_CUE =

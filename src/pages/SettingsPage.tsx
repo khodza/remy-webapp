@@ -347,9 +347,11 @@ export function SettingsPage() {
               ))}
             </div>
           </Sheet>
-          <DeleteAllDataSheet open={deleting} onClose={() => setDeleting(false)} />
         </>
       )}
+      {/* Outside the settings branch: the reset that follows the delete empties
+          the settings cache, and the sheet must outlive that to finish. */}
+      <DeleteAllDataSheet open={deleting} onClose={() => setDeleting(false)} />
 
       <p className="tnum px-4 pt-6 text-center text-[11.5px] font-semibold text-faint">
         Remy · contract {CONTRACT_VERSION}

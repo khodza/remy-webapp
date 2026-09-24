@@ -384,7 +384,7 @@ export function CreateTaskPage() {
           {rejected ? (
             // The assistant read it and found no reminder (422): its reason,
             // and the text can still be added by hand as it is.
-            <p className="px-4 pt-2 text-[12.5px] font-bold text-warn" role="status">
+            <p className="px-4 pt-2 text-[12.5px] font-bold text-warn" role="status" data-parse-rejected>
               {rejected} You can still add it as it is, or set the details below.
             </p>
           ) : parseFailed ? (

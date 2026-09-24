@@ -111,6 +111,7 @@ export function RepeatSheet({ open, onClose, value, at, onPick }: RepeatSheetPro
           <Button
             variant={(value.count ?? 0) === count ? 'secondary' : 'primary'}
             className="px-3"
+            aria-label="Set how many times"
             disabled={(value.count ?? 0) === count}
             onClick={() => {
               onPick(withCount(value, count));
