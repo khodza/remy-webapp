@@ -31,11 +31,21 @@ export function useTaskActions() {
       // A repeating task moves to its next time; there is nothing to reopen.
       done.then((updated) => {
         const next = updated.status === 'pending' ? (updated.nextFireAt ?? updated.scheduledAt) : null;
+        // Gap 3: a second tap (or a tick on a future occurrence) changes
+        // nothing on the server; say so instead of announcing a second Done.
+        if (updated.alreadyDone) {
+          toast({
+            message: next ? `Already done for today. Next: ${formatWhen(next, tz)}` : 'Already done for today.',
+          });
+          return;
+        }
         toast({ message: next ? `Done. Next: ${formatWhen(next, tz)}` : 'Done. That was the last one.' });
       }, failed('mark it done'));
       return;
     }
-    done.catch(failed('mark it done'));
+    done.then((updated) => {
+      if (updated.alreadyDone) toast({ message: 'Already done.' });
+    }, failed('mark it done'));
     toast({
       message: `Done: ${task.description}`,
       // Undo waits for Done to land, or the reopen would arrive first.
