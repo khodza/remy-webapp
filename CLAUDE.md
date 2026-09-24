@@ -86,7 +86,7 @@ pnpm dev:ngrok     # Vite + ngrok tunnel (stable URL with NGROK_DOMAIN, HMR over
 pnpm preview:ngrok # Production build + ngrok tunnel — fastest way to test inside Telegram
 pnpm typecheck     # tsc --noEmit
 pnpm lint          # ESLint, --max-warnings 0
-pnpm contract:check  # contract.gen.ts untouched + in sync with ../remy
+pnpm contract:check  # contract.gen.ts untouched + in sync with the backend (../remy, or REMY_BACKEND_DIR=/path)
 pnpm test          # vitest: `unit` (*.test.ts, node: dates, day/timeline layout, snooze/when, draft rules)
                    #         + `dom` (*.test.tsx, jsdom + Testing Library: hooks, rows, pages)
 pnpm format        # Prettier --write (single quotes, trailing commas, 120 columns; *.md left alone)
@@ -141,6 +141,10 @@ src/
 │   ├── reminders/     # task hooks, useTaskActions, TaskRow, sheets (When/Lead/Repeat/Category/Priority), lib (when, draft, recurrence)
 │   ├── today/         # day + week model, timeline layout, Timeline/List views, WeekStrip, LoadStrip
 │   ├── categories/    # category hooks, CategoryPill
+│   ├── lists/         # GET /lists hook, ListSheet (pick / new list), list-name normalisation
+│   ├── ai/            # useParsePreview (POST /ai/parse: drafts, 422 as `rejected`)
+│   ├── data/          # Your data: calendar feed, export, import, Delete all data
+│   ├── diagnostics/   # client error reports → POST /client-errors (reporter + install)
 │   ├── settings/      # settings hooks, useSaveSettings, QuietBar, nudge helpers, time zones
 │   └── profile/       # me + timezone sync
 ├── mocks/             # MSW handlers + fixtures for `pnpm dev:mock`
@@ -148,8 +152,8 @@ src/
 └── shared/
     ├── api/           # apiClient + generated contract (contract.gen.ts) + typed endpoint fns
     ├── lib/           # dates, useNow, useAutosave, scrollMemory, density, usePullToRefresh, useVoiceRecorder,
-    │                  # telegram/ (back stack, main/settings buttons, theme, haptics, closing confirmation)
-    ├── stores/        # Zustand (in-memory auth, 12/24-hour clock preference)
+    │                  # useTokenRefresh, telegram/ (back stack, main/settings buttons, theme, haptics, closing confirmation)
+    ├── stores/        # Zustand (in-memory auth with refresh/recover, 12/24-hour clock preference)
     └── ui/            # The Time canvas kit
 test/                  # vitest setup, renderWithProviders, mockApi()/signIn(), fixtures, a fake MediaRecorder
 ```
@@ -176,30 +180,77 @@ right). Auth is never stored (rule 5).
   with load dots, summary line, pull to refresh. Timeline = hour grid with NOW line (tap
   opens, swipe right = done, hold + drag = move, 15 min snap); List =
   Overdue / NOW / Later today / Done / Tomorrow / Inbox. `?day=yyyy-MM-dd`
-  shows another day.
-- `/tasks/:id` **Detail**: title and notes autosave; rows open sheets; snooze
-  chips; source; delete with Undo; MainButton Mark as done / Reopen.
-- `/catchup` **Catch-up**: one overdue card at a time; MainButton moves all to
-  tomorrow.
-- `/settings/import` refuses a ticked line whose time has passed ("Fix N past
-  times") until it is changed or unticked, like the When sheet.
-- `/create` **Create**: sentence → tokens (amber when "at 5" is ambiguous),
-  same sheets as Detail, "Looks similar", voice. Saves via `/tasks/structured`.
+  shows another day. **All-day tasks** (`allDay`, no clock time) sit in a strip
+  above the grid / first in each list section and read "All day"; they are
+  overdue only after their day (`isLate`, never `isOverdue` alone). A
+  **repeating task ticked Done stays on the day**: `completions[]` become
+  done rows (`DayItem.occurrence`, id `<taskId>@<occurrenceAt>`) while the
+  task itself moves on to its next date; the week strip counts them too.
+- `/tasks/:id` **Detail**: title and notes autosave; rows open sheets
+  (When with a "No specific time" toggle, Repeat with a "Stop after N
+  times" stepper, Category, Priority, Lead, **List** with suggestions from
+  `GET /lists`); snooze chips; "Skip this time" for repeating tasks
+  (`POST /tasks/:id/skip`); **Done N times** history from `completions[]`
+  (first 5, "Show all"); source, with **Show source message** when
+  `source.messageId` is set (404 "message not found" / 409 "deleted" toasts);
+  delete with Undo; MainButton Mark as done / Reopen. Marking a task that
+  the bot already ticked says "Already done for today. Next: …"
+  (`CompleteResult.alreadyDone`).
+- `/catchup` **Catch-up**: one overdue card at a time; "Skip this time →"
+  on repeating tasks (real skip), "Skip →" just hides a one-off; MainButton
+  moves all to tomorrow.
+- `/create` **Create**: sentence → tokens from the parse (`TaskDraft`: time,
+  all day, repeat with count, lead, priority, category, list; amber when
+  "at 5" is ambiguous), same sheets as Detail, "Looks similar", voice. A
+  sentence that holds **several reminders** (`ParsedTask.drafts`) turns into
+  a reviewable list (`DraftReviewList`, shared with Import) and saves through
+  `tasks/import`; "Just one" goes back to a single draft. A 422 ("not a
+  task") shows inline (`data-parse-rejected`) and the text can still be added
+  as is. Saves via `/tasks/structured`.
 - `/week` **Week + Inbox** (`/upcoming` redirects): the calendar week from
   `settings.weekStartsOn`, previous / next / This week, hold a row and drag
   it to another day (keeps the time of day, Undo toast), pull to refresh.
-- `/search` · `/settings` (Region: time zone, **Time format** 24 h | 12 h;
-  Organisation: Compact rows, a device preference), `/settings/quiet`,
-  `/settings/categories`, `/settings/timezone`.
+  The Inbox is **grouped by list** (headers with counts, tasks without a list
+  last) with filter chips fed by `GET /lists`.
+- `/search`: server search, `GET /tasks?q=` (every word must match title,
+  notes or list name; open and done), 300 ms debounce, a superseded request
+  is aborted, the last result stays on screen while typing; grouped Overdue /
+  Upcoming / Inbox / Done, capped at `SEARCH_LIMIT`.
+- `/settings` (Region: time zone, **Time format** 24 h | 12 h; Rhythm
+  incl. **Voice brief** and **Pinned agenda** toggles; Organisation: Compact
+  rows, a device preference; Your data: calendar, export **CSV · JSON ·
+  ICS**, import, **Delete all data** — a sheet that asks to type `DELETE`,
+  sends `DELETE /data`, resets every query cache and lands on an empty
+  Today), `/settings/quiet`, `/settings/categories`, `/settings/timezone`.
 - **Your data** (`features/data`): `/settings/calendar` turns the private
   calendar feed on/off, shows the link (made absolute from the API base by
   `feedLinks`, warns when it points at localhost), opens Google's "add by
   URL" page or `webcal://` for Apple, and replaces the link. Export (sheet in
   Settings) makes the **bot send the file to the chat** (downloads don't work
   in iOS webviews). `/settings/import`: paste a list → `parse-list` drafts →
-  untick / change times → `tasks/import` (all or nothing).
+  untick / change times → `tasks/import` (all or nothing); a ticked line
+  whose time has passed ("Fix N past times") must be changed or unticked,
+  like the When sheet.
 - Deep links: `?task=<id>`, `?screen=settings|catchup|week`, `startapp=`
   the same names or `task_<id>`.
+
+## Session and diagnostics
+
+- **JWT refresh** (`shared/lib/useTokenRefresh`, mounted in `Root`): the
+  token is refreshed through `POST /auth/refresh` at 80 % of its lifetime
+  (`exp`/`iat` decoded from the JWT) while the app is visible, retried a
+  minute later on failure; a 401 makes `apiRequest` call
+  `auth.store.recover()`, which refreshes **once** before falling back to a
+  fresh initData exchange, then retries the request once. Still in memory
+  only.
+- **Client errors** (`features/diagnostics`): `installErrorReporting()` in
+  `index.tsx` sends `window.onerror`, `unhandledrejection`, ErrorBoundary
+  renders and failed API calls (network / 5xx only, never 401/403/404) to
+  `POST /client-errors`, deduped per message for a minute, at most 5 a
+  minute, only once signed in, with the route from the hash, the app version
+  (`__APP_VERSION__` from `package.json` via Vite `define`) and the user
+  agent. `scrubSecrets` strips `tma …`, `Bearer …`, `hash=` and initData from
+  messages and stacks. The report itself is `silent` (never re-reported).
 
 ## Design reference
 
