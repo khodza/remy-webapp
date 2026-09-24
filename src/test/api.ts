@@ -32,7 +32,8 @@ type Reply = ((call: FetchCall) => unknown) | object | string | number | boolean
 /**
  * Stubs global fetch with routes keyed "METHOD /path" (under /api/v1).
  * A route returns JSON, or a function of the call (return a promise to hold
- * the response). A call whose signal aborts rejects with an AbortError.
+ * the response, or a Response for an error status). A call whose signal
+ * aborts rejects with an AbortError.
  */
 export function mockApi(routes: Record<string, Reply>) {
   const calls: FetchCall[] = [];
@@ -54,6 +55,7 @@ export function mockApi(routes: Record<string, Reply>) {
       call.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
     });
     const value = await Promise.race([typeof reply === 'function' ? reply(call) : reply, aborted]);
+    if (value instanceof Response) return value;
     return new Response(JSON.stringify(value), { status: 200, headers: { 'Content-Type': 'application/json' } });
   });
   vi.stubGlobal('fetch', fetchMock);

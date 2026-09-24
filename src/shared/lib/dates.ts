@@ -56,6 +56,12 @@ export function startOfDayInTz(date: Date | number, tz: string): Date {
   return new Date(startOfDay(inTz(date, tz)).getTime());
 }
 
+/** Midnight after the day `date` falls on in `tz` (23 or 25 hours later on DST days). */
+export function endOfDayInTz(date: Date | number, tz: string): Date {
+  const z = inTz(date, tz);
+  return new Date(new TZDate(z.getFullYear(), z.getMonth(), z.getDate() + 1, tz).getTime());
+}
+
 export function isSameDayInTz(a: Date | number, b: Date | number, tz: string): boolean {
   return isSameDay(inTz(a, tz), inTz(b, tz));
 }

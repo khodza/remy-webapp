@@ -1,5 +1,13 @@
 import { addDays, addMinutes, nextMonday, nextSaturday } from 'date-fns';
-import { atTimeInTz, formatDateTime, formatTime, inTz, isTodayInTz, isTomorrowInTz } from '@/shared/lib/dates';
+import {
+  atTimeInTz,
+  endOfDayInTz,
+  formatDateTime,
+  formatTime,
+  inTz,
+  isTodayInTz,
+  isTomorrowInTz,
+} from '@/shared/lib/dates';
 
 /**
  * Pure time choices shared by Detail, Catch-up and Create. Every option
@@ -68,6 +76,20 @@ export function describeDue(at: Date, tz: string, now: Date): string {
   if (isTodayInTz(at, tz, now)) return `Today ${formatTime(at, tz)}`;
   if (isTomorrowInTz(at, tz, now)) return `Tomorrow ${formatTime(at, tz)}`;
   return formatDateTime(at, tz);
+}
+
+/**
+ * Whether a time is already behind us for saving purposes: a timed reminder
+ * once its minute passed, an all-day one once its whole day is over (the
+ * server pings it at 09:00 but only calls it overdue the next day).
+ */
+export function isPastAt(at: Date, allDay: boolean, now: Date, tz: string): boolean {
+  return allDay ? endOfDayInTz(at, tz).getTime() <= now.getTime() : at.getTime() <= now.getTime();
+}
+
+/** The same rule for a draft (a todo is never past). */
+export function isDraftPast(draft: { scheduledAt: Date | null; allDay: boolean }, now: Date, tz: string): boolean {
+  return draft.scheduledAt !== null && isPastAt(draft.scheduledAt, draft.allDay, now, tz);
 }
 
 export const LEAD_CHOICES: Array<number | null> = [null, 5, 10, 15, 30, 60, 120, 1440];
